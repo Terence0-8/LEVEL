@@ -8,7 +8,10 @@ Level est une application personnelle de progression (LIFE · SPORT · RPG), ins
 - **Règles métier hors de l'UI** : tout calcul (XP, niveaux, rangs, agencement) vit dans `src/core/`, pur et testé.
 - **Données fictives isolées** dans `src/mocks/` uniquement, toujours étiquetées « Démo » dans l'UI. `core/` et `data/` n'importent jamais `mocks/`.
 - **L'XP vit uniquement dans le journal** (`xpEvents`, append-only). Jamais de solde stocké ni modifié à la main : gains et corrections sont des événements ; tout se recalcule depuis le journal. Toute récompense passe par `core/awards` + `questService` (transaction, clé d'unicité).
-- **Aucune pénalité d'XP**, jamais : une quête manquée n'enlève rien.
+- **Aucune pénalité d'XP**, jamais : une quête manquée n'enlève rien. L'analyse d'un manque n'écrit jamais dans le journal d'XP.
+- **Pas de réécriture silencieuse** : modifier difficulté/effort/catégorie ne change pas les gains acquis ; toute modification crée une révision.
+- **Dates** : `at` = accomplissement déclaré, `recordedAt` = enregistrement ; validation rétroactive bornée par `retroactiveMaxDays`.
+- **Seuils de niveaux et de rangs** (`xp.ts`, `rank.ts`) : ne pas modifier sans décision explicite (test de non-régression).
 - **Barèmes numériques uniquement dans `core/rewards.ts`**, marqués provisoires tant qu'ils ne sont pas calibrés.
 - **Honnêteté** : ne jamais présenter un module comme fonctionnel s'il ne l'est pas (utiliser `<Notice>`).
 - **Peu de dépendances** : justifier toute nouvelle dépendance dans `docs/ARCHITECTURE.md`.

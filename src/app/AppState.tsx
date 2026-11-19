@@ -9,6 +9,8 @@ import { arrangeHome, type WidgetPlacement } from '@/core/homeLayout'
 import { cycleProgress, questStatus } from '@/core/questState'
 import { isRecurring, type Category, type Quest } from '@/core/quest'
 import type { XpEvent } from '@/core/ledger'
+import { findMissed, type MissedAnalysis, type MissedItem } from '@/core/missed'
+import type { QuestRevision } from '@/core/revision'
 
 /** Progression affichée : réelle (journal d'XP) ou de démonstration (mocks), jamais mélangées. */
 export type Progress = ProgressSummary & { isDemo: boolean; layout: WidgetPlacement[] }
@@ -22,6 +24,10 @@ interface AppState {
   quests: Quest[]
   categories: Category[]
   events: XpEvent[]
+  analyses: MissedAnalysis[]
+  revisions: QuestRevision[]
+  /** Éléments non réalisés, pas encore analysés (aucun effet sur l'XP) */
+  missed: MissedItem[]
   now: Date
   toggleDemoQuest: (id: string) => void
 }
@@ -39,7 +45,7 @@ function useNow() {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const { ready, profile, settings, doneQuests, quests, categories, events } = usePersistedState()
+  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions } = usePersistedState()
   const now = useNow()
 
   const demo = useMemo(() => (settings.showDemoData ? buildDemoView(doneQuests) : null), [settings.showDemoData, doneQuests])
@@ -72,12 +78,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     void questService.seedCategories()
   }, [])
 
+  const missed = useMemo(() => findMissed(quests, events, analyses, now), [quests, events, analyses, now])
+
   const value = useMemo<AppState>(
     () => ({
-      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, now,
+      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, now,
       toggleDemoQuest: (id) => void repos.demo.toggleQuest(id),
     }),
-    [profile, settings, demo, progress, quests, categories, events, now],
+    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, now],
   )
 
   if (!ready) return <div style={{ minHeight: '100vh' }} aria-busy="true" />

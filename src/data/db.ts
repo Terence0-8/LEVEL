@@ -1,6 +1,8 @@
 import Dexie, { type Table } from 'dexie'
 import type { Category, Quest } from '@/core/quest'
 import type { XpEvent } from '@/core/ledger'
+import type { MissedAnalysis } from '@/core/missed'
+import type { QuestRevision } from '@/core/revision'
 
 /**
  * Base locale de Level (IndexedDB). Le schéma est versionné : toute évolution
@@ -32,6 +34,10 @@ export class LevelDB extends Dexie {
   quests!: Table<Quest, string>
   /** Journal d'XP append-only : source de vérité de toute progression */
   xpEvents!: Table<XpEvent, string>
+  /** Analyses des quêtes manquées (historique conservé, sans effet sur l'XP) */
+  analyses!: Table<MissedAnalysis, string>
+  /** Trace des modifications de quêtes */
+  revisions!: Table<QuestRevision, string>
 
   constructor(name = 'level') {
     super(name)
@@ -47,6 +53,18 @@ export class LevelDB extends Dexie {
       categories: 'id, order',
       quests: 'id, archived, createdAt',
       xpEvents: 'id, awardKey, questId, at, domain',
+    })
+    // v3 : analyses des quêtes manquées et révisions de quêtes (tables ajoutées, données existantes inchangées ;
+    // les nouveaux champs d'événements sont complétés à la lecture par `normalizeEvent`).
+    this.version(3).stores({
+      profile: 'id',
+      settings: 'key',
+      demoQuestState: 'questId',
+      categories: 'id, order',
+      quests: 'id, archived, createdAt',
+      xpEvents: 'id, awardKey, questId, at, domain',
+      analyses: 'id, questId, createdAt',
+      revisions: 'id, questId, at',
     })
   }
 }

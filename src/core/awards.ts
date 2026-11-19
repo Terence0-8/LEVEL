@@ -1,52 +1,64 @@
 import { dayKey } from './dates'
-import { effortAwardKey, cycleKeyFor, questAwardKey, stepAwardKey, type Category, type Quest } from './quest'
-import { openAwards, planAward, type PlanResult, type XpEvent } from './ledger'
-import { dampingMultiplier, effortCredit, isMicroTask, nextBaseShare, REWARD_CONFIG } from './rewards'
-import { openAwardsOfCycle, hasEffortCredit, isCycleCompleted } from './questState'
+import { cycleKeyFor, effortAwardKey, questAwardKey, stepAwardKey, type Category, type Quest } from './quest'
+import { openAwards, planAward, type CreditKind, type PlanResult, type XpEvent } from './ledger'
+import {
+  creditHeadroom, dampingMultiplier, effortCreditBase, isMicroTask, nextBaseShare, partialTargetBase, REWARD_CONFIG,
+} from './rewards'
+import { isCycleCompleted, openAwardsOfCycle } from './questState'
 
 export interface AwardContext {
   quest: Quest
   category: Category | undefined
   /** Événements de CETTE quête */
   questEvents: XpEvent[]
-  /** Événements du jour courant (toutes quêtes) pour l'anti-farming */
+  /** Événements du jour d'ACCOMPLISSEMENT déclaré (toutes quêtes) pour l'anti-farming */
   todayEvents: XpEvent[]
+  /** Instant d'enregistrement */
   now: Date
+  /** Date d'accomplissement déclarée (= now pour une validation du jour) */
+  doneAt: Date
   eventId: string
 }
 
 const DIFF_FR = { easy: 'facile', normal: 'normale', hard: 'difficile', epic: 'épique' } as const
 
 function base(ctx: AwardContext) {
-  const { quest, category, now } = ctx
+  const { quest, category, now, doneAt } = ctx
   return {
     questId: quest.id,
-    cycleKey: cycleKeyFor(quest.type, now),
+    cycleKey: cycleKeyFor(quest.type, doneAt),
     domain: 'LIFE' as const,
     categoryId: quest.categoryId,
     attribute: category?.attribute ?? null,
-    at: now.toISOString(),
+    at: doneAt.toISOString(),
+    recordedAt: now.toISOString(),
+    retroactive: dayKey(doneAt) < dayKey(now),
     label: quest.title,
   }
 }
 
+const sameDay = (ctx: AwardContext, e: XpEvent) => dayKey(new Date(e.at)) === dayKey(ctx.doneAt)
+
 function microQuestsRewardedToday(ctx: AwardContext): number {
-  const today = dayKey(ctx.now)
   const ids = new Set<string>()
   for (const e of openAwards(ctx.todayEvents).values()) {
-    if (e.micro && e.questId && e.questId !== ctx.quest.id && dayKey(new Date(e.at)) === today) ids.add(e.questId)
+    if (e.micro && e.questId && e.questId !== ctx.quest.id && sameDay(ctx, e)) ids.add(e.questId)
   }
   return ids.size
 }
 
+function creditsDeclaredToday(ctx: AwardContext): number {
+  return [...openAwards(ctx.todayEvents).values()].filter((e) => e.credit && sameDay(ctx, e)).length
+}
+
 /**
  * Prépare la récompense d'une quête simple (stepId = null) ou d'une étape.
- * Garanties : jamais deux fois la même clé ; Σ des gains d'un cycle ≤ récompense de la quête ;
- * montant ≥ 0 (aucune pénalité).
+ * Garanties : jamais deux fois la même clé ; Σ des gains d'un cycle ≤ récompense de la quête
+ * (les crédits partiels/effort déjà accordés sont déduits) ; montant ≥ 0 (aucune pénalité).
  */
 export function planCompletion(ctx: AwardContext, stepId: string | null): PlanResult<XpEvent> {
   const { quest } = ctx
-  const cycle = cycleKeyFor(quest.type, ctx.now)
+  const cycle = cycleKeyFor(quest.type, ctx.doneAt)
   const key = stepId ? stepAwardKey(quest.id, stepId, cycle) : questAwardKey(quest.id, cycle)
   const awarded = openAwardsOfCycle(quest, ctx.questEvents, cycle)
   const awardedBase = awarded.reduce((n, e) => n + e.baseAmount, 0)
@@ -59,8 +71,10 @@ export function planCompletion(ctx: AwardContext, stepId: string | null): PlanRe
   const step = stepId ? quest.steps.find((s) => s.id === stepId) : undefined
   if (stepId && !step) return { ok: false, error: 'not_found' }
   const subject = step ? `Étape « ${step.title} » validée` : 'Quête validée'
+  const retro = dayKey(ctx.doneAt) < dayKey(ctx.now)
   const reason =
     `${subject} (difficulté ${DIFF_FR[quest.difficulty]}, ~${quest.effortMinutes} min)` +
+    (retro ? ` · accomplissement déclaré le ${dayKey(ctx.doneAt)}` : '') +
     (mult < 1 ? ` · réduit à ${Math.round(mult * 100)} % : micro-tâches du jour au-delà de ${REWARD_CONFIG.microFullRewardsPerDay}` : '')
   return planAward(ctx.questEvents, {
     ...base(ctx),
@@ -77,23 +91,93 @@ export function planCompletion(ctx: AwardContext, stepId: string | null): PlanRe
   })
 }
 
-/** Récompense l'effort sans résultat (mécanisme préparé, non exposé en UI). Déduit de la récompense finale. */
-export function planEffortCredit(ctx: AwardContext): PlanResult<XpEvent> {
+/** Montant total (UI : prévisualisation) d'une validation complète : toutes les étapes restantes ou la quête. */
+export function previewCompletion(ctx: AwardContext): PlanResult<number> {
+  const targets: Array<string | null> = ctx.quest.steps.length ? ctx.quest.steps.map((s) => s.id) : [null]
+  let working = ctx.questEvents
+  let total = 0
+  let any = false
+  for (const stepId of targets) {
+    const plan = planCompletion({ ...ctx, questEvents: working }, stepId)
+    if (!plan.ok) continue
+    any = true
+    total += plan.value.amount
+    working = [...working, plan.value]
+  }
+  return any ? { ok: true, value: total } : { ok: false, error: 'already_awarded' }
+}
+
+export interface CreditInput {
+  kind: CreditKind
+  /** Part de travail accompli, en % (progression partielle) */
+  percent?: number
+  durationMinutes?: number | null
+  note?: string
+}
+
+/**
+ * Crédit partiel (proportionnel au travail accompli) ou effort sans objectif atteint (réduit, non nul).
+ * Garde-fous : refusé pour les micro-tâches et les cycles déjà accomplis ; plafond < réussite complète ;
+ * un seul effort par cycle ; progression strictement croissante ; réduction au-delà de N déclarations/jour.
+ * Tout crédit est déduit de la validation finale éventuelle.
+ */
+export function planCredit(ctx: AwardContext, input: CreditInput): PlanResult<XpEvent> {
   const { quest } = ctx
-  const cycle = cycleKeyFor(quest.type, ctx.now)
-  if (isCycleCompleted(quest, ctx.questEvents, cycle) || hasEffortCredit(quest, ctx.questEvents, cycle)) return { ok: false, error: 'already_awarded' }
-  const amount = effortCredit(quest.rewardXp)
+  const cfg = REWARD_CONFIG
+  if (isMicroTask(quest.effortMinutes)) return { ok: false, error: 'micro_not_allowed' }
+  const cycle = cycleKeyFor(quest.type, ctx.doneAt)
+  if (isCycleCompleted(quest, ctx.questEvents, cycle)) return { ok: false, error: 'cycle_completed' }
+
+  const awarded = openAwardsOfCycle(quest, ctx.questEvents, cycle)
+  const awardedBase = awarded.reduce((n, e) => n + e.baseAmount, 0)
+  const headroom = creditHeadroom(quest.rewardXp, awardedBase)
+  const duration = input.durationMinutes && input.durationMinutes > 0 ? Math.round(input.durationMinutes) : null
+
+  let baseAmount: number
+  let key: string
+  let percent: number | null = null
+  let reason: string
+  if (input.kind === 'partial') {
+    const p = Math.round(input.percent ?? NaN)
+    if (!Number.isFinite(p) || p < cfg.partialMinPercent || p > cfg.partialMaxPercent) return { ok: false, error: 'invalid_percent' }
+    const previous = Math.max(0, ...awarded.filter((e) => e.credit === 'partial').map((e) => e.percent ?? 0))
+    if (p < previous + cfg.partialMinStepPercent) return { ok: false, error: 'no_progress' }
+    const delta = partialTargetBase(quest.rewardXp, p) - awardedBase
+    if (delta <= 0 || headroom <= 0) return { ok: false, error: 'no_progress' }
+    baseAmount = Math.min(delta, headroom)
+    percent = p
+    const prefix = `partial:${quest.id}:${cycle}:`
+    const used = ctx.questEvents.filter((e) => e.awardKey.startsWith(prefix)).map((e) => Number(e.awardKey.slice(prefix.length)) || 0)
+    key = prefix + (Math.max(0, ...used) + 1)
+    reason = `Progression partielle : ${p} % du travail accompli`
+  } else {
+    key = effortAwardKey(quest.id, cycle)
+    if (openAwards(ctx.questEvents).has(key)) return { ok: false, error: 'effort_already_declared' }
+    if (headroom <= 0) return { ok: false, error: 'no_progress' }
+    baseAmount = Math.min(effortCreditBase(quest.rewardXp, quest.effortMinutes, duration), headroom)
+    reason = `Effort sans objectif atteint${duration ? ` (${duration} min de travail)` : ''} : récompense réduite`
+  }
+
+  const mult = creditsDeclaredToday(ctx) >= cfg.creditDeclarationsPerDay ? cfg.creditOverCapMultiplier : 1
+  const amount = Math.max(1, Math.round(baseAmount * mult))
+  if (mult < 1) reason += ` · réduit à ${Math.round(mult * 100)} % : plus de ${cfg.creditDeclarationsPerDay} déclarations ce jour-là`
+  if (base(ctx).retroactive) reason += ` · accomplissement déclaré le ${dayKey(ctx.doneAt)}`
+
   return planAward(ctx.questEvents, {
     ...base(ctx),
     id: ctx.eventId,
     source: 'bonus',
     sourceId: quest.id,
     stepId: null,
-    awardKey: effortAwardKey(quest.id, cycle),
+    awardKey: key,
     amount,
-    baseAmount: amount,
+    baseAmount,
     micro: false,
-    reason: `Effort reconnu sans résultat final (${Math.round(REWARD_CONFIG.effortCreditRatio * 100)} % de la récompense, déduit de la validation éventuelle)`,
-    label: `Effort : ${quest.title}`,
+    credit: input.kind,
+    percent,
+    durationMinutes: duration,
+    note: (input.note ?? '').trim().slice(0, 300),
+    reason,
+    label: `${input.kind === 'partial' ? 'Progression' : 'Effort'} : ${quest.title}`,
   })
 }

@@ -26,3 +26,19 @@ export function daysBetweenKeys(a: string, b: string): number {
   const [yb, mb, db] = b.split('-').map(Number)
   return Math.round((Date.UTC(yb, mb - 1, db) - Date.UTC(ya, ma - 1, da)) / 86_400_000)
 }
+
+/** Date locale à midi pour une clé « YYYY-MM-DD » (heure neutre pour une date déclarée). */
+export function fromDayKey(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d, 12, 0, 0, 0)
+}
+
+export const isDayKey = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(fromDayKey(s).getTime())
+
+/** Lundi (midi, local) de la semaine ISO « YYYY-Www ». */
+export function dateOfWeekKey(key: string): Date {
+  const [y, w] = key.split('-W').map(Number)
+  const jan4 = new Date(y, 0, 4, 12)
+  const mondayW1 = addDays(jan4, -((jan4.getDay() || 7) - 1))
+  return addDays(mondayW1, (w - 1) * 7)
+}

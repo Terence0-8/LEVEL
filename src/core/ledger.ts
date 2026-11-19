@@ -13,6 +13,8 @@ import type { AttributeId, Domain } from './types'
 export type XpSource = 'quest' | 'step' | 'activity' | 'bonus'
 export type XpEventKind = 'award' | 'reversal'
 export type XpEventStatus = 'valid' | 'reversed'
+/** Type de crédit hors validation complète */
+export type CreditKind = 'partial' | 'effort'
 
 export interface XpEvent {
   id: string
@@ -32,8 +34,20 @@ export interface XpEvent {
   /** Montant avant amortissement anti-farming (gains uniquement) */
   baseAmount: number
   micro: boolean
-  /** ISO 8601 */
+  /** Date d'accomplissement DÉCLARÉE (ISO 8601). Date réelle du travail, éventuellement antérieure à l'enregistrement. */
   at: string
+  /** Date d'ENREGISTREMENT (ISO 8601) */
+  recordedAt: string
+  /** Validation rétroactive : accomplissement déclaré à une date antérieure au jour d'enregistrement */
+  retroactive: boolean
+  /** Crédit partiel ou effort sans résultat (null pour une validation complète) */
+  credit: CreditKind | null
+  /** Part de travail déclarée (crédit partiel) */
+  percent: number | null
+  /** Durée déclarée en minutes (facultative) */
+  durationMinutes: number | null
+  /** Commentaire facultatif */
+  note: string
   /** Justification lisible */
   reason: string
   /** Intitulé figé au moment de l'événement (reste lisible si la quête est supprimée) */
@@ -43,7 +57,14 @@ export interface XpEvent {
   reversedByEventId: string | null
 }
 
-export type AwardInput = Omit<XpEvent, 'kind' | 'status' | 'correctsEventId' | 'reversedByEventId'>
+const OPTIONAL = ['recordedAt', 'retroactive', 'credit', 'percent', 'durationMinutes', 'note'] as const
+type OptionalKeys = (typeof OPTIONAL)[number]
+export type AwardInput = Omit<XpEvent, 'kind' | 'status' | 'correctsEventId' | 'reversedByEventId' | OptionalKeys> & Partial<Pick<XpEvent, OptionalKeys>>
+
+/** Complète les champs ajoutés après la v0.2 pour d'anciens enregistrements. */
+export function normalizeEvent(e: Partial<XpEvent> & Pick<XpEvent, 'id' | 'at'>): XpEvent {
+  return { recordedAt: e.at, retroactive: false, credit: null, percent: null, durationMinutes: null, note: '', ...e } as XpEvent
+}
 
 /** Gains non annulés, par clé. */
 export function openAwards(events: XpEvent[]): Map<string, XpEvent> {
@@ -55,13 +76,23 @@ export function openAwards(events: XpEvent[]): Map<string, XpEvent> {
 
 export const isAwardOpen = (events: XpEvent[], key: string) => openAwards(events).has(key)
 
-export type PlanResult<T> = { ok: true; value: T } | { ok: false; error: 'already_awarded' | 'not_found' | 'invalid_amount' }
+export type PlanError =
+  | 'already_awarded' | 'not_found' | 'invalid_amount'
+  | 'micro_not_allowed' | 'cycle_completed' | 'no_progress' | 'effort_already_declared' | 'invalid_percent'
+
+export type PlanResult<T> = { ok: true; value: T } | { ok: false; error: PlanError }
 
 /** Prépare un gain. Refuse si la clé est déjà récompensée (jamais deux fois la même étape). */
 export function planAward(events: XpEvent[], input: AwardInput): PlanResult<XpEvent> {
   if (!Number.isFinite(input.amount) || input.amount < 0) return { ok: false, error: 'invalid_amount' }
   if (isAwardOpen(events, input.awardKey)) return { ok: false, error: 'already_awarded' }
-  return { ok: true, value: { ...input, kind: 'award', status: 'valid', correctsEventId: null, reversedByEventId: null } }
+  return {
+    ok: true,
+    value: {
+      recordedAt: input.at, retroactive: false, credit: null, percent: null, durationMinutes: null, note: '',
+      ...input, kind: 'award', status: 'valid', correctsEventId: null, reversedByEventId: null,
+    },
+  }
 }
 
 /** Prépare l'annulation d'un gain ouvert (identifié par sa clé). */
@@ -79,6 +110,12 @@ export function planReversal(
     amount: -original.amount,
     baseAmount: -original.baseAmount,
     at: meta.at,
+    recordedAt: meta.at,
+    retroactive: false,
+    credit: null,
+    percent: null,
+    durationMinutes: null,
+    note: '',
     reason: meta.reason,
     status: 'valid',
     correctsEventId: original.id,

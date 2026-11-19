@@ -1,7 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useAppState } from '@/app/AppState'
 import { Badge, Card, EmptyState, ProgressBar, SectionTitle, Stat } from '@/design/components'
 import { REWARD_CONFIG } from '@/core/rewards'
+import { ConfirmDialog } from '@/design/Sheet'
+import { questService } from '@/data/questService'
+import type { XpEvent } from '@/core/ledger'
 import { formatDayLabel, formatNumber, formatTime } from '@/lib/format'
 import s from './life.module.css'
 
@@ -9,6 +12,7 @@ const SOURCE_LABEL = { quest: 'Quête', step: 'Étape', activity: 'Activité', b
 
 export function RewardsPanel() {
   const { progress, events, categories } = useAppState()
+  const [target, setTarget] = useState<XpEvent | null>(null)
   const life = events.filter((e) => e.domain === 'LIFE')
   const byCat = useMemo(() => {
     const m = new Map<string, number>()
@@ -56,10 +60,15 @@ export function RewardsPanel() {
                   <b>{e.kind === 'reversal' ? `Correction · ${e.label}` : e.label}</b>
                   <small>{SOURCE_LABEL[e.source]} · {formatDayLabel(e.at)} {formatTime(e.at)}</small>
                   <small>{e.reason}</small>
+                  {e.note ? <small>« {e.note} »</small> : null}
+                  {e.retroactive ? <small>Rétroactif · réalisé le {formatDayLabel(e.at).toLowerCase()}, enregistré le {formatDayLabel(e.recordedAt).toLowerCase()} {formatTime(e.recordedAt)}</small> : null}
                 </div>
                 <div className={s.ledgerXp}>
                   <span className="num">{e.amount > 0 ? '+' : ''}{e.amount} XP</span>
                   {e.status === 'reversed' ? <Badge>Corrigé</Badge> : null}
+                  {e.credit === 'partial' ? <Badge tone="info">{e.percent} %</Badge> : e.credit === 'effort' ? <Badge tone="info">Effort</Badge> : null}
+                  {e.retroactive && e.kind === 'award' ? <Badge>Rétroactif</Badge> : null}
+                  {e.kind === 'award' && e.status === 'valid' ? <button className={s.act} onClick={() => setTarget(e)} aria-label={`Annuler le gain « ${e.label} »`}>Annuler</button> : null}
                 </div>
               </li>
             ))}
@@ -67,12 +76,20 @@ export function RewardsPanel() {
         )}
       </Card>
 
+      <ConfirmDialog open={target !== null} title="Annuler ce gain ?" confirmLabel="Annuler le gain" onCancel={() => setTarget(null)}
+        onConfirm={() => { const id = target?.id; setTarget(null); if (id) void questService.reverseEvent(id, 'Correction manuelle depuis le journal') }}>
+        <p><strong>{target?.label}</strong> · +{target?.amount} XP</p>
+        <p>L’XP est retirée par une correction tracée ; niveaux, attributs et séries sont recalculés. La quête pourra être validée à nouveau.</p>
+      </ConfirmDialog>
+
       <Card variant="flat">
         <SectionTitle title="Règles de récompense" level={3} />
         <div className={s.rules}>
           <p><strong>Aucune pénalité.</strong> Une quête manquée ne retire jamais d'XP ; elle interrompt seulement une série.</p>
           <p><strong>Une seule fois.</strong> Chaque étape ou quête n'est récompensée qu'une fois par cycle.</p>
           <p><strong>Micro-tâches.</strong> Au-delà de {REWARD_CONFIG.microFullRewardsPerDay} quêtes de {REWARD_CONFIG.microEffortMinutes} min ou moins par jour, leur récompense est réduite.</p>
+          <p><strong>Trois situations.</strong> Réussite complète (récompense normale), progression partielle (proportionnelle) ou effort sans objectif atteint (réduit, jamais nul). Les crédits sont déduits de la validation finale.</p>
+          <p><strong>Rétroactif.</strong> Vous pouvez déclarer un travail jusqu’à {REWARD_CONFIG.retroactiveMaxDays} jours en arrière ; date réelle et date d’enregistrement sont conservées.</p>
           <p><strong>Barèmes provisoires.</strong> Les montants seront calibrés ultérieurement.</p>
         </div>
       </Card>

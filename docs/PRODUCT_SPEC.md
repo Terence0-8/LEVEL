@@ -9,7 +9,7 @@ Sombre, mystérieuse, élégante ; interface quotidienne sobre, événements RPG
 ## Navigation
 Accueil · LIFE · SPORT · RPG · Historique ; Profil & réglages en accès secondaire. Mobile : barre inférieure ; desktop (≥ 900 px) : menu latéral. L'accueil est **adaptatif** : Level ordonne les widgets selon échéances, moment de la journée et récupération ; l'utilisateur ne les réorganise pas.
 
-## Périmètre (v0.2)
+## Périmètre (v0.3)
 | Domaine | État |
 |---|---|
 | Navigation, layouts mobile/desktop, composants | ✅ Opérationnel |
@@ -17,9 +17,12 @@ Accueil · LIFE · SPORT · RPG · Historique ; Profil & réglages en accès sec
 | Niveaux, rangs, attributs recalculés depuis le journal | ✅ Opérationnel |
 | Quêtes LIFE : créer, modifier, étapes, valider, corriger, archiver, supprimer | ✅ Opérationnel |
 | Catégories LIFE (7 initiales, personnalisables) | ✅ Opérationnel |
-| Séries et cycles manqués (quotidien / hebdomadaire) | ✅ Calcul + affichage ; analyse des manques : préparée, non exposée |
+| Séries et cycles manqués (quotidien / hebdomadaire) | ✅ Calcul + affichage + analyse |
 | Anti-farming (unicité, micro-tâches, effort) | ✅ Mécanismes en place, barèmes provisoires |
-| Crédit d'effort sans résultat | 🧩 Moteur + service prêts, **non exposé en UI** |
+| Trois situations : réussite / progression partielle / effort sans objectif atteint | ✅ Opérationnel (feuille « Enregistrer mon travail ») |
+| Validation rétroactive (14 jours max) | ✅ Opérationnel, séries et manques recalculés |
+| Bilan des quêtes manquées (cause, décision, historique) | ✅ Opérationnel, sans effet sur l'XP |
+| Trace des modifications de quêtes | ✅ Opérationnel |
 | Accueil adaptatif | ✅ sur données réelles ou de démo |
 | Persistance locale, PWA hors ligne | ✅ Opérationnel |
 | SPORT | 🚧 Structure visuelle sur données de démo uniquement |
@@ -35,7 +38,30 @@ Accueil · LIFE · SPORT · RPG · Historique ; Profil & réglages en accès sec
 - **Modification** : les gains passés ne sont pas réécrits. Étapes supprimées → leur XP est annulée. Quête simple devenue composée → son gain est annulé puis regagné par les étapes. Changer difficulté/effort/catégorie s'applique aux gains futurs.
 - **Catégories → attributs** (hypothèse modifiable par l'utilisateur) : Professionnel→Discipline, Culture & connaissances→Intellect, Économie & finances→Prospérité, Développement personnel→Endurance, Social & relations→Vitalité, Projets personnels→Force, Hygiène de vie→Vitalité. Les catégories s'archivent (pas de suppression) pour préserver l'historique.
 
-## Équilibrage et anti-farming (barèmes PROVISOIRES, `core/rewards.ts`)
+## Trois situations de validation
+| Situation | Récompense |
+|---|---|
+| **Réussite complète** | Récompense normale de la quête (moins ce qui a déjà été crédité dans le cycle). |
+| **Progression partielle** | Proportionnelle à la part de travail déclarée (10–90 %), **cumulative** : seule la progression nouvelle est récompensée (pas de 10 points minimum entre deux déclarations). |
+| **Effort sans objectif atteint** | Réduite mais **non nulle** : au plus 25 % de la récompense, modulée par la durée déclarée rapportée à l'estimation (60 % de ce maximum si aucune durée). Jamais la récompense maximale. |
+
+Saisie : situation, part de travail (partiel), date de réalisation, durée facultative, commentaire facultatif, aperçu de l'XP, puis **confirmation** de l'enregistrement. Tout crédit est **déduit de la validation finale** : le total d'un cycle ne dépasse jamais la récompense de la quête.
+
+**Garde-fous** : refus pour les micro-tâches (≤ 10 min) ; refus si le cycle est déjà validé ; un seul « effort » par quête et par cycle ; progression partielle strictement croissante ; les crédits ne peuvent pas atteindre la réussite complète (plafond 90 %) ; au-delà de 3 déclarations de crédit par jour (toutes quêtes), récompense réduite à 25 % (jamais nulle). Chaque gain peut être annulé par une correction tracée.
+
+## Validation rétroactive
+Une quête (ou un crédit) peut être déclarée à une date antérieure, jusqu'à 14 jours en arrière ; pas de date future. Le journal conserve : **date d'accomplissement déclarée** (`at`), **date d'enregistrement** (`recordedAt`) et **statut rétroactif** (`retroactive`). Le cycle concerné est celui de la date déclarée ; une clé de cycle ne peut être récompensée qu'une fois : pas de doublon. Séries, cycles manqués et statistiques se recalculent depuis le journal. Une validation d'un cycle passé peut être corrigée (journal des gains → « Annuler »).
+
+## Analyse des quêtes manquées (aucune pénalité XP)
+- **Détection** : cycles récurrents passés non validés (14 derniers) et échéances dépassées des quêtes uniques.
+- **Cause** : oubli, manque de temps, difficulté, motivation, imprévu, repos nécessaire (ou « ignorer »).
+- **Décision** : rien · **reporter** (nouvelle échéance, ou rattrapage daté pour une récurrente) · **simplifier** (difficulté −1 cran, effort ÷ 2) · **remplacer** (copie + archivage de l'ancienne) · **suspendre** (archivage).
+- **Historique** conservé (titre figé, cycle, cause, décision, commentaire) et statistique des causes. Un élément analysé ne réapparaît plus.
+
+## Modifications historiques
+Modifier difficulté, effort, catégorie (ou tout autre champ) **ne réécrit jamais silencieusement** les récompenses acquises. Chaque modification crée une **révision** (champ, ancienne et nouvelle valeur, XP déjà acquise et conservée, note), visible dans la quête ; l'éditeur avertit quand de l'XP est déjà acquise. Seules exceptions, explicites et tracées dans le journal : étape supprimée → son gain est annulé ; quête simple devenue composée → son gain est annulé puis regagné par les étapes. Le nouveau barème vaut pour les prochains gains uniquement.
+
+## Équilibrage et anti-farming (barèmes PROVISOIRES, `core/rewards.ts` — valeurs à calibrer, non définitives)
 | Mécanisme | Principe |
 |---|---|
 | Unicité | Une clé de récompense (quête/étape × cycle) ne peut avoir qu'un gain ouvert. |
@@ -43,8 +69,9 @@ Accueil · LIFE · SPORT · RPG · Historique ; Profil & réglages en accès sec
 | Découpage neutre | Le nombre d'étapes ne change pas l'XP totale. |
 | Priorité neutre | La priorité n'influence pas l'XP. |
 | Micro-tâches | Au-delà de 3 quêtes de ≤ 10 min récompensées par jour : récompense réduite (jamais négative). |
+| Crédits | Plafonds, pas minimal, un effort par cycle, plafond quotidien (voir ci-dessus). |
+| Rétroactif | Fenêtre de 14 jours, une récompense par cycle. |
 | Doublons | Avertissement sur un titre identique à une quête active. |
-| Effort sans résultat | Crédit partiel (25 %), déduit de la validation finale (préparé). |
 
 ## Règles de jeu (hypothèses v0.1 — modifiables)
 - Coût du niveau *n* → *n+1* : `round(100 · n^1.35)` XP. Niveau max 100.
@@ -55,3 +82,9 @@ Accueil · LIFE · SPORT · RPG · Historique ; Profil & réglages en accès sec
 ## Hypothèses prises
 - Nom du joueur par défaut « Éveillé » ; modifiable.
 - **Changement v0.2** : les données de démo sont désormais **désactivées par défaut** (l'app affiche la progression réelle) ; activables dans les réglages. Démo et réel ne sont jamais mélangés.
+
+## Décisions fonctionnelles validées (retour étape 2)
+1. Données de démo : désactivées par défaut, activables dans les réglages, jamais mélangées au réel.
+2. Barèmes XP : valeurs actuelles conservées comme **provisoires**, centralisées dans `REWARD_CONFIG` ; seuils de niveaux et de rangs **inchangés** (verrouillés par un test).
+3. Crédit d'effort : exposé (trois situations, voir ci-dessus).
+4. Validation rétroactive : voir ci-dessus. 5. Analyse des manques : voir ci-dessus. 6. Modifications historiques : voir ci-dessus.

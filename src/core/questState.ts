@@ -29,7 +29,10 @@ export function cycleProgress(quest: Quest, events: XpEvent[], now: Date): Cycle
   const doneSteps = Object.values(stepDone).filter(Boolean).length
   const completed = isCycleCompleted(quest, events, cycle)
   const earnedXp = [...open.values()].filter((e) => e.questId === quest.id && e.cycleKey === cycle).reduce((n, e) => n + e.amount, 0)
-  const progress = quest.steps.length ? doneSteps / quest.steps.length : completed ? 1 : 0
+  const awardedBase = [...open.values()].filter((e) => e.questId === quest.id && e.cycleKey === cycle).reduce((n, e) => n + e.baseAmount, 0)
+  const shareProgress = quest.rewardXp > 0 ? Math.min(0.99, awardedBase / quest.rewardXp) : 0
+  const stepProgress = quest.steps.length ? doneSteps / quest.steps.length : 0
+  const progress = completed ? 1 : Math.max(stepProgress, shareProgress)
   return { cycleKey: cycle, stepDone, doneSteps, totalSteps: quest.steps.length, completed, earnedXp, progress }
 }
 

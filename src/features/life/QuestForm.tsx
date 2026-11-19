@@ -4,6 +4,7 @@ import { Field, Segmented, inputClass, textareaClass, smallBtn, errorClass } fro
 import { Sheet } from '@/design/Sheet'
 import sheet from '@/design/sheet.module.css'
 import { computeQuestReward } from '@/core/rewards'
+import { openAwards } from '@/core/ledger'
 import { findSimilarQuest, type Difficulty, type Priority, type Quest, type QuestType } from '@/core/quest'
 import { QuestError, questService, type QuestInput } from '@/data/questService'
 import { DIFFICULTY_OPTIONS, EFFORT_OPTIONS, PRIORITY_OPTIONS, TYPE_HINT, TYPE_OPTIONS } from './labels'
@@ -26,7 +27,7 @@ export function QuestFormSheet({ open, quest, onClose }: { open: boolean; quest?
 }
 
 function QuestForm({ quest, onDone }: { quest?: Quest; onDone: () => void }) {
-  const { categories, quests } = useAppState()
+  const { categories, quests, events } = useAppState()
   const active = categories.filter((c) => !c.archived || c.id === quest?.categoryId)
   const [type, setType] = useState<QuestType>(quest?.type ?? 'personal')
   const [title, setTitle] = useState(quest?.title ?? '')
@@ -43,6 +44,8 @@ function QuestForm({ quest, onDone }: { quest?: Quest; onDone: () => void }) {
   const effortNum = Number(effort)
   const reward = useMemo(() => (effortNum >= 1 ? computeQuestReward({ difficulty, effortMinutes: effortNum }) : 0), [difficulty, effortNum])
   const similar = findSimilarQuest(quests, title, quest?.id)
+  const acquired = quest ? [...openAwards(events).values()].filter((e) => e.questId === quest.id).reduce((n, e) => n + e.amount, 0) : 0
+  const rewardChanged = quest ? quest.difficulty !== difficulty || quest.effortMinutes !== effortNum || quest.categoryId !== categoryId : false
   const hasEdits = quest ? (quest.steps.length > 0 || steps.some((s) => s.title.trim())) : false
 
   const submit = async (e: React.FormEvent) => {
@@ -103,6 +106,9 @@ function QuestForm({ quest, onDone }: { quest?: Quest; onDone: () => void }) {
         <span>Récompense</span><b className="num">+{reward} XP</b>
         <small>Calculée selon la difficulté et l'effort (barème provisoire).</small>
       </div>
+      {quest && rewardChanged && acquired > 0 ? (
+        <p className={s.note} style={{ marginBottom: 14 }}>Cette quête a déjà rapporté <b className="num">{acquired} XP</b> : ils sont conservés. Le nouveau barème s’applique aux prochains gains, et la modification est consignée dans l’historique de la quête.</p>
+      ) : null}
       {error ? <p className={errorClass} role="alert">{error}</p> : null}
       <div className={s.formActions}>
         <button type="button" className={sheet.btnGhost} onClick={onDone}>Annuler</button>

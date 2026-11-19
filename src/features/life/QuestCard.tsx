@@ -4,7 +4,10 @@ import { ConfirmDialog } from '@/design/Sheet'
 import { Icon } from '@/design/Icon'
 import { questService } from '@/data/questService'
 import { isRecurring } from '@/core/quest'
-import { DIFFICULTY_LABEL, PRIORITY_LABEL, STATUS_LABEL, TYPE_LABEL, formatDue } from './labels'
+import { useAppState } from '@/app/AppState'
+import { WorkSheet } from './WorkSheet'
+import { DIFFICULTY_LABEL, FIELD_LABEL, PRIORITY_LABEL, STATUS_LABEL, TYPE_LABEL, formatDue, formatFieldValue } from './labels'
+import { formatDayLabel, formatTime } from '@/lib/format'
 import type { QuestView } from './useQuestViews'
 import s from './life.module.css'
 
@@ -14,6 +17,10 @@ export function QuestCard({ view, onEdit }: { view: QuestView; onEdit: () => voi
   const { quest, category, cp, status } = view
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState<Pending>(null)
+  const [work, setWork] = useState(false)
+  const { revisions, categories } = useAppState()
+  const myRevisions = revisions.filter((r) => r.questId === quest.id)
+  const catName = (cid: string) => categories.find((c) => c.id === cid)?.name ?? '—'
   const stepped = quest.steps.length > 0
   const done = cp.completed
   const recurring = isRecurring(quest.type)
@@ -50,10 +57,10 @@ export function QuestCard({ view, onEdit }: { view: QuestView; onEdit: () => voi
         <Badge tone={done ? 'success' : 'gold'}>{done ? `+${cp.earnedXp}` : cp.earnedXp > 0 ? `${cp.earnedXp}/${quest.rewardXp}` : `+${quest.rewardXp}`} XP</Badge>
       </div>
 
-      {stepped ? (
+      {stepped || (cp.earnedXp > 0 && !done) ? (
         <div className={s.qProgress}>
           <ProgressBar value={cp.progress} tone={done ? 'success' : 'gold'} thin label={`Étapes de ${quest.title}`} />
-          <span className="num">{cp.doneSteps}/{cp.totalSteps}</span>
+          <span className="num">{stepped ? `${cp.doneSteps}/${cp.totalSteps}` : `${Math.round(cp.progress * 100)} %`}</span>
         </div>
       ) : null}
 
@@ -82,7 +89,24 @@ export function QuestCard({ view, onEdit }: { view: QuestView; onEdit: () => voi
             <p className={s.note}>{view.missed} {quest.type === 'daily' ? 'jour(s)' : 'semaine(s)'} sans validation : la série repart, aucune XP n'est perdue.</p>
           ) : null}
           {status === 'overdue' ? <p className={s.note}>Échéance passée : vous pouvez toujours valider cette quête, sans pénalité.</p> : null}
+          {myRevisions.length > 0 ? (
+            <details className={s.revisions}>
+              <summary>Historique des modifications ({myRevisions.length})</summary>
+              <ul>
+                {myRevisions.map((r) => (
+                  <li key={r.id}>
+                    <small>{formatDayLabel(r.at)} · {formatTime(r.at)}</small>
+                    {r.changes.map((c) => (
+                      <div key={c.field}>{FIELD_LABEL[c.field]} : <span className={s.from}>{formatFieldValue(c.field, c.from, catName)}</span> → <b>{formatFieldValue(c.field, c.to, catName)}</b></div>
+                    ))}
+                    <small>{r.awardedXp > 0 ? `${r.awardedXp} XP déjà acquise(s), conservée(s). ` : ''}{r.note}</small>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
           <div className={s.qActions}>
+            {!quest.archived && (!done || recurring) ? <button className={`${s.act} ${s.actMain}`} onClick={() => setWork(true)}>Enregistrer mon travail</button> : null}
             <button className={s.act} onClick={onEdit}>Modifier</button>
             {cp.earnedXp > 0 ? <button className={s.act} onClick={() => setPending({ kind: 'undo-quest' })}>Corriger la validation</button> : null}
             <button className={s.act} onClick={() => void questService.setArchived(quest.id, !quest.archived)}>{quest.archived ? 'Désarchiver' : 'Archiver'}</button>
@@ -91,6 +115,7 @@ export function QuestCard({ view, onEdit }: { view: QuestView; onEdit: () => voi
         </div>
       ) : null}
 
+      <WorkSheet open={work} view={view} onClose={() => setWork(false)} />
       <ConfirmDialog open={pending?.kind === 'delete'} danger title="Supprimer la quête ?" confirmLabel="Supprimer" onConfirm={confirm} onCancel={() => setPending(null)}>
         <p><strong>« {quest.title} »</strong> sera supprimée définitivement.</p>
         <p>L'XP qu'elle a rapportée sera retirée ; l'historique conserve la trace de la correction.</p>

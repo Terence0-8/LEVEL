@@ -31,15 +31,20 @@ scripts/     smoke.cjs
 Sens des dépendances : `features → app/design/core/data/mocks` ; `data → core` ; `core → ∅`.
 
 ## Persistance
-Base IndexedDB `level`, schéma **v2** : `profile`, `settings`, `demoQuestState` (v1) ; `categories`, `quests`, `xpEvents` (v2). Les `get()` sont en lecture seule (requis par `useLiveQuery`). Stockage durable demandé via `navigator.storage.persist()`. Sauvegardes chiffrées (WebCrypto) prévues.
+Base IndexedDB `level`, schéma **v3** : `profile`, `settings`, `demoQuestState` (v1) ; `categories`, `quests`, `xpEvents` (v2) ; `analyses`, `revisions` (v3). Chaque montée de version ajoute des tables sans toucher aux données existantes ; les champs ajoutés aux événements après la v0.2 sont complétés à la lecture par `normalizeEvent`. Les `get()` sont en lecture seule (requis par `useLiveQuery`). Stockage durable demandé via `navigator.storage.persist()`. Sauvegardes chiffrées (WebCrypto) prévues.
 
 ## Journal d'XP (cœur de la progression)
 - `xpEvents` est **append-only** et la seule source de vérité : aucun solde n'est stocké. Niveaux, rangs, attributs, XP par domaine/catégorie se **recalculent** (`computeProgression`) en additionnant les événements.
+- Champs ajoutés en v0.3 : `recordedAt` (date d'enregistrement), `retroactive`, `credit` (`partial`|`effort`|null), `percent`, `durationMinutes`, `note`. `at` est désormais la date d'accomplissement **déclarée**.
 - Événement : `id`, `kind` (`award`|`reversal`), `source` (`quest`|`step`|`activity`|`bonus`), `sourceId`, `questId`, `stepId`, `awardKey`, `cycleKey`, `domain`, `categoryId`, `attribute`, `amount`, `baseAmount` (avant amortissement), `micro`, `at`, `reason`, `label` (intitulé figé), `status` (`valid`|`reversed`), `correctsEventId`, `reversedByEventId`.
 - **Correction** = nouvel événement `reversal` (montant opposé, `correctsEventId`) ; l'original passe à `reversed`. Σ des montants = XP courante ; `auditLedger` vérifie que ce total égale la somme des gains non annulés, qu'aucune clé n'a deux gains ouverts, qu'aucune annulation n'est orpheline.
 - **Unicité** : `awardKey` = `quest:{id}:{cycle}` ou `step:{questId}:{stepId}:{cycle}`. `planAward` refuse un second gain ouvert ; toutes les commandes sont des transactions Dexie sérialisées (test d'appels concurrents).
 - **État dérivé** : une quête « validée », une étape « faite », une série, un statut se déduisent du journal (`questState.ts`). Aucun drapeau stocké à synchroniser.
 - Répartition par étapes : part = (récompense − base déjà accordée) ÷ étapes restantes ; la dernière prend le reste → somme = récompense exacte.
+- **Date déclarée et cycles** : `AwardContext.doneAt` (date d'accomplissement) détermine le cycle et le jour pour l'anti-farming ; `now` est l'instant d'enregistrement. `resolveDoneAt` refuse futur, format invalide et au-delà de `retroactiveMaxDays`.
+- **Crédits** (`core/awards.planCredit`) : `partial:{quête}:{cycle}:{n}` (n jamais réutilisé, même après annulation) et `effort:{quête}:{cycle}`. Base déduite de la validation finale grâce à `baseAmount`. Garde-fous et paramètres dans `REWARD_CONFIG`.
+- **Analyses** (`core/missed.ts`) : détection pure (`findMissed`) à partir de quêtes, journal et analyses ; clé d'analyse = quête × cycle (ou `due:{échéance}`). `recordMissedAnalysis` applique la décision (report/simplification/remplacement/suspension) via les mêmes commandes que l'édition, donc avec révision tracée, sans jamais écrire dans le journal d'XP.
+- **Révisions** (`core/revision.ts`) : `diffQuest` compare ancien/nouvel état ; une révision est écrite par modification effective, avec l'XP acquise conservée. Supprimées avec la quête.
 - Le service `questService` orchestre (lecture du contexte, appel de `core/awards`, écriture) ; les règles restent dans `core/`. `core/rewards.ts` concentre **tous** les barèmes numériques, marqués provisoires.
 
 ## Données réelles vs démo

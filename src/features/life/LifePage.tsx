@@ -3,6 +3,7 @@ import { useAppState } from '@/app/AppState'
 import { Card, EmptyState, Notice, PageHeader, SectionTitle } from '@/design/components'
 import sheet from '@/design/sheet.module.css'
 import { isRecurring, type Quest, type QuestType } from '@/core/quest'
+import { BilanPanel } from './BilanPanel'
 import { CategoriesPanel } from './CategoriesPanel'
 import { QuestCard } from './QuestCard'
 import { QuestFormSheet } from './QuestForm'
@@ -11,28 +12,31 @@ import { TYPE_LABEL } from './labels'
 import { useQuestViews } from './useQuestViews'
 import s from './life.module.css'
 
-type Tab = 'quests' | 'rewards' | 'categories'
+type Tab = 'quests' | 'rewards' | 'review' | 'categories'
 type TypeFilter = 'all' | QuestType
 
 export function LifePage() {
-  const { progress } = useAppState()
+  const { progress, missed } = useAppState()
   const [tab, setTab] = useState<Tab>('quests')
   const [form, setForm] = useState<{ quest?: Quest } | null>(null)
 
   return (
     <div className={s.stack}>
-      <PageHeader title="LIFE" subtitle={`Niveau ${progress.life.level} · quêtes, récompenses et catégories.`}
+      <PageHeader title="LIFE" subtitle={`Niveau ${progress.life.level} · quêtes, gains, bilan et catégories.`}
         right={<button className={`${sheet.btnPrimary} ${s.newDesktop}`} onClick={() => setForm({})}>+ Nouvelle quête</button>} />
-      <Notice title="Module en cours de construction">les quêtes et le journal d'XP sont opérationnels. Habitudes avancées, budgets et objectifs arriveront dans une prochaine étape.</Notice>
+      <Notice title="Module en cours de construction">quêtes, journal d’XP, bilan des manques et catégories sont opérationnels. Habitudes avancées, budgets et objectifs arriveront dans une prochaine étape.</Notice>
 
       <div className={s.tabs} role="tablist" aria-label="Sections LIFE">
-        {([['quests', 'Quêtes'], ['rewards', 'Récompenses'], ['categories', 'Catégories']] as const).map(([id, label]) => (
-          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>
+        {([['quests', 'Quêtes'], ['rewards', 'Gains'], ['review', 'Bilan'], ['categories', 'Catégories']] as const).map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
+            {label}{id === 'review' && missed.length > 0 ? <span className={s.tabBadge} aria-label={`${missed.length} à analyser`}>{missed.length}</span> : null}
+          </button>
         ))}
       </div>
 
       {tab === 'quests' ? <QuestsTab onEdit={(q) => setForm({ quest: q })} onNew={() => setForm({})} /> : null}
       {tab === 'rewards' ? <RewardsPanel /> : null}
+      {tab === 'review' ? <BilanPanel /> : null}
       {tab === 'categories' ? <CategoriesPanel /> : null}
 
       {tab === 'quests' ? <button className={s.fab} onClick={() => setForm({})} aria-label="Créer une quête">+</button> : null}
