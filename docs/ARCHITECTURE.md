@@ -7,6 +7,7 @@
 | react-router (HashRouter) | Fonctionne hors ligne et sur tout hébergement statique sans réécriture d'URL | URLs en `#/…` |
 | Dexie (IndexedDB) + dexie-react-hooks | Stockage local structuré, versionné, requêtes réactives | Données dans le navigateur ; sauvegarde/export à prévoir |
 | vite-plugin-pwa (Workbox) | Installation sur mobile + fonctionnement 100 % hors ligne | Service worker auto-mis à jour |
+| WebCrypto (natif) | Chiffrement AES-GCM, PBKDF2, HKDF, SHA-256 sans dépendance, hors ligne | Disponible dans les navigateurs récents et Node ≥ 20 |
 | Fontsource (Cinzel, Inter) | Polices embarquées, aucun appel réseau | Poids ajouté au précache |
 | CSS Modules + tokens CSS | Pas de lib UI, identité visuelle maîtrisée | Composants maison |
 | Vitest + fake-indexeddb | Tests unitaires du cœur métier et de la persistance | — |
@@ -24,6 +25,7 @@ src/
   mocks/     Données FICTIVES (demoData) + projection UI (demoView). Jamais importé par core/data.
   design/    Tokens, styles globaux, Icon, Logo, composants (Card, ProgressBar…), charts SVG
   app/       App (routes), Shell (navigation, layouts, level-up), AppState (contexte)
+  data/backup/  Sauvegardes : crypto (WebCrypto), backupDb (base séparée), snapshot, backupService, scheduler
   features/  home, life (QuestCard, QuestForm, RewardsPanel, CategoriesPanel), sport, rpg, history, profile, shared
   lib/       Utilitaires (formatage)
 scripts/     smoke.cjs
@@ -64,3 +66,24 @@ Base IndexedDB `level`, schéma **v3** : `profile`, `settings`, `demoQuestState`
 - Animations désactivables (réglage + `prefers-reduced-motion`).
 - Responsive : breakpoint unique 900 px (barre inférieure ↔ menu latéral).
 - Le test hors ligne de `smoke.cjs` vérifie le rechargement via service worker.
+
+## Sauvegardes chiffrées (v0.4)
+**Fichiers** : `core/backupFormat.ts` (format, compatibilité, migration, audit : pur), `core/backupPolicy.ts` (rétention, santé : pur), `data/backup/*` (E/S et crypto).
+
+**Base séparée** : `level-backups` (tables `backups` = métadonnées, `blobs` = chiffrés, `keystore` = clé de données). Séparée de `level` pour qu'un bug de migration ou une corruption applicative n'emporte pas les points de restauration. **Même origine** : voir risques résiduels.
+
+**Enveloppe** : `{ format, formatVersion, id, createdAt, reason, appVersion, schemaVersion, cipher, iv, ciphertext, keyWraps }`. L'en-tête est authentifié (AAD) : le modifier invalide le déchiffrement. `keyWraps` contient la clé de données encapsulée deux fois (phrase / clé de secours) avec leurs paramètres de dérivation ; il est `null` tant qu'aucune phrase n'est définie. Charge utile chiffrée : toutes les tables (`TABLE_KEYS`, vérifié par test contre `db.tables`), comptages, somme de contrôle canonique (clés triées).
+
+**Cryptographie** : AES-256-GCM (IV 96 bits aléatoire par chiffrement) ; clé de données aléatoire (jamais dérivée d'un mot de passe) ; KEK phrase = PBKDF2-SHA-256 600 000 itérations, sel 128 bits ; KEK clé de secours = HKDF-SHA-256 sur 160 bits aléatoires ; phrase normalisée NFKC ; bornes des itérations lues dans un fichier (1 000 – 10 M) contre les fichiers hostiles. Clé de données de l'appareil stockée comme `CryptoKey` extractable dans IndexedDB (nécessaire pour la ré-encapsulation après changement de phrase).
+
+**Compatibilité** : `formatVersion` (format de fichier) et `schemaVersion` (schéma Dexie, `DB_SCHEMA_VERSION`). Refus d'un format ou d'un schéma plus récent ; schémas plus anciens migrés sans perte (`migrateTables`). **Toute évolution du schéma Dexie ou du format impose : ajouter la table à `TABLE_KEYS`, incrémenter `DB_SCHEMA_VERSION`, étendre `migrateTables` si besoin, ajouter un test.**
+
+**Restauration** : `prepareRestore*` (lecture seule) → `applyRestore` : sauvegarde `pre-restore` vérifiée (sinon abandon), `writeTables` (une transaction : tout ou rien), relecture et vérification (contenu, comptages, XP ; journal signalé), retour arrière si écart, puis sauvegarde `post-restore`. Le planificateur est suspendu pendant l'opération. Les opérations d'écriture du service sont sérialisées.
+
+**Planificateur** : hooks Dexie (création/modification/suppression) → temporisation ; `critical` pour suppression de quête et événement de correction. Aucune opération réseau (testé).
+
+## Risques résiduels connus
+- Points de restauration et clé de l'appareil vivent dans le même stockage de navigateur : un effacement des données du site ou une perte de l'appareil les emporte tous. Seul le **fichier exporté** survit, d'où le bandeau d'alerte et les rappels.
+- Quelqu'un ayant accès au profil du navigateur peut utiliser la clé de l'appareil : les sauvegardes locales ne protègent pas contre un attaquant local ; le fichier exporté, lui, dépend de la force de la phrase.
+- Rien n'oblige l'utilisateur à exporter régulièrement : l'application n'a pas d'accès au système de fichiers en arrière-plan.
+- Perte simultanée de la phrase et de la clé de secours (et de l'appareil) = perte définitive, par conception.

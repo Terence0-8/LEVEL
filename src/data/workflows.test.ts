@@ -47,7 +47,7 @@ describe('décisions de configuration', () => {
   })
   it('les barèmes provisoires restent centralisés dans REWARD_CONFIG', () => {
     expect(REWARD_CONFIG.baseByDifficulty).toEqual({ easy: 20, normal: 40, hard: 70, epic: 120 })
-    for (const k of ['effortCreditRatio', 'partialMaxPercent', 'creditDeclarationsPerDay', 'retroactiveMaxDays', 'microFullRewardsPerDay'] as const) {
+    for (const k of ['effortCreditRatio', 'partialMaxPercent', 'creditDeclarationsPerDay', 'retroactiveConfirmAfterDays', 'microFullRewardsPerDay'] as const) {
       expect(typeof REWARD_CONFIG[k]).toBe('number')
     }
   })
@@ -209,12 +209,32 @@ describe('validation rétroactive', () => {
     expect(rev).toHaveLength(2)
     expect(await xp()).toBe(0)
   })
-  it('rejette dates futures, trop anciennes ou invalides', async () => {
+  it('rejette dates futures ou invalides ; une date ancienne exige une confirmation explicite, sans limite haute', async () => {
     const q = await svc.createQuest(input({ type: 'daily' }))
     expect(await code(svc.completeQuest(q.id, { doneOn: '2026-11-20' }))).toBe('future_date')
-    expect(await code(svc.completeQuest(q.id, { doneOn: '2026-11-04' }))).toBe('retro_out_of_range')
-    expect(await code(svc.completeQuest(q.id, { doneOn: '2026-11-05' }))).toBe('ok')
     expect(await code(svc.completeQuest(q.id, { doneOn: 'hier' }))).toBe('invalid_date')
+    expect(await code(svc.completeQuest(q.id, { doneOn: '1999-12-31', confirmOld: true }))).toBe('retro_out_of_range')
+    // 14 jours : pas de confirmation requise ; 15 jours et plus : confirmation exigée
+    expect(await code(svc.completeQuest(q.id, { doneOn: '2026-11-05' }))).toBe('ok')
+    expect(await code(svc.completeQuest(q.id, { doneOn: '2026-11-04' }))).toBe('retro_confirmation_required')
+    expect(await code(svc.completeQuest(q.id, { doneOn: '2025-03-12' }))).toBe('retro_confirmation_required')
+    expect((await events())).toHaveLength(1)
+  })
+  it('accepte toute date passée confirmée (même très ancienne) et la trace comme rétroactive', async () => {
+    const q = await svc.createQuest(input({ type: 'daily' }))
+    const [ev] = await svc.completeQuest(q.id, { doneOn: '2025-03-12', confirmOld: true })
+    expect(ev.retroactive).toBe(true)
+    expect(ev.cycleKey).toBe('2025-03-12')
+    expect(dayKey(new Date(ev.at))).toBe('2025-03-12')
+    expect(ev.recordedAt).toBe(clock.toISOString())
+    expect(await svc.completeQuest(q.id, { doneOn: '2025-03-12', confirmOld: true })).toEqual([]) // pas de doublon
+    expect(await code(svc.declareWork(q.id, { kind: 'effort', doneOn: '2024-01-02' }))).toBe('retro_confirmation_required')
+    const credit = await svc.declareWork(q.id, { kind: 'effort', doneOn: '2024-01-02', confirmOld: true })
+    expect(credit.retroactive).toBe(true)
+    expect(credit.cycleKey).toBe('2024-01-02')
+  })
+  it("la fenêtre d'analyse automatique des manques reste de 14 cycles", () => {
+    expect(REWARD_CONFIG.missedWindowCycles).toBe(14)
   })
   it('les crédits aussi peuvent être déclarés à une date antérieure', async () => {
     const q = await svc.createQuest(input({ type: 'daily', difficulty: 'hard', effortMinutes: 60 }))

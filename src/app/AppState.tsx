@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { usePersistedState } from '@/data/hooks'
 import { repos } from '@/data/repositories'
 import { questService } from '@/data/questService'
+import { backups, backupScheduler } from '@/data/backup'
 import { buildDemoView, type DemoView } from '@/mocks/demoView'
 import type { Settings } from '@/data/repositories'
 import { computeProgression, type ProgressSummary } from '@/core/progression'
@@ -76,6 +77,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // Demande un stockage durable : évite l'éviction des données par le navigateur.
     void navigator.storage?.persist?.().catch(() => undefined)
     void questService.seedCategories()
+    // Sauvegardes locales chiffrées : initialisation de la clé, planificateur, puis contrôle d'intégrité différé.
+    void backups.init().then(() => backupScheduler.start())
+    const verifyLater = setTimeout(() => void backups.verifyAll().catch(() => undefined), 8_000)
+    return () => { clearTimeout(verifyLater); backupScheduler.stop() }
   }, [])
 
   const missed = useMemo(() => findMissed(quests, events, analyses, now), [quests, events, analyses, now])

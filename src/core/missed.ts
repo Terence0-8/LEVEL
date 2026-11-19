@@ -4,6 +4,7 @@ import type { XpEvent } from './ledger'
 import { cycleKeyFor } from './quest'
 import { isCycleCompleted, missedCycles } from './questState'
 import { dayKey } from './dates'
+import { REWARD_CONFIG } from './rewards'
 import type { Difficulty } from './quest'
 
 /**
@@ -39,7 +40,7 @@ export interface MissedItem {
 export const analysisKey = (questId: string, cycleKey: string) => `${questId}|${cycleKey}`
 
 /** Éléments non réalisés et pas encore analysés : cycles récurrents manqués + échéances dépassées. */
-export function findMissed(quests: Quest[], events: XpEvent[], analyses: MissedAnalysis[], now: Date, max = 14): MissedItem[] {
+export function findMissed(quests: Quest[], events: XpEvent[], analyses: MissedAnalysis[], now: Date, max = REWARD_CONFIG.missedWindowCycles): MissedItem[] {
   const done = new Set(analyses.map((a) => analysisKey(a.questId, a.cycleKey)))
   const today = dayKey(now)
   const out: MissedItem[] = []

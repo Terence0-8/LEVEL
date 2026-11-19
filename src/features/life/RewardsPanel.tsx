@@ -89,7 +89,7 @@ export function RewardsPanel() {
           <p><strong>Une seule fois.</strong> Chaque étape ou quête n'est récompensée qu'une fois par cycle.</p>
           <p><strong>Micro-tâches.</strong> Au-delà de {REWARD_CONFIG.microFullRewardsPerDay} quêtes de {REWARD_CONFIG.microEffortMinutes} min ou moins par jour, leur récompense est réduite.</p>
           <p><strong>Trois situations.</strong> Réussite complète (récompense normale), progression partielle (proportionnelle) ou effort sans objectif atteint (réduit, jamais nul). Les crédits sont déduits de la validation finale.</p>
-          <p><strong>Rétroactif.</strong> Vous pouvez déclarer un travail jusqu’à {REWARD_CONFIG.retroactiveMaxDays} jours en arrière ; date réelle et date d’enregistrement sont conservées.</p>
+          <p><strong>Rétroactif.</strong> Vous pouvez déclarer un travail à n’importe quelle date passée (confirmation au-delà de {REWARD_CONFIG.retroactiveConfirmAfterDays} jours) ; date réelle et date d’enregistrement sont conservées.</p>
           <p><strong>Barèmes provisoires.</strong> Les montants seront calibrés ultérieurement.</p>
         </div>
       </Card>

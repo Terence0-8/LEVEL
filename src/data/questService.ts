@@ -17,7 +17,7 @@ import { db, type LevelDB } from './db'
 export type QuestErrorCode =
   | PlanError
   | 'invalid_title' | 'invalid_effort' | 'unknown_category' | 'not_found' | 'invalid_step' | 'invalid_name' | 'no_attribute'
-  | 'future_date' | 'retro_out_of_range' | 'invalid_date'
+  | 'future_date' | 'retro_out_of_range' | 'retro_confirmation_required' | 'invalid_date'
   | 'already_analyzed' | 'invalid_cause' | 'invalid_due' | 'invalid_replacement'
 
 export class QuestError extends Error {
@@ -42,6 +42,8 @@ export interface QuestInput {
 export interface DeclareOptions {
   /** Date d'accomplissement déclarée « YYYY-MM-DD » (défaut : aujourd'hui). Antérieure = validation rétroactive. */
   doneOn?: string
+  /** Confirmation explicite exigée pour une date plus ancienne que `retroactiveConfirmAfterDays`. */
+  confirmOld?: boolean
 }
 
 export interface MissedAnalysisInput {
@@ -93,12 +95,13 @@ export function createQuestService(database: LevelDB = db, deps: ServiceDeps = d
   }
 
   /** Date d'accomplissement : aujourd'hui (instant exact) ou une date passée dans la fenêtre autorisée (midi). */
-  function resolveDoneAt(doneOn: string | undefined, at: Date): Date {
+  function resolveDoneAt(doneOn: string | undefined, at: Date, confirmOld = false): Date {
     const today = dayKey(at)
     if (!doneOn || doneOn === today) return at
     if (!isDayKey(doneOn)) throw new QuestError('invalid_date')
     if (doneOn > today) throw new QuestError('future_date')
-    if (daysBetweenKeys(doneOn, today) > REWARD_CONFIG.retroactiveMaxDays) throw new QuestError('retro_out_of_range')
+    if (doneOn < REWARD_CONFIG.retroactiveEarliestDate) throw new QuestError('retro_out_of_range')
+    if (daysBetweenKeys(doneOn, today) > REWARD_CONFIG.retroactiveConfirmAfterDays && !confirmOld) throw new QuestError('retro_confirmation_required')
     return fromDayKey(doneOn)
   }
 
@@ -262,7 +265,7 @@ export function createQuestService(database: LevelDB = db, deps: ServiceDeps = d
     async completeQuest(questId: string, opts: DeclareOptions = {}): Promise<XpEvent[]> {
       return tx(async () => {
         const quest = await getQuest(questId)
-        const doneAt = resolveDoneAt(opts.doneOn, now())
+        const doneAt = resolveDoneAt(opts.doneOn, now(), opts.confirmOld)
         const ctx = await contextFor(quest, doneAt)
         const awarded: XpEvent[] = []
         let working = ctx.questEvents
@@ -282,7 +285,7 @@ export function createQuestService(database: LevelDB = db, deps: ServiceDeps = d
       return tx(async () => {
         const quest = await getQuest(questId)
         if (!quest.steps.some((s) => s.id === stepId)) throw new QuestError('invalid_step')
-        const ctx = await contextFor(quest, resolveDoneAt(opts.doneOn, now()))
+        const ctx = await contextFor(quest, resolveDoneAt(opts.doneOn, now(), opts.confirmOld))
         const plan = planCompletion(ctx, stepId)
         if (!plan.ok) return null
         await database.xpEvents.add(plan.value)
@@ -297,7 +300,7 @@ export function createQuestService(database: LevelDB = db, deps: ServiceDeps = d
     async declareWork(questId: string, input: CreditInput & DeclareOptions): Promise<XpEvent> {
       return tx(async () => {
         const quest = await getQuest(questId)
-        const ctx = await contextFor(quest, resolveDoneAt(input.doneOn, now()))
+        const ctx = await contextFor(quest, resolveDoneAt(input.doneOn, now(), input.confirmOld))
         const plan = planCredit(ctx, input)
         if (!plan.ok) throw new QuestError(plan.error)
         await database.xpEvents.add(plan.value)

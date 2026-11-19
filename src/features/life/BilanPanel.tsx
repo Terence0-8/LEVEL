@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { useAppState } from '@/app/AppState'
 import { Badge, Card, EmptyState, ProgressBar, SectionTitle } from '@/design/components'
 import { causeStats, type MissedItem } from '@/core/missed'
-import { dayKey, addDays } from '@/core/dates'
-import { REWARD_CONFIG } from '@/core/rewards'
 import { questService } from '@/data/questService'
 import { formatDayLabel } from '@/lib/format'
 import { AnalysisSheet } from './AnalysisSheet'
@@ -14,13 +12,12 @@ import s from './life.module.css'
 
 /** Bilan des quêtes non réalisées : à analyser, causes, décisions. Aucune pénalité d'XP. */
 export function BilanPanel() {
-  const { missed, analyses, now } = useAppState()
+  const { missed, analyses } = useAppState()
   const views = useQuestViews()
   const [analysing, setAnalysing] = useState<MissedItem | null>(null)
   const [catchUp, setCatchUp] = useState<{ item: MissedItem; date: string } | null>(null)
   const stats = causeStats(analyses)
   const max = Math.max(1, ...Object.values(stats))
-  const minDate = dayKey(addDays(now, -REWARD_CONFIG.retroactiveMaxDays))
   const view = catchUp ? views.find((v) => v.quest.id === catchUp.item.quest.id) : undefined
 
   return (
@@ -34,7 +31,7 @@ export function BilanPanel() {
           <ul className={s.missedList}>
             {missed.map((m) => {
               const date = catchUpDate(m.cycleKey)
-              const canCatchUp = m.kind === 'cycle' && date !== null && date >= minDate
+              const canCatchUp = m.kind === 'cycle' && date !== null
               return (
                 <li key={m.quest.id + m.cycleKey}>
                   <div className={s.missedInfo}><b>{m.quest.title}</b><small>{formatCycle(m.cycleKey)}</small></div>

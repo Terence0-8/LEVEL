@@ -33,8 +33,15 @@ export const REWARD_CONFIG = {
   creditDeclarationsPerDay: 3,
   /** Au-delà, montant réduit mais jamais nul */
   creditOverCapMultiplier: 0.25,
-  /** Validation rétroactive : fenêtre maximale (jours en arrière) */
-  retroactiveMaxDays: 14,
+  /**
+   * Validation rétroactive : possible à toute date passée. Au-delà de ce nombre de jours en arrière,
+   * une confirmation explicite est exigée (« date ancienne »).
+   */
+  retroactiveConfirmAfterDays: 14,
+  /** Plancher de sanité de saisie (évite les fautes de frappe d'année) ; ce n'est pas une limite métier. */
+  retroactiveEarliestDate: '2000-01-01',
+  /** Fenêtre d'analyse AUTOMATIQUE des quêtes manquées (cycles récents examinés) */
+  missedWindowCycles: 14,
 } as const
 
 /** Récompense totale d'une quête : difficulté × effort. La priorité n'influence PAS l'XP (anti-farming). */

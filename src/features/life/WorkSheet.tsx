@@ -4,7 +4,7 @@ import { Field, Segmented, inputClass, textareaClass, errorClass } from '@/desig
 import { Sheet } from '@/design/Sheet'
 import sheet from '@/design/sheet.module.css'
 import { planCredit, previewCompletion, type AwardContext } from '@/core/awards'
-import { dayKey, addDays, fromDayKey } from '@/core/dates'
+import { dayKey, daysBetweenKeys, fromDayKey } from '@/core/dates'
 import type { XpEvent } from '@/core/ledger'
 import { isMicroTask, REWARD_CONFIG } from '@/core/rewards'
 import { QuestError, questService } from '@/data/questService'
@@ -45,9 +45,10 @@ function WorkForm({ view, initialDoneOn, onDone }: { view: QuestView; initialDon
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [saved, setSaved] = useState<XpEvent[] | null>(null)
+  const [confirmedOld, setConfirmedOld] = useState(false)
 
-  const minDate = dayKey(addDays(now, -REWARD_CONFIG.retroactiveMaxDays))
   const retro = doneOn < today
+  const old = retro && daysBetweenKeys(doneOn, today) > REWARD_CONFIG.retroactiveConfirmAfterDays
 
   const preview = useMemo(() => {
     const doneAt = doneOn === today ? now : fromDayKey(doneOn)
@@ -69,7 +70,7 @@ function WorkForm({ view, initialDoneOn, onDone }: { view: QuestView; initialDon
     setBusy(true)
     setError(null)
     try {
-      const opts = { doneOn }
+      const opts = { doneOn, confirmOld: confirmedOld }
       if (situation === 'full') setSaved(await questService.completeQuest(quest.id, opts))
       else setSaved([await questService.declareWork(quest.id, { kind: situation, percent: Number(percent), durationMinutes: duration ? Number(duration) : null, note, ...opts })])
     } catch (err) {
@@ -116,9 +117,15 @@ function WorkForm({ view, initialDoneOn, onDone }: { view: QuestView; initialDon
         </Field>
       ) : null}
 
-      <Field label="Date de réalisation" htmlFor="w-date" hint={retro ? 'Validation rétroactive : la date réelle et la date d’enregistrement sont toutes deux conservées.' : 'Aujourd’hui. Choisissez une date antérieure pour une validation rétroactive (14 jours maximum).'}>
-        <input id="w-date" className={inputClass} type="date" min={minDate} max={today} value={doneOn} onChange={(e) => setDoneOn(e.target.value || today)} />
+      <Field label="Date de réalisation" htmlFor="w-date" hint={retro ? 'Validation rétroactive : la date réelle et la date d’enregistrement sont toutes deux conservées.' : 'Aujourd’hui. Choisissez une date antérieure pour une validation rétroactive.'}>
+        <input id="w-date" className={inputClass} type="date" min={REWARD_CONFIG.retroactiveEarliestDate} max={today} value={doneOn} onChange={(e) => { setDoneOn(e.target.value || today); setConfirmedOld(false) }} />
       </Field>
+      {old ? (
+        <label className={s.confirmOld}>
+          <input type="checkbox" checked={confirmedOld} onChange={(e) => setConfirmedOld(e.target.checked)} />
+          <span>Date ancienne ({daysBetweenKeys(doneOn, today)} jours). Je confirme que ce travail a bien été réalisé le {doneOn}.</span>
+        </label>
+      ) : null}
 
       {situation !== 'full' ? (
         <>
@@ -139,7 +146,7 @@ function WorkForm({ view, initialDoneOn, onDone }: { view: QuestView; initialDon
       {error ? <p className={errorClass} role="alert">{error}</p> : null}
       <div className={s.formActions}>
         <button type="button" className={sheet.btnGhost} onClick={onDone}>Annuler</button>
-        <button type="submit" className={sheet.btnPrimary} disabled={busy || 'error' in preview}>Enregistrer</button>
+        <button type="submit" className={sheet.btnPrimary} disabled={busy || 'error' in preview || (old && !confirmedOld)}>Enregistrer</button>
       </div>
     </form>
   )

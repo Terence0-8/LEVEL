@@ -1,6 +1,7 @@
 import { cycleKeyFor, effortAwardKey, isRecurring, previousCycleDate, questAwardKey, stepAwardKey, type Quest, type QuestStatus } from './quest'
 import { openAwards, type XpEvent } from './ledger'
 import { dayKey } from './dates'
+import { REWARD_CONFIG } from './rewards'
 
 /** État d'une quête dans son cycle courant, dérivé du journal (aucun drapeau stocké). */
 export interface CycleProgress {
@@ -77,7 +78,7 @@ export function streak(quest: Quest, events: XpEvent[], now: Date): number {
  * Cycles passés non accomplis depuis la création. N'a AUCUN effet sur l'XP ; sert à interrompre la
  * série et à alimenter une analyse ultérieure (bilans).
  */
-export function missedCycles(quest: Quest, events: XpEvent[], now: Date, max = 14): string[] {
+export function missedCycles(quest: Quest, events: XpEvent[], now: Date, max = REWARD_CONFIG.missedWindowCycles): string[] {
   if (!isRecurring(quest.type)) return []
   const first = cycleKeyFor(quest.type, new Date(quest.createdAt))
   const out: string[] = []

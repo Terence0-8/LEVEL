@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Icon, type IconName } from '@/design/Icon'
 import { LogoWordmark } from '@/design/Logo'
 import { useAppState } from './AppState'
+import { BackupBanner } from '@/features/backup/BackupBanner'
 import s from './Shell.module.css'
 
 export const NAV: Array<{ to: string; label: string; icon: IconName }> = [
@@ -47,6 +48,9 @@ export function Shell() {
           </NavLink>
         ))}
         <div className={s.spacer} />
+        <NavLink to="/backups" className={({ isActive }) => cls(s.link, isActive)}>
+          <Icon name="shield" /> Sauvegardes
+        </NavLink>
         <NavLink to="/profile" className={({ isActive }) => cls(s.link, isActive)}>
           <Icon name="user" /> Profil & réglages
         </NavLink>
@@ -58,6 +62,7 @@ export function Shell() {
           <NavLink to="/profile" className={s.avatarBtn} aria-label="Profil et réglages"><Icon name="user" size={20} /></NavLink>
         </header>
         <main className={s.main}>
+          <BackupBanner />
           <div key={loc.pathname} className={s.page}><Outlet /></div>
         </main>
       </div>

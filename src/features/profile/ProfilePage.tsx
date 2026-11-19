@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAppState } from '@/app/AppState'
 import { Card, PageHeader, SectionTitle } from '@/design/components'
 import { repos } from '@/data/repositories'
+import { Link } from 'react-router-dom'
+import { useBackupData } from '@/features/backup/useBackupData'
 import s from '../pages.module.css'
 
 function Toggle({ label, hint, checked, onChange }: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
@@ -17,6 +19,7 @@ export function ProfilePage() {
   const { displayName, settings } = useAppState()
   const [name, setName] = useState(displayName)
   const [saved, setSaved] = useState(false)
+  const { health, list } = useBackupData()
   useEffect(() => setName(displayName), [displayName])
 
   const save = async (e: React.FormEvent) => {
@@ -38,6 +41,13 @@ export function ProfilePage() {
             <button className={s.btn} type="submit">{saved ? 'Enregistré ✓' : 'Enregistrer'}</button>
           </div>
         </form>
+      </Card>
+      <Card>
+        <SectionTitle title="Sauvegardes et sécurité" />
+        <p style={{ color: 'var(--c-text-dim)', fontSize: 14, marginBottom: 12 }}>
+          {health.level === 'ok' ? 'Vos données sont sauvegardées, chiffrées et leur récupération a été testée.' : health.messages[0]} ({list.length} point{list.length > 1 ? 's' : ''} de restauration)
+        </p>
+        <Link to="/backups" className={s.btn} style={{ display: 'inline-block' }}>Gérer les sauvegardes</Link>
       </Card>
       <Card>
         <SectionTitle title="Préférences" />

@@ -13,6 +13,7 @@ Level est une application personnelle de progression (LIFE · SPORT · RPG), ins
 - **Dates** : `at` = accomplissement déclaré, `recordedAt` = enregistrement ; validation rétroactive bornée par `retroactiveMaxDays`.
 - **Seuils de niveaux et de rangs** (`xp.ts`, `rank.ts`) : ne pas modifier sans décision explicite (test de non-régression).
 - **Barèmes numériques uniquement dans `core/rewards.ts`**, marqués provisoires tant qu'ils ne sont pas calibrés.
+- **Sauvegardes** : toute nouvelle table Dexie doit être ajoutée à `TABLE_KEYS` (`core/backupFormat.ts`) et `DB_SCHEMA_VERSION` incrémentée (un test échoue sinon). Ne jamais afficher « récupérable » sans déchiffrement réellement testé. Aucune clé, phrase ou donnée en clair dans les journaux, URLs ou requêtes. Les rapports PDF ne remplacent jamais la sauvegarde.
 - **Honnêteté** : ne jamais présenter un module comme fonctionnel s'il ne l'est pas (utiliser `<Notice>`).
 - **Peu de dépendances** : justifier toute nouvelle dépendance dans `docs/ARCHITECTURE.md`.
 - Ne pas contredire une exigence de `PRODUCT_SPEC.md` sans le signaler et le documenter.
