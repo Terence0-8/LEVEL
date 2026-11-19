@@ -4,7 +4,7 @@ import { SPORT_CONFIG } from './config'
 import { EXERCISE_BY_ID } from './exercises'
 import type { SportProfile } from './profile'
 import type { ProgressionDecision, RecoveryCheck, SetLog, SportSession } from './session'
-import { latestPerDay } from './recovery'
+import { latestPerDay, restRecommendation } from './recovery'
 import type { Exercise, SessionKind } from './types'
 
 /**
@@ -60,37 +60,56 @@ export function setMetric(l: SetLog, ex: Exercise | undefined): number | null {
 interface Opts { sessions: SportSession[]; checks: RecoveryCheck[]; decisions: ProgressionDecision[]; profile: SportProfile; custom?: Exercise[] }
 
 /** Toutes les récompenses SPORT que le journal doit contenir, pour l'historique actuel. */
-export function desiredSportAwards(o: Opts): DesiredAward[] {
+export function desiredSportAwards(o: Opts, explain?: Map<string, string>): DesiredAward[] {
   const out: DesiredAward[] = []
   const exOf = (id: string) => EXERCISE_BY_ID[id] ?? o.custom?.find((c) => c.id === id)
   const sorted = [...o.sessions].filter(isFinished).sort((a, b) => a.date.localeCompare(b.date) || (a.endedAt ?? a.createdAt).localeCompare(b.endedAt ?? b.createdAt))
 
-  const perDay = new Map<string, number>()
+  const rewardedByDay = new Map<string, SportSession[]>()
+  const extraByWeek = new Map<string, number>()
   const best = new Map<string, number>()
   const exposures = new Map<string, number>()
   const runBest = { distance: 0, pace: Infinity, runs: 0 }
   const weekDates = new Map<string, Set<string>>()
   const target = Math.max(2, o.profile.availability.strengthPerWeek + o.profile.availability.runsPerWeek)
+  const E = X.extraSession
+  const why = (id: string, msg: string) => explain?.set(id, msg)
 
   for (const s of sorted) {
     const c = completion(s)
     const minutes = s.kind === 'run' ? Math.round((s.run?.durationSec ?? 0) / 60) : s.plannedMinutes
-    const eligibleKind = isOrganised(s)
     let rewarded = false
-    if (eligibleKind && (perDay.get(s.date) ?? 0) < X.maxRewardedSessionsPerDay) {
-      const okRatio = c.ratio >= X.minCompletion
-      const okRun = s.kind !== 'run' || minutes >= X.runMinMinutes
-      if (okRatio && okRun) {
-        let amount = Math.round(X.base[s.kind] * c.ratio * durationFactor(minutes))
+    if (!isOrganised(s)) why(s.id, 'Activité imprévue : enregistrée et prise en compte dans la récupération et les statistiques, sans XP.')
+    else {
+      const sameDay = rewardedByDay.get(s.date) ?? []
+      const wk = weekKey(new Date(s.date + 'T12:00:00'))
+      let multiplier = 1
+      let blocked: string | null = null
+      if (sameDay.length >= 1) {
+        multiplier = E.multiplier
+        const prev = sameDay[sameDay.length - 1]
+        const gapMs = s.startedAt && prev.endedAt && prev.startedAt ? new Date(s.startedAt).getTime() - new Date(prev.endedAt).getTime() : null
+        if (sameDay.length >= E.maxRewardedPerDay) blocked = `${E.maxRewardedPerDay} séances récompensées par jour au maximum.`
+        else if ((extraByWeek.get(wk) ?? 0) >= E.maxExtraPerWeek) blocked = `Plafond de ${E.maxExtraPerWeek} séances supplémentaires récompensées par semaine atteint.`
+        else if (s.safetyAtStart !== 'NORMAL') blocked = 'Deuxième séance du jour : la récupération ne la permettait pas (ou n’a pas pu être vérifiée au départ), séance enregistrée sans XP.'
+        else if (gapMs !== null && gapMs < E.minHoursBetween * 3_600_000) blocked = `Moins de ${E.minHoursBetween} h après la séance précédente : une séance scindée ne double pas la récompense.`
+      }
+      const significant = s.kind === 'run' ? minutes >= X.runMinMinutes : c.done >= X.minSignificantSets
+      if (blocked) why(s.id, blocked)
+      else if (!significant) why(s.id, s.kind === 'run' ? `Moins de ${X.runMinMinutes} minutes : pas de travail significatif, enregistrée sans XP.` : `Moins de ${X.minSignificantSets} séries réalisées : pas de travail significatif, enregistrée sans XP.`)
+      else {
+        let amount = Math.round(X.base[s.kind] * c.ratio * durationFactor(minutes) * multiplier)
         if (s.kind === 'run' && s.run?.family === 'recovery') amount = Math.round(amount * X.recoveryRunCapFactor)
         if (amount > 0) {
           rewarded = true
-          perDay.set(s.date, (perDay.get(s.date) ?? 0) + 1)
+          rewardedByDay.set(s.date, [...sameDay, s])
+          if (sameDay.length >= 1) extraByWeek.set(wk, (extraByWeek.get(wk) ?? 0) + 1)
           out.push({
             key: `sport:session:${s.id}:base`, at: when(s), amount, attribute: KIND_ATTRIBUTE[s.kind], sourceId: s.id, cycleKey: s.date,
             label: `${KIND_LABEL[s.kind]} : ${s.title}`,
-            reason: s.kind === 'run' ? `Course ${s.run!.distanceKm} km en ${minutes} min` + (s.run!.family === 'recovery' ? ' (récupération active : récompense plafonnée)' : '')
-              : c.ratio >= 1 ? `Séance terminée (${c.done}/${c.planned} séries)` : `Séance écourtée : ${c.done}/${c.planned} séries, récompense proportionnelle (${Math.round(c.ratio * 100)} %)`,
+            reason: (s.kind === 'run' ? `Course ${s.run!.distanceKm} km en ${minutes} min` + (s.run!.family === 'recovery' ? ' (récupération active : récompense plafonnée)' : '')
+              : c.ratio >= 1 ? `Séance terminée (${c.done}/${c.planned} séries)` : `Séance écourtée : ${c.done}/${c.planned} séries, récompense proportionnelle (${Math.round(c.ratio * 100)} %)`)
+              + (sameDay.length >= 1 ? ` · séance supplémentaire du jour (×${E.multiplier})` : ''),
           })
         }
       }
@@ -137,10 +156,11 @@ export function desiredSportAwards(o: Opts): DesiredAward[] {
   const sessionDays = new Set(o.sessions.filter((s) => s.status !== 'abandoned' && s.status !== 'planned').map((s) => s.date))
   for (const c of latestPerDay(o.checks).sort((a, b) => a.day.localeCompare(b.day))) {
     if (!c.restChosen || c.safety === 'NORMAL' || sessionDays.has(c.day)) continue
+    if (!restRecommendation({ sessions: o.sessions, day: c.day, custom: o.custom }).corroborated) continue // déclaration seule : pas d'XP
     const wk = weekKey(new Date(c.day + 'T12:00:00'))
     if ((restPerWeek.get(wk) ?? 0) >= X.restMaxPerWeek) continue
     restPerWeek.set(wk, (restPerWeek.get(wk) ?? 0) + 1)
-    out.push({ key: `sport:rest:${c.day}`, at: noon(c.day), amount: X.rest, attribute: 'resilience', sourceId: c.id, cycleKey: c.day, label: 'Repos respecté', reason: `Niveau ${c.safety} : repos choisi plutôt que de forcer` })
+    out.push({ key: `sport:rest:${c.day}`, at: noon(c.day), amount: X.rest, attribute: 'resilience', sourceId: c.id, cycleKey: c.day, label: 'Repos respecté', reason: `Repos recommandé par Level (niveau ${c.safety}, ${restRecommendation({ sessions: o.sessions, day: c.day, custom: o.custom }).reasons.join(' ; ')}) et respecté` })
   }
 
   // Progressions confirmées par l'utilisateur (plafond hebdomadaire)
@@ -152,4 +172,12 @@ export function desiredSportAwards(o: Opts): DesiredAward[] {
     out.push({ key: `sport:progress:${d.id}`, at: d.at, amount: X.progressionConfirmed, attribute: 'maitrise', sourceId: d.id, cycleKey: wk, label: `Progression confirmée : ${exOf(d.exerciseId)?.name ?? d.exerciseId}`, reason: d.reason })
   }
   return out
+}
+
+/** Pourquoi une séance terminée n'a pas rapporté d'XP (null si elle en a rapporté). */
+export function explainNoXp(o: Opts, sessionId: string): string | null {
+  const explain = new Map<string, string>()
+  const awards = desiredSportAwards(o, explain)
+  if (awards.some((a) => a.key === `sport:session:${sessionId}:base`)) return null
+  return explain.get(sessionId) ?? null
 }

@@ -230,6 +230,7 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
         if (s.slots.length && s.slots.every((sl) => sl.status === 'skipped')) throw new SportError('blocked', `Séance bloquée par la sécurité : ${skipped.join(' ; ')}`)
         if (c.recovery.level === 'ALERTE' && !s.slots.length) throw new SportError('alert', 'Alerte de récupération : séance non démarrée.')
         s.startedAt = stamp(); s.date = s.date < today() ? today() : s.date
+        s.safetyAtStart = c.recovery.level
       } else if (s.status === 'paused' && s.pausedAt) { s.pausedMs += now().getTime() - new Date(s.pausedAt).getTime(); s.pausedAt = null }
       s.status = 'active'
       return { session: await save(s), skippedForSafety: skipped }
@@ -250,7 +251,7 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
       slot.status = slot.logs.length >= slot.sets ? 'done' : 'pending'
       const choice = [slot.equipment, slot.bodyweight].find((c) => c?.exerciseId === input.exerciseId)
       s.restEndsAt = input.pain === 'strong' || slot.status === 'done' && s.slots.every((x) => x.status !== 'pending') ? null : new Date(now().getTime() + (choice?.restSec ?? 60) * 1000).toISOString()
-      if (s.status === 'planned') { s.status = 'active'; s.startedAt = s.startedAt ?? stamp() }
+      if (s.status === 'planned') { s.status = 'active'; s.startedAt = s.startedAt ?? stamp(); if (s.safetyAtStart === undefined) s.safetyAtStart = (await context()).recovery.level }
       await save(s)
       return { session: s, caution: input.pain === 'strong' ? 'Douleur importante : arrêtez cet exercice. Ne forcez jamais pour terminer la séance. Signalez-la dans le questionnaire de récupération.' : input.pain === 'light' ? 'Douleur légère signalée : allégez ou choisissez une alternative, et surveillez-la.' : null }
     }),
@@ -307,6 +308,8 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
         id: id(), kind: 'run', origin: 'unplanned', date, status: 'completed', title: '', plannedMinutes: 0, variant: 'bodyweight', slots: [], startedAt: null, endedAt: null, pausedMs: 0, pausedAt: null, restEndsAt: null, notes: '', createdAt: stamp(), updatedAt: stamp(),
       }
       s.kind = 'run'; s.run = built.run; s.date = date; s.status = 'completed'; s.endedAt = new Date(date + 'T12:00:00').toISOString()
+      // Niveau de sécurité au moment de la sortie : état actuel, ou questionnaire de ce jour-là pour une saisie rétroactive (inconnu sinon)
+      s.safetyAtStart = date === today() ? c.recovery.level : c.checks.filter((k) => k.day === date).sort((a, b) => a.at.localeCompare(b.at)).at(-1)?.safety ?? null
       s.origin = planned ? 'planned' : input.organised === false ? 'unplanned' : 'generated'
       s.title = `${built.run.distanceKm} km`; s.plannedMinutes = Math.round(built.run.durationSec / 60); s.notes = input.notes ?? ''
       if (c.recovery.level !== 'NORMAL' && ['interval', 'tempo', 'hills'].includes(built.run.family)) built.warnings.push('Séance exigeante enregistrée un jour de vigilance : écoutez votre récupération.')

@@ -4,13 +4,13 @@ import { EXERCISES, EXERCISE_BY_ID } from './exercises'
 import { equipmentFor, generateHiit, generateStrengthSession, usablePool, suggestAlternative, type GenInput } from './generator'
 import { defaultProfile, measuredLevel, operationalLevel, profileCompleteness, type SportProfile } from './profile'
 import { exposuresOf, recommend } from './progression'
-import { evaluateRecovery, localFatigue } from './recovery'
+import { evaluateRecovery, localFatigue, restRecommendation } from './recovery'
 import { buildRun, formatPace, paceOf, suggestRun } from './running'
 import type { RecoveryCheck, SessionSlot, SetLog, SportSession } from './session'
 import { planWeek } from './planner'
 import { personalRecords, regularity, muscleSplit, volume, sessionDebrief } from './stats'
 import { MUSCLE_GROUPS, type MuscleGroup } from './types'
-import { completion, desiredSportAwards, setMetric } from './xp'
+import { completion, desiredSportAwards, explainNoXp, setMetric } from './xp'
 import { SPORT_CONFIG } from './config'
 import { dayKey } from '../dates'
 
@@ -45,7 +45,7 @@ describe('bibliothèque d’exercices', () => {
     for (const g of MUSCLE_GROUPS) {
       const list = EXERCISES.filter((e) => e.kind === 'strength' && e.primary.includes(g))
       expect(list.length, g).toBeGreaterThanOrEqual(3)
-      expect(list.some((e) => e.equipment.every((q) => q === 'furniture' || q === 'mat') && !e.hiitOnly), `${g} sans matériel`).toBe(true)
+      expect(list.some((e) => e.equipment.every((q) => q === 'mat') && !e.hiitOnly), `${g} : option sans matériel ni mobilier (tapis facultatif)`).toBe(true)
     }
   })
   it('chaque fiche est complète et cohérente', () => {
@@ -77,9 +77,25 @@ describe('bibliothèque d’exercices', () => {
   })
   it('place exercices sans matériel et avec matériel dans les bons profils', () => {
     expect(equipmentFor(profile({ equipmentProfile: 'none' }), 'equipment')).toEqual([])
+    expect(equipmentFor(profile({ equipmentProfile: 'none' }), 'bodyweight')).toEqual(['mat'])
     expect(equipmentFor(profile({ equipmentProfile: 'home', homeEquipment: ['bands'] }), 'equipment')).toEqual(expect.arrayContaining(['bands', 'furniture', 'mat']))
     expect(equipmentFor(profile({ equipmentProfile: 'gym' }), 'equipment')).toContain('barbell')
-    expect(equipmentFor(profile({ equipmentProfile: 'gym' }), 'bodyweight')).toEqual(['furniture', 'mat'])
+    expect(equipmentFor(profile({ equipmentProfile: 'gym' }), 'bodyweight')).toEqual(['mat'])
+  })
+  it('profil sans matériel : fonctionne sans chaise, table ni équipement ; le mobilier reste réservé à Domicile et Salle', () => {
+    const base = { recovery: noRecovery(), now: NOW, prefs: [], custom: [] }
+    const none = usablePool({ profile: profile({ equipmentProfile: 'none' }), ...base }, 'bodyweight')
+    for (const g of MUSCLE_GROUPS) expect(none.some((e) => e.primary.includes(g)), `${g} sans matériel`).toBe(true)
+    for (const e of none) expect(e.equipment.every((q) => q === 'mat'), e.id).toBe(true) // jamais de mobilier ni d'équipement
+    expect(none.some((e) => e.equipment.includes('furniture'))).toBe(false)
+    const home = usablePool({ profile: profile({ equipmentProfile: 'home' }), ...base }, 'equipment')
+    expect(home.some((e) => e.equipment.includes('furniture'))).toBe(true) // mobilier solide à domicile
+    expect(home.some((e) => e.equipment.includes('dumbbells'))).toBe(true) // petit matériel
+    for (const r of [gen({ p: { equipmentProfile: 'none', experience: 'intermediate' } }), gen({ p: { equipmentProfile: 'none', experience: 'beginner' }, focus: ['pectoraux', 'triceps', 'dos'] })])
+      for (const id of idsOf(r)) expect(EXERCISE_BY_ID[id].equipment.every((q) => q === 'mat'), id).toBe(true)
+  })
+  it('le tapis reste facultatif : aucun exercice ne l\'exige en plus d\'un autre matériel', () => {
+    for (const e of EXERCISES.filter((x) => x.equipment.includes('mat'))) expect(e.equipment, e.id).toEqual(['mat'])
   })
 })
 
@@ -115,7 +131,7 @@ describe('générateur de séances adaptatif', () => {
       if (s.bodyweight) {
         const a = EXERCISE_BY_ID[s.equipment!.exerciseId], b = EXERCISE_BY_ID[s.bodyweight.exerciseId]
         expect(b.primary.includes(s.group) && a.primary.includes(s.group)).toBe(true)
-        expect(b.equipment.every((q) => q === 'furniture' || q === 'mat')).toBe(true)
+        expect(b.equipment.every((q) => q === 'mat')).toBe(true) // la variante sans matériel n'exige ni chaise, ni table, ni équipement
         expect(a.id).not.toBe(b.id) // exercices distincts : jamais de conversion de performances
       }
     }
@@ -365,25 +381,78 @@ describe('XP SPORT (récompenses souhaitées, inscrites dans le journal existant
   const awards = (sessions: SportSession[], checks: RecoveryCheck[] = [], decisions: never[] = []) => desiredSportAwards({ sessions, checks, decisions, profile: prof })
   const full = (date = TODAY, over: Partial<SportSession> = {}) => session({ date, endedAt: `${date}T10:00:00.000Z`, slots: [slot('curl_halteres', [1, 2, 3].map((i) => log('curl_halteres', {}, i)), 3, 'biceps')], ...over })
 
-  it('séance complète : récompense de base ; écourtée : proportionnelle ; trop courte : aucune', () => {
+  it('séance complète : récompense de base ; écourtée : strictement proportionnelle (pas de seuil en pourcentage)', () => {
     const [a] = awards([full()])
     expect(a.amount).toBe(Math.round(X.base.strength * 1 * Math.sqrt(45 / X.durationReferenceMin)))
     expect(a.attribute).toBe('force')
     expect(a.key).toMatch(/^sport:session:.*:base$/)
-    const half = full(TODAY, { status: 'partial', slots: [slot('curl_halteres', [log('curl_halteres'), log('curl_halteres', {}, 2)], 4, 'biceps')] })
-    expect(awards([half])[0].amount).toBeLessThan(a.amount)
-    expect(awards([half])[0].reason).toMatch(/écourtée/)
-    const tiny = full(TODAY, { status: 'partial', slots: [slot('curl_halteres', [log('curl_halteres')], 8, 'biceps')] })
-    expect(awards([tiny])).toHaveLength(0) // 12,5 % < seuil minimal
+    const part = (done: number, planned: number) => full(TODAY, { status: 'partial', slots: [slot('curl_halteres', Array.from({ length: done }, (_, i) => log('curl_halteres', {}, i + 1)), planned, 'biceps')] })
+    const six = awards([part(3, 6)])[0]
+    expect(six.amount).toBe(Math.round(a.amount * 0.5 + 0) === six.amount ? six.amount : Math.round((X.base.strength * 0.5) * Math.sqrt(45 / X.durationReferenceMin)))
+    expect(six.amount).toBeLessThan(a.amount)
+    expect(six.reason).toMatch(/écourtée.*proportionnelle \(50 %\)/)
+    // pas de falaise à 25 % : 3 séries sur 20 (15 %) rapportent une XP proportionnelle
+    const small = awards([part(3, 20)])[0]
+    expect(small.amount).toBeGreaterThan(0)
+    expect(small.amount).toBeLessThan(six.amount)
+    // plus de travail = plus d'XP, de façon continue
+    const xp = [3, 4, 5, 6, 7, 8].map((n) => awards([part(n, 8)])[0].amount)
+    expect([...xp].sort((x, y) => x - y)).toEqual(xp)
+    expect(new Set(xp).size).toBeGreaterThan(3)
+  })
+  it('séance sans travail significatif : enregistrée, sans XP, avec explication', () => {
+    const part = (done: number) => full(TODAY, { status: 'partial', slots: [slot('curl_halteres', Array.from({ length: done }, (_, i) => log('curl_halteres', {}, i + 1)), 8, 'biceps')] })
+    expect(awards([part(1)])).toHaveLength(0)
+    expect(awards([part(SPORT_CONFIG.xp.minSignificantSets - 1)])).toHaveLength(0)
+    expect(awards([part(SPORT_CONFIG.xp.minSignificantSets)]).length).toBeGreaterThan(0)
+    const s = part(2)
+    expect(explainNoXp({ sessions: [s], checks: [], decisions: [], profile: prof }, s.id)).toMatch(/pas de travail significatif/)
+    expect(explainNoXp({ sessions: [full()], checks: [], decisions: [], profile: prof }, 'inconnu')).toBeNull()
   })
   it('activité imprévue : enregistrée, sans XP ; séance non terminée ou abandonnée : sans XP', () => {
     expect(awards([session({ kind: 'other', origin: 'unplanned', other: { minutes: 60, rpe: 7, muscles: [] } })])).toHaveLength(0)
     expect(awards([full(TODAY, { origin: 'unplanned' })])).toHaveLength(0)
     expect(awards([full(TODAY, { status: 'abandoned' }), full(TODAY, { status: 'active' })])).toHaveLength(0)
   })
-  it('une seule séance récompensée par jour (la seconde est possible mais sans XP)', () => {
-    const r = awards([full(TODAY), full(TODAY)])
-    expect(r.filter((x) => x.key.endsWith(':base'))).toHaveLength(1)
+  it('deuxième séance du jour : récompensée seulement si la récupération le permettait au départ', () => {
+    const timed = (start: string, end: string, safety: 'NORMAL' | 'VIGILANCE' | null | undefined, id?: string) =>
+      full(TODAY, { ...(id ? { id } : {}), startedAt: `${TODAY}T${start}:00.000Z`, endedAt: `${TODAY}T${end}:00.000Z`, safetyAtStart: safety })
+    const base = (list: SportSession[]) => awards(list).filter((x) => x.key.endsWith(':base'))
+    const first = timed('07:00', '08:00', 'NORMAL', 'first')
+    const ok = base([first, timed('14:00', '15:00', 'NORMAL', 'second')])
+    expect(ok).toHaveLength(2)
+    expect(Math.abs(ok[1].amount - ok[0].amount * SPORT_CONFIG.xp.extraSession.multiplier)).toBeLessThanOrEqual(1) // arrondi
+    expect(ok[1].reason).toMatch(/séance supplémentaire du jour/)
+    // récupération non permissive, inconnue ou non vérifiée : enregistrée sans XP
+    for (const safety of ['VIGILANCE', null, undefined] as const) {
+      const sessions = [first, timed('14:00', '15:00', safety, 'second')]
+      expect(base(sessions)).toHaveLength(1)
+      expect(explainNoXp({ sessions, checks: [], decisions: [], profile: prof }, 'second')).toMatch(/la récupération ne la permettait pas/)
+    }
+  })
+  it('anti-farming des séances supplémentaires : délai minimal, plafond par jour et par semaine', () => {
+    const E = SPORT_CONFIG.xp.extraSession
+    const at = (day: string, start: string, end: string, id: string) => full(day, { id, startedAt: `${day}T${start}:00.000Z`, endedAt: `${day}T${end}:00.000Z`, safetyAtStart: 'NORMAL' })
+    const base = (list: SportSession[]) => awards(list).filter((x) => x.key.endsWith(':base'))
+    // une séance scindée en deux (moins de 4 h d'écart) ne double pas la récompense
+    const split = [at(TODAY, '07:00', '08:00', 'a'), at(TODAY, '09:00', '10:00', 'b')]
+    expect(base(split)).toHaveLength(1)
+    expect(explainNoXp({ sessions: split, checks: [], decisions: [], profile: prof }, 'b')).toMatch(new RegExp(`Moins de ${E.minHoursBetween} h`))
+    // plafond par jour
+    const three = [at(TODAY, '06:00', '07:00', 'a'), at(TODAY, '12:00', '13:00', 'b'), at(TODAY, '19:00', '20:00', 'c')]
+    expect(base(three)).toHaveLength(E.maxRewardedPerDay)
+    expect(explainNoXp({ sessions: three, checks: [], decisions: [], profile: prof }, 'c')).toMatch(/au maximum/)
+    // plafond hebdomadaire de séances supplémentaires
+    const days = ['2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20']
+    const week = days.flatMap((d, i) => [at(d, '06:00', '07:00', `m${i}`), at(d, '14:00', '15:00', `s${i}`)])
+    const extras = base(week).filter((x) => /^sport:session:s\d:base$/.test(x.key))
+    expect(extras).toHaveLength(E.maxExtraPerWeek)
+  })
+  it('séance supplémentaire de course : même condition de récupération', () => {
+    const run = (id: string, safety: 'NORMAL' | 'VIGILANCE') => session({ id, kind: 'run', origin: 'planned', date: TODAY, endedAt: `${TODAY}T12:00:00.000Z`, safetyAtStart: safety, run: { family: 'easy', distanceKm: 5, durationSec: 1800, paceSecPerKm: 360, rpe: 4, intervals: [] } })
+    const strength = full(TODAY, { id: 'str', startedAt: `${TODAY}T07:00:00.000Z`, endedAt: `${TODAY}T08:00:00.000Z`, safetyAtStart: 'NORMAL' })
+    expect(awards([strength, run('r1', 'NORMAL')]).filter((x) => x.key.endsWith(':base'))).toHaveLength(2)
+    expect(awards([strength, run('r2', 'VIGILANCE')]).filter((x) => x.key.endsWith(':base'))).toHaveLength(1)
   })
   it('course : XP selon la durée ; récupération active plafonnée ; trop courte : aucune', () => {
     const run = (family: 'easy' | 'recovery', min: number) => session({ kind: 'run', origin: 'planned', date: TODAY, endedAt: `${TODAY}T10:00:00.000Z`, run: { family, distanceKm: 5, durationSec: min * 60, paceSecPerKm: Math.round((min * 60) / 5), rpe: 3, intervals: [] } })
@@ -407,13 +476,35 @@ describe('XP SPORT (récompenses souhaitées, inscrites dans le journal existant
     expect(awards([full('2026-11-16')]).filter((a) => a.key.includes('regularity'))).toHaveLength(0)
     expect(awards([full('2026-11-16'), full('2026-11-16')]).filter((a) => a.key.includes('regularity'))).toHaveLength(0)
   })
-  it('repos respecté : seulement en vigilance/alerte, sans séance ce jour, plafonné par semaine', () => {
+  it('repos respecté : seulement si Level le recommande de façon pertinente (niveau ET charge récente), jamais sur simple déclaration', () => {
     const c = (day: string, safety: 'NORMAL' | 'VIGILANCE', rest = true) => check({ safety, restChosen: rest }, day)
-    expect(awards([], [c('2026-11-16', 'VIGILANCE')])).toHaveLength(1)
-    expect(awards([], [c('2026-11-16', 'NORMAL')])).toHaveLength(0)
-    expect(awards([], [c('2026-11-16', 'VIGILANCE', false)])).toHaveLength(0)
-    expect(awards([full('2026-11-16')], [c('2026-11-16', 'VIGILANCE')])).toHaveLength(1) // seule la séance rapporte
-    expect(awards([], ['2026-11-16', '2026-11-17', '2026-11-18'].map((d) => c(d, 'VIGILANCE'))).filter((a) => a.key.includes(':rest:'))).toHaveLength(X.restMaxPerWeek)
+    const loaded = [full('2026-11-15'), full('2026-11-15')] // deux séances organisées dans les 3 jours précédents
+    const rest = (sessions: SportSession[], checks: RecoveryCheck[]) => awards(sessions, checks).filter((a) => a.key.includes(':rest:'))
+    // recommandation corroborée par la charge récente → XP
+    const r = rest(loaded, [c('2026-11-16', 'VIGILANCE')])
+    expect(r).toHaveLength(1)
+    expect(r[0].attribute).toBe('resilience')
+    expect(r[0].reason).toMatch(/Repos recommandé par Level/)
+    // simple déclaration (vigilance/alerte déclarée) sans charge récente : pas d'XP
+    expect(rest([], [c('2026-11-16', 'VIGILANCE')])).toHaveLength(0)
+    expect(rest([full('2026-10-01')], [c('2026-11-16', 'VIGILANCE')])).toHaveLength(0)
+    // la charge doit venir de séances organisées : une activité imprévue déclarée ne suffit pas
+    const fake = [1, 2, 3].map((i) => session({ kind: 'other', origin: 'unplanned', date: `2026-11-1${3 + i}`, endedAt: `2026-11-1${3 + i}T12:00:00.000Z`, other: { minutes: 120, rpe: 9, muscles: ['quadriceps', 'dos', 'pectoraux'] } }))
+    expect(rest(fake, [c('2026-11-16', 'VIGILANCE')])).toHaveLength(0)
+    // niveau normal, repos non choisi, ou séance ce jour-là : pas de récompense de repos
+    expect(rest(loaded, [c('2026-11-16', 'NORMAL')])).toHaveLength(0)
+    expect(rest(loaded, [c('2026-11-16', 'VIGILANCE', false)])).toHaveLength(0)
+    expect(rest([...loaded, full('2026-11-16')], [c('2026-11-16', 'VIGILANCE')])).toHaveLength(0)
+    // plafond hebdomadaire
+    expect(rest(loaded, ['2026-11-16', '2026-11-17', '2026-11-18'].map((d) => c(d, 'VIGILANCE')))).toHaveLength(X.restMaxPerWeek)
+  })
+  it('recommandation de repos : fatigue locale élevée ou plusieurs séances récentes', () => {
+    const heavy = session({ date: '2026-11-15', endedAt: '2026-11-15T20:00:00.000Z', slots: [slot('developpe_couche_halteres', Array.from({ length: 12 }, (_, i) => log('developpe_couche_halteres', { rpe: 9 }, i + 1)), 12)] })
+    const r = restRecommendation({ sessions: [heavy], day: '2026-11-16' })
+    expect(r.corroborated).toBe(true)
+    expect(r.reasons.join()).toMatch(/fatigue locale/)
+    expect(restRecommendation({ sessions: [], day: '2026-11-16' }).corroborated).toBe(false)
+    expect(restRecommendation({ sessions: [full('2026-11-15')], day: '2026-11-16' }).corroborated).toBe(false) // une seule séance légère
   })
   it('progression confirmée par l’utilisateur uniquement', () => {
     const dec = (applied: boolean) => ({ id: 'd1', exerciseId: 'curl_halteres', action: 'increase' as const, from: 10, to: 12, unit: 'kg' as const, reason: 'ok', applied, at: new Date(NOW).toISOString() })

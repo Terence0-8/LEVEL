@@ -118,16 +118,62 @@ describe('XP SPORT dans le journal existant (aucun second moteur)', () => {
     expect(context.localFatigue([s], clock).quadriceps).toBeGreaterThan(0)
     expect(await code(sport.logUnplanned({ title: '', minutes: 60, rpe: 5 }))).toBe('invalid')
   })
-  it('une seule séance récompensée par jour : la seconde est enregistrée sans XP', async () => {
+  it('deuxième séance du jour : récompensée si la récupération le permettait et après un délai ; coefficient réduit ; plafonnée', async () => {
     await gymProfile()
-    await doSession()
-    const one = await xp('SPORT')
-    await doSession({ focus: ['epaules'] })
-    expect((await sportEvents()).filter((e) => e.awardKey.endsWith(':base') && e.status === 'valid')).toHaveLength(1)
-    expect(await xp('SPORT')).toBe(one)
-    expect((await main.sportSessions.toArray()).filter((s) => s.status === 'completed')).toHaveLength(2)
+    clock = at(19, 7)
+    const first = await doSession()
+    const base = async () => (await sportEvents()).filter((e) => e.awardKey.endsWith(':base') && e.kind === 'award' && e.status === 'valid')
+    expect(await base()).toHaveLength(1)
+    // moins de 4 h après : une séance scindée ne double pas la récompense
+    clock = at(19, 9)
+    const tooSoon = await doSession({ focus: ['epaules'] })
+    expect(await base()).toHaveLength(1)
+    expect(tooSoon.safetyAtStart).toBe('NORMAL')
+    // plus tard dans la journée, récupération normale : la séance supplémentaire rapporte de l'XP (coefficient réduit)
+    clock = at(19, 15)
+    const extra = await doSession({ focus: ['quadriceps'] })
+    const awards = await base()
+    expect(awards).toHaveLength(2)
+    const a = awards.find((e) => e.sourceId === first.id)!, b = awards.find((e) => e.sourceId === extra.id)!
+    expect(b.reason).toMatch(/séance supplémentaire du jour/)
+    expect(b.amount).toBeLessThan(a.amount)
+    // plafond de 2 séances récompensées par jour
+    clock = at(19, 21)
+    await doSession({ focus: ['biceps'] })
+    expect(await base()).toHaveLength(2)
+    expect(auditLedger(await events())).toEqual([])
   })
-})
+  it('deuxième séance démarrée en vigilance : enregistrée, sans XP', async () => {
+    await gymProfile()
+    clock = at(19, 7)
+    await doSession()
+    clock = at(19, 15)
+    await sport.saveCheck({ fatigue: 2, sleep: 2, soreness: 'none', pain: 'none' }) // vigilance : séance possible, mais pas récompensée
+    const extra = await doSession({ focus: ['quadriceps'] })
+    expect(extra.safetyAtStart).toBe('VIGILANCE')
+    expect(extra.status).not.toBe('abandoned')
+    expect((await sportEvents()).filter((e) => e.awardKey.endsWith(':base') && e.kind === 'award' && e.status === 'valid')).toHaveLength(1)
+    expect((await main.sportSessions.toArray()).filter((s) => s.status === 'completed' || s.status === 'partial')).toHaveLength(2)
+  })
+  it('séance écourtée : XP proportionnelle au travail, sans seuil en pourcentage ; sans travail significatif : aucune', async () => {
+    await gymProfile()
+    const amounts: number[] = []
+    for (const [i, ratio] of [0.2, 0.5, 1].entries()) {
+      clock = at(10 + i * 2)
+      const s = await doSession({ completeRatio: ratio })
+      amounts.push((await sportEvents()).filter((e) => e.sourceId === s.id && e.awardKey.endsWith(':base') && e.status === 'valid' && e.kind === 'award').reduce((n, e) => n + e.amount, 0))
+    }
+    expect(amounts[0]).toBeGreaterThan(0) // 20 % du travail : proportionnel, pas de falaise
+    expect(amounts[0]).toBeLessThan(amounts[1])
+    expect(amounts[1]).toBeLessThan(amounts[2])
+    clock = at(16)
+    const { session } = await sport.generateStrength({ focus: ['dos'] })
+    await sport.startSession(session.id)
+    const sl = session.slots[0]; const ex = (sl.equipment ?? sl.bodyweight)!
+    await sport.logSet(session.id, sl.id, { exerciseId: ex.exerciseId, reps: 8, loadKg: 10 })
+    const done = (await sport.finishSession(session.id)).session
+    expect((await sportEvents()).filter((e) => e.sourceId === done.id)).toHaveLength(0) // 1 série : pas de travail significatif
+  })})
 
 describe('corrections de l’historique : recalcul complet', () => {
   it('corriger une séance (statut) recalcule l’XP avec événements de correction tracés', async () => {
@@ -384,14 +430,39 @@ describe('course, récupération, planning, progression', () => {
     expect(b.check.safety).toBe('NORMAL')
     expect(await main.recoveryChecks.count()).toBe(2)
   })
-  it('« Je me repose » : XP seulement en vigilance/alerte, plafonnée par semaine, jamais en NORMAL', async () => {
+  it('« Je me repose » : XP seulement si Level le recommande de façon pertinente (niveau et charge récente), jamais sur simple déclaration', async () => {
+    // jour normal : aucune récompense
     await sport.saveCheck({ fatigue: 0, sleep: 3, soreness: 'none', pain: 'none' })
     await sport.chooseRest()
     expect(await sportEvents()).toHaveLength(0)
-    for (const d of [16, 17, 18]) { clock = at(d); await sport.saveCheck({ fatigue: 2, sleep: 2, soreness: 'none', pain: 'none' }); await sport.chooseRest() }
-    expect((await sportEvents()).filter((e) => e.status === 'valid' && e.kind === 'award')).toHaveLength(2)
-    expect((await sportEvents())[0].attribute).toBe('resilience')
-    expect(await code((async () => { clock = at(21); return sport.chooseRest() })())).toBe('bad_state')
+    // vigilance DÉCLARÉE sans aucune charge récente : repos conseillé mais sans XP
+    clock = at(17)
+    await sport.saveCheck({ fatigue: 2, sleep: 2, soreness: 'none', pain: 'none' })
+    await sport.chooseRest()
+    expect(await sportEvents()).toHaveLength(0)
+    // deux séances guidées récentes : la recommandation de repos devient pertinente
+    for (const d of [18, 19]) {
+      clock = at(d, 9)
+      const s = await sport.createPersonalSession('Travail', ['developpe_couche_halteres', 'tirage_vertical'], 3)
+      await sport.startSession(s.id)
+      for (const sl of s.slots) for (let i = 0; i < 3; i++) await sport.logSet(s.id, sl.id, { exerciseId: (sl.equipment ?? sl.bodyweight)!.exerciseId, reps: 10, loadKg: 20, rpe: 8, technique: 3 })
+      await sport.finishSession(s.id)
+    }
+    await sport.syncXp()
+    const before = (await sportEvents()).filter((e) => e.awardKey.includes(':rest:') && e.kind === 'award' && e.status === 'valid').length
+    expect(before).toBe(0)
+    clock = at(20)
+    await sport.saveCheck({ fatigue: 2, sleep: 2, soreness: 'none', pain: 'none' })
+    await sport.chooseRest()
+    const rest = (await sportEvents()).filter((e) => e.awardKey.includes(':rest:') && e.kind === 'award' && e.status === 'valid')
+    expect(rest).toHaveLength(1)
+    expect(rest[0]).toMatchObject({ attribute: 'resilience', domain: 'SPORT' })
+    expect(rest[0].reason).toMatch(/Repos recommandé par Level/)
+    // plafond hebdomadaire respecté
+    clock = at(21); await sport.saveCheck({ fatigue: 2, sleep: 2, soreness: 'none', pain: 'none' }); await sport.chooseRest()
+    clock = at(22); await sport.saveCheck({ fatigue: 2, sleep: 2, soreness: 'none', pain: 'none' }); await sport.chooseRest()
+    expect((await sportEvents()).filter((e) => e.awardKey.includes(':rest:') && e.kind === 'award' && e.status === 'valid').length).toBeLessThanOrEqual(2)
+    expect(await code((async () => { clock = at(23); return sport.chooseRest() })())).toBe('bad_state')
   })
   it('planning : applique sans empiler, remplace les séances prévues non commencées, conserve les commencées', async () => {
     await sport.saveProfile({ availability: { days: [0, 2, 4], strengthPerWeek: 3, runsPerWeek: 0 } })

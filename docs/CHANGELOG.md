@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1 — Arbitrages de validation SPORT (V1)
+- Deuxième séance du jour récompensable : récupération NORMALE au départ, ≤ 2 séances récompensées/jour, ≤ 3 supplémentaires/semaine, coefficient ×0,75, ≥ 4 h d'écart ; sinon enregistrée sans XP avec explication.
+- Séances écourtées : XP strictement proportionnelle au travail accompli ; fin du seuil de 25 % (seul un travail non significatif, < 3 séries / < 10 min, ne rapporte rien).
+- Repos : XP seulement si Level le recommande de façon pertinente (niveau + charge récente objective) ; la déclaration seule ne suffit plus ; explication affichée.
+- Profils de matériel : « Sans matériel » sans mobilier ni équipement (pompes inclinées au mur, pompes triceps au mur, pompes en piqué au sol, mollets au sol…) ; mobilier solide réservé à Domicile/Salle ; tapis facultatif. 4 exercices ajoutés pour couvrir tous les groupes dès le niveau débutant (ange inversé, touche-épaules en planche, pompes triceps au mur, charnière au poids du corps).
+- Règle de douleur inchangée.
+- Tests : 233 (Vitest) ; contrôles navigateur SPORT mis à jour.
+
 ## 0.5.0 — Module SPORT
 - Profil sportif progressif (niveaux déclaré / mesuré / opérationnel), enregistrement immédiat, jamais bloquant.
 - Bibliothèque de ~75 exercices sur 11 groupes (fiches complètes, illustrations SVG locales), préférences (favoris, exclusions, évitements temporaires), exercices et séances personnalisés ; pompes classiques réservées au circuit HIIT.

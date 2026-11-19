@@ -123,7 +123,7 @@ Expérience, objectifs, priorités musculaires (Développement / Progression / E
 |---|---|
 | Bibliothèque | 11 groupes musculaires, ~75 exercices utiles (musculation, mobilité, circuit HIIT), fiche complète : muscles principaux/secondaires, matériel, famille biomécanique (poussée, tirage, flexion, extension, charnière, rotation, stabilisation), niveau, exécution, sécurité, progression, alternatives, illustration. |
 | Images | Illustrations **schématiques** générées localement en SVG (départ / fin, muscles en or) : quelques octets, hors ligne, pas de photographie. |
-| Matériel | Un programme = **deux variantes cohérentes** (avec / sans matériel), mêmes groupes et mouvements, même historique. Bascule possible en séance **sans perdre** les séries saisies. Exercices et performances **restent distincts** : aucune conversion répétitions ↔ charge. Profil « Sans matériel » : chaise/table solide et tapis ; une seule variante. |
+| Matériel | Un programme = **deux variantes cohérentes** (avec / sans matériel), mêmes groupes et mouvements, même historique. Bascule possible en séance **sans perdre** les séries saisies. Exercices et performances **restent distincts** : aucune conversion répétitions ↔ charge. **Sans matériel** = aucun équipement ni mobilier (le sol et un mur suffisent ; un tapis est facultatif) ; une seule variante. **Domicile** = mobilier solide (chaise, table, marche) + petit matériel choisi, tapis facultatif. **Salle** = tout. La variante « sans matériel » d'un programme n'exige jamais chaise, table ni équipement. |
 | Pompes classiques | **Exclues des programmes ordinaires** ; seulement dans un circuit HIIT full-body, si l'utilisateur l'autorise. Les pompes inclinées et en piqué (variantes différentes) restent possibles. |
 | Préférences | Favoris, exclusions, évitements temporaires (jusqu'à une date), contraintes physiques, exercices personnalisés, séances personnelles. Exercice impossible → alternative **proposée**, jamais appliquée durablement sans validation (remplacement ponctuel pour la séance seulement). |
 | Génération | Adaptative, sans split fixe : priorités × besoin hebdomadaire (14/10/6 séries selon la priorité) × fraîcheur du groupe × fatigue locale × récupération × durée × historique ; équilibre poussée/tirage ; ordre des exercices (polyarticulaires d'abord). |
@@ -135,7 +135,7 @@ Expérience, objectifs, priorités musculaires (Développement / Progression / E
 Familles : endurance fondamentale, fractionné, sortie longue, tempo, récupération active, côtes — **choisies par l'utilisateur** (Level n'ajoute jamais une famille exclue). Enregistré : distance, durée, **allure moyenne calculée**, type, difficulté ressentie, commentaire, **intervalles individuels** du fractionné. Proposition de sortie : premier test prudent (20 min, allure de conversation), puis volume ≤ +10 %/sem., **un seul levier** (volume, sortie longue ou intensité) par semaine, pas d'exigeant en vigilance/alerte, rien en alerte ; une récupération qui dépasse la difficulté permise est signalée et plafonnée en XP. Pas de GPS ni de montre.
 
 ### Planning et coordination
-Une séance par jour ; musculation prioritaire dans les arbitrages ; jours disponibles respectés ; séance manquée → réorganisation du reste de la semaine **sans empiler** (aucune pénalité) ; séances prévues préparées au dernier moment avec les données du jour. Seconde séance le même jour : possible à l'initiative de l'utilisateur, enregistrée, mais **une seule séance récompensée par jour**.
+Une séance par jour ; musculation prioritaire dans les arbitrages ; jours disponibles respectés ; séance manquée → réorganisation du reste de la semaine **sans empiler** (aucune pénalité) ; séances prévues préparées au dernier moment avec les données du jour. Seconde séance le même jour : possible exceptionnellement, **à l'initiative de l'utilisateur**. Elle **rapporte de l'XP** si la récupération la permettait au départ (niveau NORMAL), avec les protections ci-dessous (voir XP).
 
 ### Récupération et sécurité (estimation non médicale)
 Questionnaire d'environ 30 s : fatigue (4 niveaux), sommeil (4), courbatures (aucune/légères/modérées/importantes, zone facultative), douleur inhabituelle (non/légère/importante, zone). Combiné à la charge des séances (**fatigue locale par groupe** à décroissance exponentielle, distincte de la fatigue générale). Trois niveaux : **NORMAL / VIGILANCE / ALERTE**. Alerte (douleur importante, douleur légère 3 jours de suite dans la même zone, fatigue forte + sommeil très mauvais, indice très bas) : la zone concernée (muscle, articulation, ou tout si non localisée) est **bloquée jusqu'à réévaluation** (nouvelle saisie) ; aucune séance proposée ; une séance prévue voit ses exercices bloqués écartés au démarrage. La sécurité passe avant les objectifs et les récompenses ; aucun encouragement à dépasser une douleur.
@@ -143,11 +143,12 @@ Questionnaire d'environ 30 s : fatigue (4 niveaux), sommeil (4), courbatures (au
 ### XP et attributs SPORT (barèmes provisoires)
 | Récompense | Règle |
 |---|---|
-| Séance terminée / écourtée | Base × taux de réalisation × facteur de durée ; **proportionnelle** au travail réalisé ; en dessous de 25 % : enregistrée, sans XP. |
+| Séance terminée / écourtée | Base × part du travail réalisé × facteur de durée : **strictement proportionnelle** au travail accompli, sans seuil en pourcentage. Seule une séance **sans travail significatif** (moins de 3 séries ; moins de 10 min de course) est enregistrée sans XP (paramètres provisoires). |
+| 2ᵉ séance du jour | Récompensée si : niveau de récupération **NORMAL au départ** (mémorisé), au plus **2 séances récompensées par jour** et **3 séances supplémentaires par semaine**, coefficient **×0,75**, **≥ 4 h** après la séance précédente (une séance scindée ne double pas la récompense). Sinon : enregistrée, comptée dans la récupération et les statistiques, sans XP, avec la raison affichée. |
 | Course | Selon la durée (≥ 10 min) ; récupération active plafonnée. |
 | Régularité | Objectif hebdomadaire atteint sur des jours distincts (1/semaine). |
 | Records personnels | Après ≥ 3 expositions, amélioration ≥ 2 %, technique propre, sans douleur ; ≤ 2 par séance. |
-| Récupération respectée | Repos choisi en vigilance/alerte, sans séance ce jour ; ≤ 2/semaine. |
+| Récupération respectée | **Seulement si Level recommande le repos de façon pertinente** : niveau VIGILANCE/ALERTE **et** charge récente objective (fatigue locale élevée ou ≥ 2 séances organisées dans les 3 derniers jours), repos choisi, aucune séance ce jour ; ≤ 2/semaine. Une déclaration personnelle (questionnaire, activité imprévue déclarée) **ne suffit pas** : le repos reste conseillé, sans XP. |
 | Progression confirmée | Quand l'utilisateur applique une recommandation (Maîtrise technique) ; ≤ 3/semaine. |
 | Activité imprévue | Enregistrée, comptée dans la récupération et les statistiques, **sans XP**. |
 Attributs SPORT : Force, Endurance, Discipline (partagés avec LIFE), Mobilité (séances de mobilité), Coordination (circuits HIIT), Maîtrise technique (progressions confirmées), Résilience (repos respecté).
@@ -163,4 +164,12 @@ Volume (séries, tonnage, répétitions poids du corps, durée), répartition mu
 - Bilans : affichés dans l'application (pas de notification, ni PDF).
 - Alertes de fin de repos : vibration seulement ; aucune notification si l'application est en arrière-plan (limite du web sans serveur) — le chronomètre reste exact au retour.
 - Mensurations : poids et tour de taille dans le formulaire.
-- Barèmes, seuils de récupération et demi-vie de fatigue : hypothèses à calibrer.
+- Barèmes, seuils de récupération, demi-vie de fatigue, seuil de travail significatif, paramètres des séances supplémentaires et de la recommandation de repos : hypothèses à calibrer.
+
+### Arbitrages de validation du module SPORT (V1)
+1. **Deuxième séance quotidienne** : peut rapporter de l'XP (pas de règle générale « une séance par jour »), sous conditions de récupération et protections anti-farming (voir XP).
+2. **Seuil de 25 %** supprimé : récompense proportionnelle au travail accompli ; seul un travail non significatif (nombre minimal de séries / minutes, provisoire) ne rapporte rien.
+3. **Repos** : récompensé seulement sur recommandation pertinente de Level (niveau + charge objective), jamais sur simple déclaration.
+4. **Profils de matériel** : « Sans matériel » sans mobilier ni équipement ; « Domicile » avec mobilier solide et petit matériel ; tapis facultatif.
+5. **Règle de douleur** inchangée (provisoire) : douleur importante, ou douleur légère 3 jours de suite dans la même zone → ALERTE et blocage jusqu'à réévaluation.
+Le module SPORT est considéré comme **livré en V1** ; les autres paramètres numériques restent provisoires et seront calibrés à l'usage.

@@ -8,8 +8,11 @@ export const SPORT_CONFIG = {
   xp: {
     /** XP d'une séance complète (avant facteur de durée) */
     base: { strength: 90, run: 80, hiit: 70, mobility: 35, other: 0 },
-    /** Sous ce taux de réalisation, la séance est enregistrée sans XP (anti-farming des « séances » de quelques secondes) */
-    minCompletion: 0.25,
+    /**
+     * Travail significatif : nombre MINIMAL de séries réalisées pour qu'une séance rapporte de l'XP. Ce n'est pas un taux :
+     * au-dessus, la récompense est strictement proportionnelle au travail accompli (séance écourtée = XP proportionnelle).
+     */
+    minSignificantSets: 3,
     /** Facteur de durée = √(minutes / référence), borné */
     durationReferenceMin: 45,
     durationFactorMin: 0.6,
@@ -17,8 +20,12 @@ export const SPORT_CONFIG = {
     /** Course : durée minimale pour gagner de l'XP (min) ; sortie « récupération » plafonnée */
     runMinMinutes: 10,
     recoveryRunCapFactor: 0.6,
-    /** Une seule séance récompensée par jour (une 2e reste possible et enregistrée, sans XP) */
-    maxRewardedSessionsPerDay: 1,
+    /**
+     * Deuxième séance du jour : exceptionnelle, à l'initiative de l'utilisateur, récompensée seulement si la récupération le
+     * permettait au départ (niveau NORMAL). Protections anti-farming : plafonds par jour et par semaine, coefficient réduit,
+     * délai minimal entre deux séances (une séance scindée en deux ne double pas la récompense).
+     */
+    extraSession: { maxRewardedPerDay: 2, maxExtraPerWeek: 3, multiplier: 0.75, minHoursBetween: 4 },
     /** Régularité : objectif hebdomadaire atteint (séances sur jours distincts) */
     regularityWeek: 40,
     /** Record personnel : XP, plafond par séance, expositions minimales avant qu'un record compte */
@@ -29,6 +36,12 @@ export const SPORT_CONFIG = {
     /** Respect de la récupération (repos décidé en vigilance/alerte) : XP et plafond hebdomadaire */
     rest: 15,
     restMaxPerWeek: 2,
+    /**
+     * Le repos ne rapporte de l'XP que si Level le RECOMMANDE de façon pertinente : niveau VIGILANCE/ALERTE ET charge récente
+     * objective (séances organisées). Une simple déclaration personnelle ne suffit pas.
+     */
+    restMinLocalFatigue: 50,
+    restMinSessionsIn3Days: 2,
     /** Progression confirmée par l'utilisateur après plusieurs expositions (maîtrise technique) */
     progressionConfirmed: 20,
   },

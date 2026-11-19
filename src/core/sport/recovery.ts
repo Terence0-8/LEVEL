@@ -148,3 +148,24 @@ export function isBlocked(ex: Exercise, state: RecoveryState): string | null {
   }
   return null
 }
+
+export interface RestRecommendation {
+  /** Level recommande-t-il le repos de façon pertinente (donc récompensable) ? */
+  corroborated: boolean
+  reasons: string[]
+}
+
+/**
+ * Repos « pertinent » : le niveau est VIGILANCE/ALERTE (questionnaire) ET une charge récente objective le justifie
+ * (fatigue locale élevée ou plusieurs séances organisées dans les 3 derniers jours). Seules les séances guidées/organisées comptent :
+ * une déclaration seule ne suffit pas à déclencher de l'XP. Pure et recalculée à partir de l'historique.
+ */
+export function restRecommendation(opts: { sessions: SportSession[]; day: string; custom?: Exercise[] }): RestRecommendation {
+  const before = opts.sessions.filter((s) => s.date < opts.day && s.origin !== 'unplanned' && s.kind !== 'other' && (s.status === 'completed' || s.status === 'partial'))
+  const fat = Math.max(0, ...Object.values(localFatigue(before, new Date(opts.day + 'T20:00:00'), opts.custom ?? [])))
+  const recent = before.filter((s) => (new Date(opts.day + 'T12:00:00').getTime() - new Date(s.date + 'T12:00:00').getTime()) / dayMs <= 3).length
+  const reasons: string[] = []
+  if (fat >= SPORT_CONFIG.xp.restMinLocalFatigue) reasons.push(`charge récente élevée (fatigue locale ${fat}/100)`)
+  if (recent >= SPORT_CONFIG.xp.restMinSessionsIn3Days) reasons.push(`${recent} séances dans les 3 derniers jours`)
+  return { corroborated: reasons.length > 0, reasons }
+}

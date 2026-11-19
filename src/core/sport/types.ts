@@ -16,7 +16,7 @@ export const MOVEMENT_LABEL: Record<Movement, string> = {
 
 export type EquipmentId = 'furniture' | 'mat' | 'bands' | 'dumbbells' | 'kettlebell' | 'pullup_bar' | 'bench' | 'barbell' | 'rack' | 'machines' | 'cables' | 'dip_bars'
 export const EQUIPMENT_LABEL: Record<EquipmentId, string> = {
-  furniture: 'Chaise / table solide', mat: 'Tapis', bands: 'Élastiques', dumbbells: 'Haltères', kettlebell: 'Kettlebell', pullup_bar: 'Barre de traction',
+  furniture: 'Mobilier solide (chaise, table)', mat: 'Tapis (facultatif)', bands: 'Élastiques', dumbbells: 'Haltères', kettlebell: 'Kettlebell', pullup_bar: 'Barre de traction',
   bench: 'Banc', barbell: 'Barre et disques', rack: 'Rack / supports', machines: 'Machines guidées', cables: 'Poulies', dip_bars: 'Barres de dips',
 }
 export const ALL_EQUIPMENT = Object.keys(EQUIPMENT_LABEL) as EquipmentId[]

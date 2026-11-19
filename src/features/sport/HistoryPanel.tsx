@@ -8,7 +8,7 @@ import { EXERCISE_BY_ID } from '@/core/sport/exercises'
 import { formatPace, formatDuration } from '@/core/sport/running'
 import type { SetLog, SportSession } from '@/core/sport/session'
 import { sessionDebrief } from '@/core/sport/stats'
-import { completion } from '@/core/sport/xp'
+import { completion, explainNoXp } from '@/core/sport/xp'
 import { RUN_FAMILY_LABEL, type Exercise, type SessionKind } from '@/core/sport/types'
 import { sportService } from '@/data/sportService'
 import { formatDayLabel } from '@/lib/format'
@@ -90,7 +90,7 @@ function Detail({ session, onClose }: { session: SportSession; onClose: () => vo
       ))}
       <section>
         <h3 className={s.h3}>XP de cette séance : {total} XP</h3>
-        {xp.length ? <ul className={s.list}>{xp.map((e) => <li key={e.id} className={s.rowCard}><div><b>{e.kind === 'reversal' ? `Correction · ${e.label}` : e.label}</b><small>{e.reason}</small></div><span className="num">{e.amount > 0 ? '+' : ''}{e.amount}</span></li>)}</ul> : <p className={s.dim}>{session.origin === 'unplanned' ? 'Activité imprévue : sans XP, mais comptée dans la récupération et les statistiques.' : 'Aucun gain pour cette séance.'}</p>}
+        {xp.length ? <ul className={s.list}>{xp.map((e) => <li key={e.id} className={s.rowCard}><div><b>{e.kind === 'reversal' ? `Correction · ${e.label}` : e.label}</b><small>{e.reason}</small></div><span className="num">{e.amount > 0 ? '+' : ''}{e.amount}</span></li>)}</ul> : <p className={s.dim}>{explainNoXp({ sessions: sport.sessions, checks: sport.checks, decisions: sport.decisions, profile: sport.profile, custom: sport.custom }, session.id) ?? 'Aucun gain pour cette séance.'}</p>}
       </section>
       <section>
         <h3 className={s.h3}>Corriger</h3>

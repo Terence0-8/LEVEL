@@ -88,11 +88,11 @@ export function ProfilePanel() {
         <SectionTitle title="Matériel" />
         <Segmented label="Profil de matériel" value={p.equipmentProfile} options={(['none', 'home', 'gym'] as EquipmentProfile[]).map((v) => ({ value: v, label: PROFILE_LABEL[v] }))} onChange={(v) => save({ equipmentProfile: v })} />
         <p className={s.dim} style={{ marginTop: 8 }}>
-          {p.equipmentProfile === 'none' ? 'Par défaut : chaise ou table solide et tapis. Vos programmes n’ont alors qu’une variante.' : 'Chaque séance a deux variantes cohérentes, avec et sans matériel, qui alimentent le même historique. Vous pouvez basculer pendant la séance sans perdre vos séries.'}
+          {p.equipmentProfile === 'none' ? 'Par défaut : aucun matériel ni mobilier (le sol et un mur suffisent ; un tapis est facultatif). Vos programmes n’ont alors qu’une variante.' : 'Chaque séance a deux variantes cohérentes, avec et sans matériel, qui alimentent le même historique. Vous pouvez basculer pendant la séance sans perdre vos séries.'}
         </p>
         {p.equipmentProfile === 'home' ? (
-          <Field label="Matériel à domicile">
-            <div className={s.chips}>{ALL_EQUIPMENT.filter((e) => !['machines', 'cables', 'rack', 'dip_bars'].includes(e)).map((e: EquipmentId) => <button key={e} className={s.chip} aria-pressed={p.homeEquipment.includes(e)} onClick={() => save((c) => ({ homeEquipment: toggle(c.homeEquipment, e) }))}>{EQUIPMENT_LABEL[e]}</button>)}</div>
+          <Field label="Petit matériel à domicile" hint="Le mobilier solide (chaise, table, marche) et le tapis sont toujours pris en compte à domicile.">
+            <div className={s.chips}>{ALL_EQUIPMENT.filter((e) => !['machines', 'cables', 'rack', 'dip_bars', 'furniture', 'mat'].includes(e)).map((e: EquipmentId) => <button key={e} className={s.chip} aria-pressed={p.homeEquipment.includes(e)} onClick={() => save((c) => ({ homeEquipment: toggle(c.homeEquipment, e) }))}>{EQUIPMENT_LABEL[e]}</button>)}</div>
           </Field>
         ) : null}
       </Card>

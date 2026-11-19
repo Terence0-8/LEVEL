@@ -38,9 +38,12 @@ export interface GenResult {
 const LEVEL_NUM = { beginner: 1, intermediate: 2, advanced: 3 } as const
 const PRIO_W: Record<PriorityLevel, number> = { develop: 3, progress: 2, maintain: 1 }
 
-/** Matériel disponible selon la variante : « sans matériel » = chaise/table + tapis. */
+/**
+ * Matériel disponible selon la variante. « Sans matériel » = AUCUN équipement ni mobilier (le sol suffit ; le tapis est facultatif).
+ * « Domicile » ajoute le mobilier solide et le petit matériel choisi ; « Salle » : tout.
+ */
 export function equipmentFor(profile: SportProfile, variant: Variant): EquipmentId[] {
-  if (variant === 'bodyweight') return ['furniture', 'mat']
+  if (variant === 'bodyweight') return ['mat']
   if (profile.equipmentProfile === 'gym') return [...ALL_EQUIPMENT]
   if (profile.equipmentProfile === 'home') return [...new Set<EquipmentId>([...profile.homeEquipment, 'furniture', 'mat'])]
   return []

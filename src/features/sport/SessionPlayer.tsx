@@ -7,7 +7,7 @@ import { ConfirmDialog, Sheet } from '@/design/Sheet'
 import sheet from '@/design/sheet.module.css'
 import { EXERCISE_BY_ID } from '@/core/sport/exercises'
 import type { SessionSlot, SetLog, SlotChoice, SportSession, Variant } from '@/core/sport/session'
-import { completion } from '@/core/sport/xp'
+import { completion, explainNoXp } from '@/core/sport/xp'
 import { sessionDebrief } from '@/core/sport/stats'
 import { MUSCLE_LABEL, type Exercise, type PainLevel } from '@/core/sport/types'
 import { loadStep } from '@/core/sport/progression'
@@ -86,7 +86,7 @@ export function SessionPlayer() {
   const elapsed = session.startedAt ? Math.max(0, Math.floor(((session.endedAt ? new Date(session.endedAt).getTime() : session.pausedAt ? new Date(session.pausedAt).getTime() : tick) - new Date(session.startedAt).getTime() - session.pausedMs) / 1000)) : 0
 
   // ── Écran de fin ──
-  if (ended) return <Summary session={session} onDone={() => nav('/sport/historique')} events={events.filter((e) => e.sourceId === session.id && e.kind === 'award' && e.status === 'valid')} all={sport.sessions} custom={sport.custom} />
+  if (ended) return <Summary why={explainNoXp({ sessions: sport.sessions, checks: sport.checks, decisions: sport.decisions, profile: sport.profile, custom: sport.custom }, session.id)} session={session} onDone={() => nav('/sport/historique')} events={events.filter((e) => e.sourceId === session.id && e.kind === 'award' && e.status === 'valid')} all={sport.sessions} custom={sport.custom} />
 
   // ── Écran de démarrage / reprise ──
   if (session.status === 'planned' || session.status === 'paused') {
@@ -274,13 +274,13 @@ function EditSet({ session, slot, log, ex, onDone }: { session: SportSession; sl
   )
 }
 
-function Summary({ session, onDone, events, all, custom }: { session: SportSession; onDone: () => void; events: Array<{ id: string; amount: number; label: string; reason: string }>; all: SportSession[]; custom: Exercise[] }) {
+function Summary({ session, onDone, events, all, custom, why }: { why: string | null; session: SportSession; onDone: () => void; events: Array<{ id: string; amount: number; label: string; reason: string }>; all: SportSession[]; custom: Exercise[] }) {
   const lines = sessionDebrief(session, all, custom)
   const total = events.reduce((n, e) => n + e.amount, 0)
   return (
     <div className={s.shell}>
       <h1 className={s.title}>{session.status === 'completed' ? 'Séance terminée' : session.status === 'partial' ? 'Séance écourtée' : 'Séance abandonnée'}</h1>
-      <div className={s.xpBox}><b className="num">+{total} XP</b><small>{total ? 'SPORT · inscrits dans votre journal' : session.origin === 'unplanned' ? 'Activité imprévue : enregistrée, sans XP' : 'Pas d’XP pour cette séance'}</small></div>
+      <div className={s.xpBox}><b className="num">+{total} XP</b><small>{total ? 'SPORT · inscrits dans votre journal' : why ?? 'Pas d’XP pour cette séance'}</small></div>
       <ul className={s.debrief}>{lines.map((l) => <li key={l}>{l}</li>)}</ul>
       {events.length ? <ul className={s.awards}>{events.map((e) => <li key={e.id}><b>{e.label}</b><small>{e.reason}</small><span className="num">+{e.amount}</span></li>)}</ul> : null}
       <p className={s.dim}>Vous pouvez corriger cette séance à tout moment depuis l’historique : XP, niveaux, records et recommandations sont alors recalculés.</p>

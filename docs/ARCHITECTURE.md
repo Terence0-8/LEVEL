@@ -105,3 +105,9 @@ Base IndexedDB `level`, schéma **v4** : `profile`, `settings`, `demoQuestState`
 - Sauvegardes : les 8 tables SPORT sont dans `TABLE_KEYS` ; schéma de sauvegarde v4 ; migration des sauvegardes plus anciennes (tables vides).
 
 **Dépendances ajoutées : aucune.**
+
+### Ajustements V1 du module SPORT
+- **Séances supplémentaires** : `SportSession.safetyAtStart` mémorise le niveau de récupération au démarrage (ou à l'enregistrement d'une course ; pour une saisie rétroactive, celui du questionnaire de ce jour, sinon inconnu = non récompensé). `desiredSportAwards` applique les règles de `SPORT_CONFIG.xp.extraSession` (plafonds jour/semaine, coefficient, délai minimal vérifié quand les deux séances ont des horodatages réels). `explainNoXp` restitue la raison d'une absence d'XP (écran de fin de séance, historique).
+- **Proportionnalité** : plus de seuil en pourcentage ; `minSignificantSets` (nombre absolu) écarte seulement l'absence de travail significatif.
+- **Repos** : `restRecommendation` (pure) exige un niveau VIGILANCE/ALERTE **et** une charge récente issue de séances organisées ; recalculée à chaque `syncXp`, donc corrigée si l'historique change.
+- **Matériel** : `equipmentFor` — variante sans matériel = `['mat']` (le tapis n'est jamais requis en plus d'un autre matériel ; test) ; mobilier solide réservé à Domicile/Salle.

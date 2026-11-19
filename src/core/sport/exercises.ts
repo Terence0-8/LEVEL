@@ -3,7 +3,8 @@ import type { BodyArea, EquipmentId, Exercise, ExerciseKind, MuscleGroup, Moveme
 /**
  * Bibliothèque initiale. Chaque exercice a une raison d'être : un geste distinct, un matériel distinct
  * ou une progression/régression utile. Les pompes classiques sont réservées au circuit HIIT (option utilisateur).
- * Hypothèse : « chaise / table solide » (furniture) et un tapis sont disponibles dans le profil « Sans matériel ».
+ * Profil « Sans matériel » : AUCUN matériel ni mobilier (un mur et le sol suffisent ; un tapis est facultatif et toujours toléré).
+ * Le mobilier solide (chaise, table, marche) n'est utilisé que par les profils « Domicile » et « Salle ».
  */
 interface Opts {
   mode?: TrackMode
@@ -35,10 +36,10 @@ function x(id: string, name: string, primary: MuscleGroup[], secondary: MuscleGr
 
 export const EXERCISES: Exercise[] = [
   // ── Pectoraux ───────────────────────────────────────────────
-  x('pompes_inclinees', 'Pompes inclinées (mains surélevées)', ['pectoraux'], ['triceps', 'epaules'], ['furniture'], 'push', 1, 'pushup', {
-    stress: ['wrist', 'shoulder'], ins: ['Mains sur une table ou un plan solide, légèrement plus larges que les épaules.', 'Corps gainé en ligne droite, fessiers serrés.', 'Descendez la poitrine vers le support en gardant les coudes à 45°, puis repoussez.'],
-    safe: ['Vérifiez la stabilité du support.', 'Arrêtez si une douleur à l’épaule ou au poignet apparaît.'],
-    prog: 'Abaisser la hauteur d’appui quand vous atteignez le haut de la plage, ralentir la descente (3 s), ajouter une pause d’1 s en bas.', alt: ['developpe_sol_halteres', 'developpe_elastique', 'dips_chaises'] }),
+  x('pompes_inclinees', 'Pompes inclinées (mains surélevées)', ['pectoraux'], ['triceps', 'epaules'], [], 'push', 1, 'pushup', {
+    stress: ['wrist', 'shoulder'], ins: ['Mains sur un mur, un peu plus larges que les épaules, bras tendus (ou sur un support solide plus bas si vous en avez un).', 'Corps gainé en ligne droite, fessiers serrés.', 'Fléchissez les coudes (45°) pour approcher la poitrine du support, puis repoussez.'],
+    safe: ['Pieds assez loin du mur pour garder le contrôle, sans glisser.', 'Arrêtez si une douleur à l’épaule ou au poignet apparaît.'],
+    prog: 'Reculer les pieds, ralentir la descente (3 s), ajouter une pause d’1 s ; avec du mobilier solide, abaisser progressivement la hauteur d’appui.', alt: ['developpe_sol_halteres', 'developpe_elastique', 'dips_chaises'] }),
   x('dips_chaises', 'Dips entre deux chaises', ['triceps'], ['pectoraux', 'epaules'], ['furniture'], 'push', 2, 'triceps_ext', {
     stress: ['shoulder', 'elbow', 'wrist'], ins: ['Deux supports stables, mains sur les bords, jambes tendues ou fléchies.', 'Descendez en gardant le buste proche des supports, coudes vers l’arrière.', 'Remontez en poussant sans verrouiller brutalement les coudes.'],
     safe: ['Ne descendez pas sous 90° de coude si l’épaule tire.', 'Supports verrouillés et antidérapants.'],
@@ -97,7 +98,14 @@ export const EXERCISES: Exercise[] = [
     mode: 'time', stress: ['lower_back'], ins: ['Allongé sur le ventre, bras tendus devant.', 'Soulevez simultanément bras et jambes sans cambrer excessivement.', 'Maintenez, puis relâchez.'],
     safe: ['Amplitude modérée, nuque neutre.', 'Arrêtez en cas de gêne lombaire.'], prog: 'Allonger la durée (jusqu’à 45 s), puis alterner bras/jambe opposés.', alt: ['pont_fessier', 'dead_bug', 'rowing_elastique'] }),
 
+  x('ange_inverse', 'Ange inversé au sol', ['dos'], ['epaules', 'fessiers'], ['mat'], 'pull', 1, 'plank', {
+    mode: 'time', stress: ['lower_back', 'shoulder'], ins: ['Allongé sur le ventre, bras le long du corps, front vers le sol.', 'Décollez légèrement la poitrine et ramenez les bras en arc vers l’avant, pouces vers le haut.', 'Revenez lentement, en gardant la nuque alignée.'],
+    safe: ['Amplitude modérée : ne cambrez pas le bas du dos.', 'Arrêtez en cas de gêne lombaire ou d’épaule.'], prog: 'Allonger la durée (jusqu’à 45 s), ralentir le mouvement, marquer une pause en haut.', alt: ['superman', 'rowing_elastique', 'face_pull_elastique'] }),
+
   // ── Épaules ─────────────────────────────────────────────────
+  x('touche_epaules_planche', 'Touche-épaules en planche', ['epaules'], ['abdominaux'], ['mat'], 'stabilisation', 1, 'plank', {
+    mode: 'time', stress: ['wrist', 'shoulder'], ins: ['En planche haute (ou sur les genoux pour faciliter), mains sous les épaules.', 'Touchez l’épaule opposée avec une main en gardant le bassin immobile.', 'Reposez la main, alternez, sans balancer le corps.'],
+    safe: ['Écartez davantage les pieds pour plus de stabilité.', 'Arrêtez si le poignet ou l’épaule tire.'], prog: 'Allonger la durée (jusqu’à 45 s), rapprocher les pieds, ralentir les touchers.', alt: ['pompes_piquees', 'gainage_planche', 'elevations_laterales_elastique'] }),
   x('developpe_epaules_halteres', 'Développé épaules aux haltères', ['epaules'], ['triceps'], ['dumbbells'], 'push', 2, 'press_overhead', {
     step: 2, stress: ['shoulder', 'lower_back'], ins: ['Assis ou debout, haltères à hauteur d’oreilles.', 'Poussez au-dessus de la tête sans cambrer.', 'Redescendez contrôlé.'],
     safe: ['Gainez les abdominaux.', 'Pas de douleur d’épaule.'], prog: 'Double progression (répétitions puis charge).', alt: ['pompes_piquees', 'elevations_laterales', 'developpe_militaire_barre'] }),
@@ -116,9 +124,9 @@ export const EXERCISES: Exercise[] = [
   x('face_pull_elastique', 'Face pull avec élastique', ['epaules'], ['dos'], ['bands'], 'pull', 1, 'row_bent', {
     stress: ['shoulder'], ins: ['Élastique fixé à hauteur du visage.', 'Tirez vers le visage en écartant les mains, coudes hauts.', 'Revenez lentement.'],
     safe: ['Ne haussez pas les épaules.'], prog: 'Pause 1–2 s en contraction, élastique plus fort.', alt: ['oiseau_halteres', 'rowing_elastique', 'elevations_laterales_elastique'] }),
-  x('pompes_piquees', 'Pompes en piqué (épaules)', ['epaules'], ['triceps'], ['furniture'], 'push', 2, 'press_overhead', {
-    stress: ['shoulder', 'wrist'], ins: ['Hanches hautes en V inversé, mains au sol (ou pieds sur un support).', 'Fléchissez les coudes pour approcher le sommet du crâne du sol.', 'Repoussez à la verticale.'],
-    safe: ['Mouvement contrôlé, tête libre.', 'Si le poignet tire, passez à un autre exercice.'], prog: 'Pieds surélevés pour augmenter la difficulté, descente plus lente.', alt: ['developpe_epaules_halteres', 'elevations_laterales_elastique', 'pompes_inclinees'] }),
+  x('pompes_piquees', 'Pompes en piqué (épaules)', ['epaules'], ['triceps'], [], 'push', 2, 'press_overhead', {
+    stress: ['shoulder', 'wrist'], ins: ['Hanches hautes en V inversé, mains et pieds au sol.', 'Fléchissez les coudes pour approcher le sommet du crâne du sol.', 'Repoussez à la verticale.'],
+    safe: ['Mouvement contrôlé, tête libre.', 'Si le poignet tire, passez à un autre exercice.'], prog: 'Rapprocher les pieds des mains, descente plus lente ; pieds surélevés si vous avez un support solide.', alt: ['developpe_epaules_halteres', 'elevations_laterales_elastique', 'pompes_inclinees'] }),
 
   // ── Biceps ──────────────────────────────────────────────────
   x('curl_halteres', 'Curl haltères', ['biceps'], ['avant_bras'], ['dumbbells'], 'flexion', 1, 'curl', {
@@ -135,6 +143,9 @@ export const EXERCISES: Exercise[] = [
     safe: ['Montée progressive de la tension, sans à-coup.'], prog: 'Allonger les maintiens (20 → 40 s) et augmenter l’intensité de la résistance.', alt: ['curl_elastique', 'rowing_inverse_table', 'curl_halteres'] }),
 
   // ── Triceps ─────────────────────────────────────────────────
+  x('pompes_triceps_mur', 'Pompes triceps contre un mur', ['triceps'], ['pectoraux', 'epaules'], [], 'push', 1, 'pushup', {
+    stress: ['elbow', 'wrist'], ins: ['Face à un mur, mains rapprochées à hauteur de poitrine, coudes serrés le long du corps.', 'Fléchissez les coudes pour approcher le visage des mains, sans écarter les coudes.', 'Repoussez jusqu’à tendre les bras.'],
+    safe: ['Pieds assez proches pour éviter de glisser.', 'Arrêtez si le coude tire.'], prog: 'Reculer les pieds, ralentir la descente, ajouter une pause en bas.', alt: ['extension_triceps_elastique', 'extension_triceps_halteres', 'pompes_inclinees'] }),
   x('extension_triceps_halteres', 'Extension triceps au-dessus de la tête', ['triceps'], [], ['dumbbells'], 'extension', 1, 'triceps_ext', {
     step: 1, stress: ['elbow', 'shoulder'], ins: ['Un haltère tenu à deux mains au-dessus de la tête.', 'Fléchissez les coudes derrière la tête, coudes fixes.', 'Étendez jusqu’en haut.'],
     safe: ['Charge modérée.', 'Gainez pour ne pas cambrer.'], prog: 'Double progression.', alt: ['pushdown_poulie', 'extension_triceps_elastique', 'dips_chaises'] }),
@@ -225,6 +236,9 @@ export const EXERCISES: Exercise[] = [
   x('souleve_roumain_barre', 'Soulevé de terre roumain à la barre', ['ischios', 'fessiers'], ['dos'], ['barbell'], 'hinge', 3, 'hinge', {
     step: 2.5, stress: ['lower_back', 'hip'], ins: ['Barre devant les cuisses, prise à largeur d’épaules.', 'Reculez les hanches, dos plat.', 'Remontez en poussant les hanches vers l’avant.'],
     safe: ['Abandonnez si le dos s’arrondit.'], prog: 'Ajouter 2,5 kg en haut de plage.', alt: ['souleve_roumain_halteres', 'leg_curl_machine', 'pont_fessier'] }),
+  x('charniere_poids_du_corps', 'Charnière de hanche au poids du corps', ['ischios', 'fessiers'], ['dos'], [], 'hinge', 1, 'hinge', {
+    stress: ['lower_back', 'hip'], ins: ['Debout, pieds largeur de hanches, genoux légèrement fléchis, mains croisées sur la poitrine ou sur les hanches.', 'Poussez les hanches en arrière en gardant le dos plat, jusqu’à sentir l’étirement derrière les cuisses.', 'Remontez en poussant les hanches vers l’avant et en serrant les fessiers.'],
+    safe: ['Dos neutre en permanence : descendez seulement tant qu’il reste plat.', 'Mouvement lent, sans à-coup.'], prog: 'Monter les répétitions, ralentir (3 s), marquer une pause en bas, puis passer à la charnière sur une jambe.', alt: ['souleve_roumain_unipodal', 'pont_fessier', 'curl_ischios_serviette'] }),
   x('souleve_roumain_unipodal', 'Charnière unipodale (sans charge)', ['ischios', 'fessiers'], ['abdominaux'], [], 'hinge', 2, 'hinge', {
     uni: true, stress: ['lower_back', 'hip', 'ankle'], ins: ['Debout sur une jambe, appui léger à portée de main.', 'Penchez le buste en levant l’autre jambe, dos plat.', 'Revenez en contractant fessier et ischio.'],
     safe: ['Appui à portée de main.', 'Genou d’appui légèrement fléchi.'], prog: 'Ralentir, allonger l’amplitude, puis ajouter un haltère.', alt: ['pont_fessier_unipodal', 'souleve_roumain_halteres', 'curl_ischios_serviette'] }),
@@ -253,14 +267,14 @@ export const EXERCISES: Exercise[] = [
     safe: ['Ne laissez pas les genoux rentrer.'], prog: 'Élastique plus fort ou placé aux chevilles.', alt: ['pont_fessier', 'pont_fessier_unipodal', 'squat_poids_du_corps'] }),
 
   // ── Mollets ─────────────────────────────────────────────────
-  x('mollets_debout', 'Mollets debout (sur marche)', ['mollets'], [], ['furniture'], 'extension', 1, 'calf', {
-    stress: ['ankle'], ins: ['Avant-pieds sur le bord d’une marche, talons dans le vide, main en appui.', 'Montez sur la pointe des pieds.', 'Redescendez lentement, étirement complet.'],
+  x('mollets_debout', 'Mollets debout', ['mollets'], [], [], 'extension', 1, 'calf', {
+    stress: ['ankle'], ins: ['Debout, pieds parallèles (sur le bord d’une marche si vous en avez une, sinon au sol), main en appui contre un mur.', 'Montez sur la pointe des pieds.', 'Redescendez lentement, étirement complet.'],
     safe: ['Appui à portée de main.'], prog: 'Monter les répétitions, ralentir (3 s), puis passer à un pied ou ajouter une charge.', alt: ['mollets_unipodal', 'mollets_halteres', 'mollets_assis_machine'] }),
-  x('mollets_unipodal', 'Mollets sur un pied', ['mollets'], [], ['furniture'], 'extension', 2, 'calf', {
-    uni: true, stress: ['ankle'], ins: ['Sur une marche, un seul pied d’appui.', 'Montez sur la pointe.', 'Redescendez lentement.'],
+  x('mollets_unipodal', 'Mollets sur un pied', ['mollets'], [], [], 'extension', 2, 'calf', {
+    uni: true, stress: ['ankle'], ins: ['Un seul pied d’appui, main contre un mur (sur une marche si vous en avez une).', 'Montez sur la pointe.', 'Redescendez lentement.'],
     safe: ['Appui à portée de main.'], prog: 'Monter les répétitions, puis tenir un haltère.', alt: ['mollets_debout', 'mollets_halteres', 'mollets_assis_machine'] }),
-  x('mollets_halteres', 'Mollets aux haltères', ['mollets'], [], ['dumbbells', 'furniture'], 'extension', 1, 'calf', {
-    step: 2, stress: ['ankle'], ins: ['Haltères en main, avant-pieds sur une marche.', 'Montez sur la pointe.', 'Redescendez lentement.'],
+  x('mollets_halteres', 'Mollets aux haltères', ['mollets'], [], ['dumbbells'], 'extension', 1, 'calf', {
+    step: 2, stress: ['ankle'], ins: ['Haltères en main, pieds parallèles (avant-pieds sur une marche si vous en avez une).', 'Montez sur la pointe.', 'Redescendez lentement.'],
     safe: ['Appui à portée de main.'], prog: 'Double progression.', alt: ['mollets_debout', 'mollets_unipodal', 'mollets_assis_machine'] }),
   x('mollets_assis_machine', 'Mollets assis (machine)', ['mollets'], [], ['machines'], 'extension', 1, 'calf', {
     step: 5, stress: ['ankle'], ins: ['Genoux sous le coussin, avant-pieds sur la plateforme.', 'Montez sur la pointe.', 'Redescendez jusqu’à l’étirement.'],

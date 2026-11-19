@@ -83,6 +83,8 @@ export interface SportSession {
   /** Activité imprévue : durée et effort déclarés */
   other?: { minutes: number; rpe: number; muscles: MuscleGroup[] }
   notes: string
+  /** Niveau de sécurité de Level au démarrage (ou à l'enregistrement) : conditionne la récompense d'une 2e séance du jour */
+  safetyAtStart?: SafetyLevel | null
   /** Pour les séances prévues par le planning mais pas encore détaillées */
   runFamilyPlanned?: RunFamily
   createdAt: string

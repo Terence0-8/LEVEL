@@ -5,7 +5,7 @@ import { Ring } from '@/design/charts'
 import { Field, Segmented, inputClass, errorClass } from '@/design/Form'
 import { Sheet } from '@/design/Sheet'
 import sheet from '@/design/sheet.module.css'
-import { latestPerDay } from '@/core/sport/recovery'
+import { latestPerDay, restRecommendation } from '@/core/sport/recovery'
 import { AREA_LABEL, MUSCLE_GROUPS, MUSCLE_LABEL, type BodyArea, type Level3, type MuscleGroup, type PainLevel, type SorenessLevel } from '@/core/sport/types'
 import { sportService } from '@/data/sportService'
 import { useAction } from '../backup/useBackupData'
@@ -25,6 +25,7 @@ export function RecoveryPanel() {
   const canRest = r.hasCheckToday && r.level !== 'NORMAL'
   const rested = sport.checks.some((c) => c.day === sport.today && c.restChosen)
   void now
+  const rr = restRecommendation({ sessions: sport.sessions, day: sport.today, custom: sport.custom })
   return (
     <div className={s.stack}>
       <SafetyNotice />
@@ -41,7 +42,13 @@ export function RecoveryPanel() {
           <button className={sheet.btnPrimary} onClick={() => setOpen(true)}>{r.hasCheckToday ? 'Me réévaluer' : 'Questionnaire du jour (30 s)'}</button>
           {canRest ? <button className={sheet.btnGhost} disabled={act.busy || rested} onClick={() => void act.run(() => sportService.chooseRest())}>{rested ? 'Repos choisi ✓' : 'Je me repose aujourd’hui'}</button> : null}
         </div>
-        {canRest ? <p className={s.dim}>Écouter son corps est récompensé (petite XP de Résilience, plafonnée à 2 par semaine). Jamais de pénalité si vous vous entraînez prudemment.</p> : null}
+        {canRest ? (
+          <p className={s.dim}>
+            {rr.corroborated
+              ? <>Level recommande le repos aujourd’hui ({rr.reasons.join(' ; ')}). Le respecter rapporte une petite XP de Résilience (2 par semaine au plus).</>
+              : <>Le repos est conseillé, mais il ne rapporte pas d’XP : votre charge récente ne le justifie pas objectivement, et une déclaration seule ne suffit pas. Reposez-vous quand même si vous en ressentez le besoin.</>}
+          </p>
+        ) : null}
         {act.error ? <p className={errorClass} role="alert">{act.error}</p> : null}
       </Card>
 

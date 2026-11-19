@@ -50,7 +50,7 @@ export function PlanPanel() {
         {[...preview.dropped.map((d) => d.reason), ...(last?.dropped ?? [])].filter((v, i, a) => a.indexOf(v) === i).map((n) => <p key={n} className={s.warn}>{n}</p>)}
         {act.error ? <p className={s.warn} role="alert">{act.error}</p> : null}
         <div className={s.actions}><button className={sheet.btnPrimary} disabled={act.busy} onClick={() => void apply()}>{sport.sessions.some((x) => x.status === 'planned' && x.origin === 'planned') ? 'Réorganiser ma semaine' : 'Planifier ma semaine'}</button></div>
-        <p className={s.dim}>Seconde séance le même jour : possible exceptionnellement, à votre initiative et si la récupération le permet. Elle est enregistrée, mais une seule séance par jour est récompensée.</p>
+        <p className={s.dim}>Seconde séance le même jour : possible exceptionnellement, à votre initiative. Elle rapporte de l’XP si la récupération le permettait au départ (niveau normal), avec un coefficient réduit, au plus 2 séances récompensées par jour et un délai minimal entre deux séances.</p>
       </Card>
     </div>
   )
