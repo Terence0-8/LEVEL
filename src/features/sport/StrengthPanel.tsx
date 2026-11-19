@@ -122,7 +122,7 @@ function PersonalForm({ onDone }: { onDone: () => void }) {
   const [g, setG] = useState<MuscleGroup | 'all'>('all')
   const [pick, setPick] = useState<string[]>([])
   const { busy, error, run } = useAction()
-  const list = [...EXERCISES.filter((e) => (e.kind === 'strength' || e.kind === 'mobility') && !e.hiitOnly), ...sport.custom].filter((e) => g === 'all' || e.primary.includes(g))
+  const list = [...EXERCISES.filter((e) => (e.kind === 'strength' || e.kind === 'mobility') && !e.hiitOnly && !e.pushup), ...sport.custom].filter((e) => g === 'all' || e.primary.includes(g))
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const r = await run(() => sportService.createPersonalSession(title, pick))

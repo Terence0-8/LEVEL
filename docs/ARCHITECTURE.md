@@ -111,3 +111,6 @@ Base IndexedDB `level`, schéma **v4** : `profile`, `settings`, `demoQuestState`
 - **Proportionnalité** : plus de seuil en pourcentage ; `minSignificantSets` (nombre absolu) écarte seulement l'absence de travail significatif.
 - **Repos** : `restRecommendation` (pure) exige un niveau VIGILANCE/ALERTE **et** une charge récente issue de séances organisées ; recalculée à chaque `syncXp`, donc corrigée si l'historique change.
 - **Matériel** : `equipmentFor` — variante sans matériel = `['mat']` (le tapis n'est jamais requis en plus d'un autre matériel ; test) ; mobilier solide réservé à Domicile/Salle.
+
+### Pompes : HIIT uniquement (V1 final)
+`Exercise.pushup` marque toute variante de pompes (4 exercices) ; ces exercices sont `kind: 'hiit'` + `hiitOnly`. `usablePool` (programmes ordinaires) les exclut explicitement ; `sportService.createPersonalSession` et `swapExerciseInSession` les refusent ; aucune fiche ordinaire ne les cite en alternative (tests). `generateHiit` n'en inclut qu'une par circuit, seulement si `allowPushupsInHiit`, selon le niveau opérationnel et la semaine. Ils restent listés dans la bibliothèque.

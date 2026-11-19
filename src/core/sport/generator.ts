@@ -64,7 +64,7 @@ export function usablePool(input: Pick<GenInput, 'profile' | 'prefs' | 'custom' 
   const areas = new Set(profile.constraints.map((c) => c.area))
   const maxLevel = LEVEL_NUM[operationalLevel(profile.experience, input.measured ?? null)] + (profile.experience === 'beginner' ? 0 : 0)
   return allExercises(custom).filter((e) =>
-    e.kind === 'strength' && !e.hiitOnly && !e.classicPushup &&
+    e.kind === 'strength' && !e.hiitOnly && !e.classicPushup && !e.pushup && // jamais de pompes dans un programme ordinaire
     !excluded.has(e.id) && !avoided.has(e.id) &&
     e.equipment.every((q) => eq.has(q)) &&
     !e.stress.some((a) => areas.has(a)) &&
@@ -231,11 +231,18 @@ export function estimateMinutes(slots: SessionSlot[]): number {
   return Math.round(sec / 60 + 4)
 }
 
-/** Circuit HIIT full-body. Les pompes classiques n'y entrent que si l'utilisateur l'a autorisé. */
-export function generateHiit(profile: SportProfile, recovery: RecoveryState, minutes = 20): { slots: SessionSlot[]; hiit: { workSec: number; restSec: number; rounds: number }; notes: string[] } {
-  const pool = EXERCISES.filter((e) => e.kind === 'hiit' && (!e.classicPushup || profile.allowPushupsInHiit))
+/**
+ * Circuit HIIT full-body. Les pompes (toutes variantes) n'y entrent que si l'utilisateur les a autorisées dans ses préférences :
+ * UNE variante par circuit, adaptée au niveau opérationnel (débutant : variantes simples) et variée d'une semaine à l'autre.
+ */
+export function generateHiit(profile: SportProfile, recovery: RecoveryState, minutes = 20, now = new Date()): { slots: SessionSlot[]; hiit: { workSec: number; restSec: number; rounds: number }; notes: string[] } {
+  const usable = EXERCISES.filter((e) => e.kind === 'hiit')
     .filter((e) => !isBlocked(e, recovery) && !e.stress.some((a) => profile.constraints.some((c) => c.area === a)))
-  const picks = pool.slice(0, 6)
+  const plain = usable.filter((e) => !e.pushup)
+  const beginner = operationalLevel(profile.experience, null) === 'beginner'
+  const pushups = profile.allowPushupsInHiit ? usable.filter((e) => e.pushup && (!beginner || e.level === 1)) : []
+  const pushup = pushups.length ? pushups[Number(weekKey(now).slice(-2)) % pushups.length] : null
+  const picks = pushup ? [...plain.slice(0, 5), pushup] : plain.slice(0, 6)
   const workSec = recovery.level === 'VIGILANCE' ? 30 : 40
   const restSec = recovery.level === 'VIGILANCE' ? 30 : 20
   const rounds = Math.max(2, Math.min(4, Math.floor((minutes * 60) / (picks.length * (workSec + restSec)))))
@@ -243,7 +250,11 @@ export function generateHiit(profile: SportProfile, recovery: RecoveryState, min
     id: `hiit-${i + 1}`, group: e.primary[0] ?? 'quadriceps', movement: e.movement, sets: rounds, status: 'pending', logs: [],
     equipment: null, bodyweight: { exerciseId: e.id, repsMin: 0, repsMax: 0, durationSec: workSec, restSec },
   }))
-  return { slots, hiit: { workSec, restSec, rounds }, notes: profile.allowPushupsInHiit ? ['Les pompes classiques sont incluses dans ce circuit, comme vous l’avez autorisé.'] : ['Les pompes classiques ne sont pas incluses : vous pouvez les autoriser dans votre profil pour les circuits HIIT.'] }
+  return {
+    slots, hiit: { workSec, restSec, rounds },
+    notes: pushup ? ['Une variante de pompes est incluse dans ce circuit, comme vous l’avez autorisé (réservée aux circuits HIIT, jamais aux programmes ordinaires).']
+      : ['Les pompes (toutes variantes) ne sont pas incluses : vous pouvez les autoriser dans votre profil pour les circuits HIIT full-body.'],
+  }
 }
 
 /** Alternative proposée quand un exercice est impossible : jamais appliquée durablement sans validation. */

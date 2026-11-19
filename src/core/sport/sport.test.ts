@@ -41,12 +41,17 @@ const gen = (over: Partial<GenInput> & { p?: Partial<SportProfile> } = {}): Retu
 const idsOf = (r: ReturnType<typeof gen>) => r.slots.flatMap((s) => [s.equipment?.exerciseId, s.bodyweight?.exerciseId].filter(Boolean) as string[])
 
 describe('bibliothèque d’exercices', () => {
-  it('couvre les 11 groupes, chacun avec des exercices ET une option sans matériel', () => {
+  it('couvre les 11 groupes ; option sans matériel pour tous sauf pectoraux et triceps (seules les pompes y répondraient, réservées au HIIT)', () => {
     for (const g of MUSCLE_GROUPS) {
-      const list = EXERCISES.filter((e) => e.kind === 'strength' && e.primary.includes(g))
-      expect(list.length, g).toBeGreaterThanOrEqual(3)
-      expect(list.some((e) => e.equipment.every((q) => q === 'mat') && !e.hiitOnly), `${g} : option sans matériel ni mobilier (tapis facultatif)`).toBe(true)
+      const ordinary = EXERCISES.filter((e) => e.kind === 'strength' && !e.hiitOnly && !e.pushup && e.primary.includes(g))
+      expect(ordinary.length, g).toBeGreaterThanOrEqual(3)
+      const none = ordinary.some((e) => e.equipment.every((q) => q === 'mat'))
+      if (g === 'pectoraux' || g === 'triceps') expect(none, `${g} : aucun exercice ordinaire sans matériel (conséquence assumée de l'exclusion des pompes)`).toBe(false)
+      else expect(none, `${g} : option sans matériel ni mobilier (tapis facultatif)`).toBe(true)
     }
+    // les seules options sans matériel de ces deux groupes sont des pompes, donc réservées au HIIT
+    for (const g of ['pectoraux', 'triceps'] as const)
+      for (const e of EXERCISES.filter((x) => x.primary.includes(g) && x.equipment.length === 0)) expect(e.pushup, e.id).toBe(true)
   })
   it('chaque fiche est complète et cohérente', () => {
     const ids = new Set<string>()
@@ -66,7 +71,7 @@ describe('bibliothèque d’exercices', () => {
     const fams = new Set(EXERCISES.map((e) => e.movement))
     for (const m of ['push', 'pull', 'flexion', 'extension', 'hinge', 'rotation', 'stabilisation']) expect(fams.has(m as never), m).toBe(true)
   })
-  it('les pompes classiques sont réservées au HIIT', () => {
+  it('les pompes classiques sont réservées au HIIT (premier jalon : drapeau classique unique)', () => {
     const classic = EXERCISES.filter((e) => e.classicPushup)
     expect(classic.map((e) => e.id)).toEqual(['pompes_classiques'])
     expect(classic[0].hiitOnly).toBe(true)
@@ -85,7 +90,7 @@ describe('bibliothèque d’exercices', () => {
   it('profil sans matériel : fonctionne sans chaise, table ni équipement ; le mobilier reste réservé à Domicile et Salle', () => {
     const base = { recovery: noRecovery(), now: NOW, prefs: [], custom: [] }
     const none = usablePool({ profile: profile({ equipmentProfile: 'none' }), ...base }, 'bodyweight')
-    for (const g of MUSCLE_GROUPS) expect(none.some((e) => e.primary.includes(g)), `${g} sans matériel`).toBe(true)
+    for (const g of MUSCLE_GROUPS) expect(none.some((e) => e.primary.includes(g)), `${g} sans matériel`).toBe(g !== 'pectoraux' && g !== 'triceps')
     for (const e of none) expect(e.equipment.every((q) => q === 'mat'), e.id).toBe(true) // jamais de mobilier ni d'équipement
     expect(none.some((e) => e.equipment.includes('furniture'))).toBe(false)
     const home = usablePool({ profile: profile({ equipmentProfile: 'home' }), ...base }, 'equipment')
@@ -136,7 +141,7 @@ describe('générateur de séances adaptatif', () => {
       }
     }
   })
-  it('ne propose jamais de pompes classiques dans une séance ordinaire', () => {
+  it('ne propose jamais de pompes dans une séance ordinaire (voir aussi le test dédié à toutes les variantes)', () => {
     for (const prof of ['none', 'home', 'gym'] as const)
       expect(idsOf(gen({ p: { equipmentProfile: prof, experience: 'advanced', musclePriorities: { pectoraux: 'develop' } }, focus: ['pectoraux'] }))).not.toContain('pompes_classiques')
   })
@@ -184,11 +189,47 @@ describe('générateur de séances adaptatif', () => {
     const notes = r.slots.flatMap((s) => [s.equipment?.note, s.bodyweight?.note]).filter(Boolean).join(' ')
     expect(notes).toMatch(/Première exposition/)
   })
-  it('circuit HIIT : pompes classiques seulement si autorisées', () => {
+  it('circuit HIIT : pompes (toutes variantes) seulement si autorisées, une variante par circuit, adaptée au niveau', () => {
     const off = generateHiit(profile(), noRecovery())
-    expect(off.slots.some((s) => s.bodyweight?.exerciseId === 'pompes_classiques')).toBe(false)
-    const on = generateHiit(profile({ allowPushupsInHiit: true }), noRecovery())
-    expect(on.slots.some((s) => s.bodyweight?.exerciseId === 'pompes_classiques')).toBe(true)
+    expect(off.slots.some((s) => EXERCISE_BY_ID[s.bodyweight!.exerciseId].pushup)).toBe(false)
+    expect(off.notes.join()).toMatch(/toutes variantes/)
+    const pushupsIn = (p: SportProfile, now = NOW) => generateHiit(p, noRecovery(), 20, now).slots.map((s) => EXERCISE_BY_ID[s.bodyweight!.exerciseId]).filter((e) => e.pushup)
+    const adv = profile({ allowPushupsInHiit: true, experience: 'intermediate' })
+    expect(pushupsIn(adv)).toHaveLength(1)
+    expect(generateHiit(adv, noRecovery()).slots).toHaveLength(6)
+    // débutant : variantes simples seulement
+    for (let w = 0; w < 8; w++) for (const e of pushupsIn(profile({ allowPushupsInHiit: true, experience: 'beginner' }), new Date(2026, 10, 2 + w * 7))) expect(e.level).toBe(1)
+    // variété d'une semaine à l'autre
+    const seen = new Set(Array.from({ length: 8 }, (_, w) => pushupsIn(adv, new Date(2026, 10, 2 + w * 7))[0].id))
+    expect(seen.size).toBeGreaterThan(1)
+    for (const id of seen) expect(['pompes_classiques', 'pompes_inclinees', 'pompes_piquees', 'pompes_triceps_mur']).toContain(id)
+  })
+  it('TOUTES les variantes de pompes sont réservées au HIIT : bibliothèque oui, programmes ordinaires jamais', () => {
+    const ids = ['pompes_classiques', 'pompes_inclinees', 'pompes_piquees', 'pompes_triceps_mur']
+    expect(EXERCISES.filter((e) => e.pushup).map((e) => e.id).sort()).toEqual([...ids].sort())
+    for (const id of ids) {
+      const e = EXERCISE_BY_ID[id]
+      expect(e, id).toBeDefined() // reste dans la bibliothèque
+      expect(e.pushup && e.hiitOnly && e.kind === 'hiit', id).toBe(true)
+    }
+    // aucune autre fiche ne propose une pompe comme alternative à un exercice ordinaire
+    for (const e of EXERCISES.filter((x) => !x.pushup)) for (const a of e.alternatives) expect(EXERCISE_BY_ID[a].pushup, `${e.id} → ${a}`).toBeFalsy()
+    // jamais dans une réserve d'exercices utilisables, quels que soient profil, niveau, variante ou préférences
+    const favorites = ids.map((exerciseId) => ({ exerciseId, status: 'favorite' as const }))
+    for (const prof of ['none', 'home', 'gym'] as const) for (const exp of ['beginner', 'advanced'] as const) for (const variant of ['bodyweight', 'equipment'] as const)
+      for (const prefs of [[], favorites])
+        for (const e of usablePool({ profile: profile({ equipmentProfile: prof, experience: exp, allowPushupsInHiit: true }), prefs, custom: [], recovery: noRecovery(), now: NOW }, variant)) expect(e.pushup, e.id).toBeFalsy()
+    // jamais dans une séance générée, même avec autorisation HIIT et même en ciblant pectoraux, triceps ou épaules
+    for (const prof of ['none', 'home', 'gym'] as const)
+      for (const focus of [['pectoraux'], ['triceps'], ['epaules'], ['pectoraux', 'triceps', 'epaules']] as MuscleGroup[][]) {
+        const r = gen({ p: { equipmentProfile: prof, experience: 'advanced', allowPushupsInHiit: true, musclePriorities: { pectoraux: 'develop', triceps: 'develop', epaules: 'develop' } }, focus, prefs: favorites })
+        for (const id of idsOf(r)) expect(EXERCISE_BY_ID[id].pushup, id).toBeFalsy()
+      }
+    // l'alternative proposée n'est jamais une pompe
+    for (const id of ['developpe_couche_barre', 'dips_chaises', 'developpe_epaules_halteres', 'extension_triceps_halteres']) {
+      const alt = suggestAlternative(id, { profile: profile({ equipmentProfile: 'gym' }), prefs: [], custom: [], recovery: noRecovery(), now: NOW }, 'equipment')
+      expect(alt?.pushup).toBeFalsy()
+    }
   })
   it('propose une alternative sans jamais la substituer d’office', () => {
     const alt = suggestAlternative('developpe_couche_barre', { profile: profile({ equipmentProfile: 'gym' }), prefs: [{ exerciseId: 'developpe_couche_halteres', status: 'excluded' }], custom: [], recovery: noRecovery(), now: NOW }, 'equipment')

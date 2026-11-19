@@ -119,7 +119,7 @@ export function ProfilePanel() {
 
       <Card>
         <SectionTitle title="Préférences d’exercices" />
-        <label className={s.checkLine}><input type="checkbox" checked={p.allowPushupsInHiit} onChange={(e) => save({ allowPushupsInHiit: e.target.checked })} /> Autoriser les pompes classiques dans les circuits HIIT full-body (elles ne figurent jamais dans les programmes ordinaires).</label>
+        <label className={s.checkLine}><input type="checkbox" checked={p.allowPushupsInHiit} onChange={(e) => save({ allowPushupsInHiit: e.target.checked })} /> Autoriser les pompes (classiques, inclinées, au mur, en piqué, triceps) dans les circuits HIIT full-body. Elles ne figurent jamais dans les programmes ordinaires.</label>
         <p className={s.dim}>Favoris, exclusions, évitements temporaires et exercices personnalisés se gèrent dans <Link to="/sport/muscu" className={s.link}>la bibliothèque</Link>.</p>
       </Card>
 

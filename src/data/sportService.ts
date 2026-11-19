@@ -158,7 +158,7 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
     generateHiit: (minutes = 20) => tx(async () => {
       const c = await context()
       if (c.recovery.level === 'ALERTE') throw new SportError('alert', 'Alerte de récupération : pas de circuit HIIT aujourd’hui.')
-      const h = generateHiit(c.prof, c.recovery, minutes)
+      const h = generateHiit(c.prof, c.recovery, minutes, c.now)
       const s: SportSession = {
         id: id(), kind: 'hiit', origin: 'generated', date: today(), status: 'planned', title: 'Circuit HIIT full-body', plannedMinutes: minutes, variant: 'bodyweight',
         slots: h.slots, hiit: h.hiit, startedAt: null, endedAt: null, pausedMs: 0, pausedAt: null, restEndsAt: null, notes: '', createdAt: stamp(), updatedAt: stamp(),
@@ -171,6 +171,7 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
       const c = await context()
       if (!title.trim() || !exerciseIds.length) throw new SportError('invalid', 'Donnez un titre et au moins un exercice.')
       const all = [...Object.values(EXERCISE_BY_ID), ...c.custom]
+      if (exerciseIds.some((eid) => all.find((e) => e.id === eid)?.pushup)) throw new SportError('invalid', 'Les pompes (toutes variantes) sont réservées aux circuits HIIT full-body.')
       const slots: SessionSlot[] = exerciseIds.flatMap((eid, i) => {
         const ex = all.find((e) => e.id === eid)
         if (!ex) return []
@@ -196,6 +197,7 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
       const prev = (variant === 'equipment' ? slot.equipment : slot.bodyweight)
       const ex = EXERCISE_BY_ID[newExerciseId] ?? (await database.customExercises.get(newExerciseId))
       if (!ex) throw new SportError('not_found', 'Exercice introuvable.')
+      if (ex.pushup) throw new SportError('invalid', 'Les pompes (toutes variantes) sont réservées aux circuits HIIT full-body.')
       const st = await database.exerciseStates.get(newExerciseId)
       const next = { exerciseId: newExerciseId, loadKg: st?.workingLoadKg ?? null, repsMin: st?.repsMin ?? prev?.repsMin ?? 8, repsMax: st?.repsMax ?? prev?.repsMax ?? 12, durationSec: ex.mode === 'time' ? 40 : undefined, restSec: prev?.restSec ?? 75 }
       if (variant === 'equipment') slot.equipment = next

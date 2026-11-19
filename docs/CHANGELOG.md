@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2 — Précision finale SPORT V1 : pompes
+- Toutes les variantes de pompes (classiques, inclinées au mur, en piqué, triceps au mur) sont exclues des programmes ordinaires ; elles restent dans la bibliothèque (badge « Circuit HIIT uniquement ») et ne servent qu'aux circuits HIIT full-body, si l'utilisateur les autorise (une variante par circuit, selon niveau et semaine).
+- Refus dans les séances personnelles et les échanges d'exercice ; plus citées comme alternatives.
+- Conséquence documentée : sans matériel ni mobilier, aucun exercice ordinaire pour pectoraux et triceps (couverts en Domicile/Salle).
+- Aucun autre changement. Tests : 235 (Vitest). **SPORT V1 clos.**
+
 ## 0.5.1 — Arbitrages de validation SPORT (V1)
 - Deuxième séance du jour récompensable : récupération NORMALE au départ, ≤ 2 séances récompensées/jour, ≤ 3 supplémentaires/semaine, coefficient ×0,75, ≥ 4 h d'écart ; sinon enregistrée sans XP avec explication.
 - Séances écourtées : XP strictement proportionnelle au travail accompli ; fin du seuil de 25 % (seul un travail non significatif, < 3 séries / < 10 min, ne rapporte rien).

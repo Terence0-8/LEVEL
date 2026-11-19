@@ -11,7 +11,7 @@ export const BACKUP_FORMAT = 'level-backup'
 export const BACKUP_FORMAT_VERSION = 1
 /** Version du schéma Dexie couverte par ce code (doit égaler `db.verno` : vérifié par test). */
 export const DB_SCHEMA_VERSION = 4
-export const APP_VERSION = '0.5.1'
+export const APP_VERSION = '0.5.2'
 
 /** Toutes les tables de `LevelDB` et leur clé primaire. Toute nouvelle table DOIT être ajoutée ici. */
 export const TABLE_KEYS = {

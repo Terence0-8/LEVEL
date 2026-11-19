@@ -3,6 +3,8 @@ import type { BodyArea, EquipmentId, Exercise, ExerciseKind, MuscleGroup, Moveme
 /**
  * Bibliothèque initiale. Chaque exercice a une raison d'être : un geste distinct, un matériel distinct
  * ou une progression/régression utile. Les pompes classiques sont réservées au circuit HIIT (option utilisateur).
+ * Toutes les variantes de POMPES (classiques, inclinées au mur, en piqué, triceps au mur) sont exclues des programmes ordinaires :
+ * elles restent dans la bibliothèque mais ne servent qu'aux circuits HIIT full-body, si l'utilisateur les autorise.
  * Profil « Sans matériel » : AUCUN matériel ni mobilier (un mur et le sol suffisent ; un tapis est facultatif et toujours toléré).
  * Le mobilier solide (chaise, table, marche) n'est utilisé que par les profils « Domicile » et « Salle ».
  */
@@ -15,6 +17,7 @@ interface Opts {
   stress?: BodyArea[]
   step?: number
   classic?: boolean
+  pushup?: boolean
   hiit?: boolean
   ins: string[]
   safe: string[]
@@ -30,24 +33,25 @@ function x(id: string, name: string, primary: MuscleGroup[], secondary: MuscleGr
     id, name, primary, secondary, equipment, movement, level, pose,
     kind: o.kind ?? 'strength', mode: o.mode ?? 'reps', bodyweight: !loaded, unilateral: o.uni, stress: o.stress ?? [],
     instructions: o.ins, safety: o.safe, progression: o.prog, alternatives: o.alt, loadStepKg: o.step,
-    classicPushup: o.classic, hiitOnly: o.hiit,
+    classicPushup: o.classic, hiitOnly: o.hiit, pushup: o.pushup,
   }
 }
 
 export const EXERCISES: Exercise[] = [
   // ── Pectoraux ───────────────────────────────────────────────
   x('pompes_inclinees', 'Pompes inclinées (mains surélevées)', ['pectoraux'], ['triceps', 'epaules'], [], 'push', 1, 'pushup', {
+    kind: 'hiit', hiit: true, pushup: true,
     stress: ['wrist', 'shoulder'], ins: ['Mains sur un mur, un peu plus larges que les épaules, bras tendus (ou sur un support solide plus bas si vous en avez un).', 'Corps gainé en ligne droite, fessiers serrés.', 'Fléchissez les coudes (45°) pour approcher la poitrine du support, puis repoussez.'],
-    safe: ['Pieds assez loin du mur pour garder le contrôle, sans glisser.', 'Arrêtez si une douleur à l’épaule ou au poignet apparaît.'],
+    safe: ['Réservées au circuit HIIT full-body, sur option.', 'Pieds assez loin du mur pour garder le contrôle, sans glisser.', 'Arrêtez si une douleur à l’épaule ou au poignet apparaît.'],
     prog: 'Reculer les pieds, ralentir la descente (3 s), ajouter une pause d’1 s ; avec du mobilier solide, abaisser progressivement la hauteur d’appui.', alt: ['developpe_sol_halteres', 'developpe_elastique', 'dips_chaises'] }),
   x('dips_chaises', 'Dips entre deux chaises', ['triceps'], ['pectoraux', 'epaules'], ['furniture'], 'push', 2, 'triceps_ext', {
     stress: ['shoulder', 'elbow', 'wrist'], ins: ['Deux supports stables, mains sur les bords, jambes tendues ou fléchies.', 'Descendez en gardant le buste proche des supports, coudes vers l’arrière.', 'Remontez en poussant sans verrouiller brutalement les coudes.'],
     safe: ['Ne descendez pas sous 90° de coude si l’épaule tire.', 'Supports verrouillés et antidérapants.'],
-    prog: 'Fléchir les genoux (plus facile) puis tendre les jambes ; ralentir la descente ; ajouter une charge sur les cuisses.', alt: ['extension_triceps_halteres', 'extension_triceps_elastique', 'pompes_inclinees'] }),
+    prog: 'Fléchir les genoux (plus facile) puis tendre les jambes ; ralentir la descente ; ajouter une charge sur les cuisses.', alt: ['extension_triceps_halteres', 'extension_triceps_elastique'] }),
   x('developpe_sol_halteres', 'Développé au sol aux haltères', ['pectoraux'], ['triceps', 'epaules'], ['dumbbells'], 'push', 1, 'press_flat', {
     step: 2, stress: ['shoulder'], ins: ['Allongé au sol, genoux fléchis, haltères au-dessus de la poitrine.', 'Descendez jusqu’à ce que les triceps touchent le sol, poignets alignés.', 'Poussez en rapprochant légèrement les haltères en haut.'],
     safe: ['Ne rebondissez pas sur le sol.', 'Choisissez une charge permettant de contrôler la descente.'],
-    prog: 'Doublure de progression : atteindre le haut de la plage de répétitions sur toutes les séries, puis augmenter la charge d’un cran.', alt: ['developpe_couche_halteres', 'pompes_inclinees', 'developpe_elastique'] }),
+    prog: 'Doublure de progression : atteindre le haut de la plage de répétitions sur toutes les séries, puis augmenter la charge d’un cran.', alt: ['developpe_couche_halteres', 'developpe_elastique'] }),
   x('developpe_couche_halteres', 'Développé couché aux haltères', ['pectoraux'], ['triceps', 'epaules'], ['dumbbells', 'bench'], 'push', 2, 'press_flat', {
     step: 2, stress: ['shoulder'], ins: ['Dos plaqué sur le banc, pieds au sol, omoplates serrées.', 'Descendez les haltères à hauteur de poitrine, coudes à 45–60°.', 'Poussez jusqu’à presque tendre les bras.'],
     safe: ['Demandez de l’aide ou posez les haltères sur les cuisses avant de vous allonger avec des charges lourdes.', 'Aucune douleur d’épaule tolérée.'],
@@ -64,10 +68,10 @@ export const EXERCISES: Exercise[] = [
     safe: ['Amplitude arrière limitée au confort de l’épaule.'], prog: 'Monter les répétitions, puis la charge d’un cran.', alt: ['ecartes_halteres', 'developpe_couche_halteres', 'developpe_elastique'] }),
   x('developpe_elastique', 'Développé avec élastique', ['pectoraux'], ['triceps', 'epaules'], ['bands'], 'push', 1, 'press_flat', {
     ins: ['Élastique passé dans le dos, mains à hauteur de poitrine.', 'Poussez droit devant vous jusqu’à tendre les bras.', 'Revenez lentement en gardant la tension.'],
-    safe: ['Vérifiez l’état de l’élastique avant chaque séance.', 'Ne le lâchez pas sous tension.'], prog: 'Utiliser un élastique plus résistant, se reculer, ou ajouter une pause en fin de course.', alt: ['pompes_inclinees', 'developpe_sol_halteres', 'ecartes_halteres'] }),
+    safe: ['Vérifiez l’état de l’élastique avant chaque séance.', 'Ne le lâchez pas sous tension.'], prog: 'Utiliser un élastique plus résistant, se reculer, ou ajouter une pause en fin de course.', alt: ['developpe_sol_halteres', 'ecartes_halteres'] }),
   x('pompes_classiques', 'Pompes classiques (circuit HIIT uniquement)', ['pectoraux'], ['triceps', 'epaules', 'abdominaux'], [], 'push', 2, 'pushup', {
-    classic: true, hiit: true, kind: 'hiit', stress: ['wrist', 'shoulder'], ins: ['Mains sous les épaules, corps gainé.', 'Descendez poitrine près du sol, coudes à 45°.', 'Repoussez en gardant la ligne du corps.'],
-    safe: ['Réservées au circuit HIIT full-body, sur option.', 'Passez sur les genoux ou en inclinées si la technique se dégrade.'], prog: 'Sans objet hors circuit HIIT.', alt: ['pompes_inclinees'] }),
+    classic: true, hiit: true, pushup: true, kind: 'hiit', stress: ['wrist', 'shoulder'], ins: ['Mains sous les épaules, corps gainé.', 'Descendez poitrine près du sol, coudes à 45°.', 'Repoussez en gardant la ligne du corps.'],
+    safe: ['Réservées au circuit HIIT full-body, sur option.', 'Passez sur les genoux ou en inclinées si la technique se dégrade.'], prog: 'Sans objet hors circuit HIIT.', alt: ['developpe_sol_halteres', 'developpe_elastique'] }),
 
   // ── Dos ─────────────────────────────────────────────────────
   x('tractions_pronation', 'Tractions en pronation', ['dos'], ['biceps', 'avant_bras'], ['pullup_bar'], 'pull', 3, 'pull_up', {
@@ -105,19 +109,19 @@ export const EXERCISES: Exercise[] = [
   // ── Épaules ─────────────────────────────────────────────────
   x('touche_epaules_planche', 'Touche-épaules en planche', ['epaules'], ['abdominaux'], ['mat'], 'stabilisation', 1, 'plank', {
     mode: 'time', stress: ['wrist', 'shoulder'], ins: ['En planche haute (ou sur les genoux pour faciliter), mains sous les épaules.', 'Touchez l’épaule opposée avec une main en gardant le bassin immobile.', 'Reposez la main, alternez, sans balancer le corps.'],
-    safe: ['Écartez davantage les pieds pour plus de stabilité.', 'Arrêtez si le poignet ou l’épaule tire.'], prog: 'Allonger la durée (jusqu’à 45 s), rapprocher les pieds, ralentir les touchers.', alt: ['pompes_piquees', 'gainage_planche', 'elevations_laterales_elastique'] }),
+    safe: ['Écartez davantage les pieds pour plus de stabilité.', 'Arrêtez si le poignet ou l’épaule tire.'], prog: 'Allonger la durée (jusqu’à 45 s), rapprocher les pieds, ralentir les touchers.', alt: ['gainage_planche', 'elevations_laterales_elastique'] }),
   x('developpe_epaules_halteres', 'Développé épaules aux haltères', ['epaules'], ['triceps'], ['dumbbells'], 'push', 2, 'press_overhead', {
     step: 2, stress: ['shoulder', 'lower_back'], ins: ['Assis ou debout, haltères à hauteur d’oreilles.', 'Poussez au-dessus de la tête sans cambrer.', 'Redescendez contrôlé.'],
-    safe: ['Gainez les abdominaux.', 'Pas de douleur d’épaule.'], prog: 'Double progression (répétitions puis charge).', alt: ['pompes_piquees', 'elevations_laterales', 'developpe_militaire_barre'] }),
+    safe: ['Gainez les abdominaux.', 'Pas de douleur d’épaule.'], prog: 'Double progression (répétitions puis charge).', alt: ['elevations_laterales', 'developpe_militaire_barre'] }),
   x('developpe_militaire_barre', 'Développé militaire à la barre', ['epaules'], ['triceps', 'abdominaux'], ['barbell', 'rack'], 'push', 3, 'press_overhead', {
     step: 2.5, stress: ['shoulder', 'lower_back', 'wrist'], ins: ['Barre sur le haut de la poitrine, gainage serré.', 'Poussez en passant la tête sous la barre.', 'Verrouillez au-dessus des épaules.'],
-    safe: ['Ne cambrez pas : serrez les fessiers.', 'Sécurités du rack réglées.'], prog: 'Ajouter 2,5 kg en haut de plage, technique propre.', alt: ['developpe_epaules_halteres', 'elevations_laterales', 'pompes_piquees'] }),
+    safe: ['Ne cambrez pas : serrez les fessiers.', 'Sécurités du rack réglées.'], prog: 'Ajouter 2,5 kg en haut de plage, technique propre.', alt: ['developpe_epaules_halteres', 'elevations_laterales'] }),
   x('elevations_laterales', 'Élévations latérales', ['epaules'], [], ['dumbbells'], 'push', 1, 'raise_lateral', {
     step: 1, stress: ['shoulder'], ins: ['Debout, haltères le long du corps, coudes légèrement fléchis.', 'Levez les bras sur les côtés jusqu’à la hauteur des épaules.', 'Redescendez lentement.'],
     safe: ['Charge légère : pas d’élan.', 'Ne dépassez pas la ligne des épaules.'], prog: 'Monter les répétitions (12–15) puis +1 kg.', alt: ['elevations_laterales_elastique', 'oiseau_halteres', 'developpe_epaules_halteres'] }),
   x('elevations_laterales_elastique', 'Élévations latérales avec élastique', ['epaules'], [], ['bands'], 'push', 1, 'raise_lateral', {
     stress: ['shoulder'], ins: ['Debout sur l’élastique, une main à chaque extrémité.', 'Levez les bras sur les côtés jusqu’aux épaules.', 'Redescendez en gardant la tension.'],
-    safe: ['Fixez bien l’élastique sous les pieds.'], prog: 'Élastique plus résistant ou pause en haut.', alt: ['elevations_laterales', 'face_pull_elastique', 'pompes_piquees'] }),
+    safe: ['Fixez bien l’élastique sous les pieds.'], prog: 'Élastique plus résistant ou pause en haut.', alt: ['elevations_laterales', 'face_pull_elastique'] }),
   x('oiseau_halteres', 'Oiseau aux haltères (deltoïdes postérieurs)', ['epaules'], ['dos'], ['dumbbells'], 'pull', 2, 'row_bent', {
     step: 1, stress: ['lower_back', 'shoulder'], ins: ['Buste penché, dos plat, haltères sous la poitrine.', 'Ouvrez les bras en arc jusqu’à la ligne des épaules.', 'Redescendez lentement.'],
     safe: ['Charge légère.', 'Gardez la nuque alignée.'], prog: 'Augmenter les répétitions puis +1 kg.', alt: ['face_pull_elastique', 'elevations_laterales_elastique', 'rowing_elastique'] }),
@@ -125,8 +129,9 @@ export const EXERCISES: Exercise[] = [
     stress: ['shoulder'], ins: ['Élastique fixé à hauteur du visage.', 'Tirez vers le visage en écartant les mains, coudes hauts.', 'Revenez lentement.'],
     safe: ['Ne haussez pas les épaules.'], prog: 'Pause 1–2 s en contraction, élastique plus fort.', alt: ['oiseau_halteres', 'rowing_elastique', 'elevations_laterales_elastique'] }),
   x('pompes_piquees', 'Pompes en piqué (épaules)', ['epaules'], ['triceps'], [], 'push', 2, 'press_overhead', {
+    kind: 'hiit', hiit: true, pushup: true,
     stress: ['shoulder', 'wrist'], ins: ['Hanches hautes en V inversé, mains et pieds au sol.', 'Fléchissez les coudes pour approcher le sommet du crâne du sol.', 'Repoussez à la verticale.'],
-    safe: ['Mouvement contrôlé, tête libre.', 'Si le poignet tire, passez à un autre exercice.'], prog: 'Rapprocher les pieds des mains, descente plus lente ; pieds surélevés si vous avez un support solide.', alt: ['developpe_epaules_halteres', 'elevations_laterales_elastique', 'pompes_inclinees'] }),
+    safe: ['Réservées au circuit HIIT full-body, sur option.', 'Mouvement contrôlé, tête libre.', 'Si le poignet tire, passez à un autre exercice.'], prog: 'Rapprocher les pieds des mains, descente plus lente ; pieds surélevés si vous avez un support solide.', alt: ['developpe_epaules_halteres', 'elevations_laterales_elastique'] }),
 
   // ── Biceps ──────────────────────────────────────────────────
   x('curl_halteres', 'Curl haltères', ['biceps'], ['avant_bras'], ['dumbbells'], 'flexion', 1, 'curl', {
@@ -144,8 +149,9 @@ export const EXERCISES: Exercise[] = [
 
   // ── Triceps ─────────────────────────────────────────────────
   x('pompes_triceps_mur', 'Pompes triceps contre un mur', ['triceps'], ['pectoraux', 'epaules'], [], 'push', 1, 'pushup', {
+    kind: 'hiit', hiit: true, pushup: true,
     stress: ['elbow', 'wrist'], ins: ['Face à un mur, mains rapprochées à hauteur de poitrine, coudes serrés le long du corps.', 'Fléchissez les coudes pour approcher le visage des mains, sans écarter les coudes.', 'Repoussez jusqu’à tendre les bras.'],
-    safe: ['Pieds assez proches pour éviter de glisser.', 'Arrêtez si le coude tire.'], prog: 'Reculer les pieds, ralentir la descente, ajouter une pause en bas.', alt: ['extension_triceps_elastique', 'extension_triceps_halteres', 'pompes_inclinees'] }),
+    safe: ['Réservées au circuit HIIT full-body, sur option.', 'Pieds assez proches pour éviter de glisser.', 'Arrêtez si le coude tire.'], prog: 'Reculer les pieds, ralentir la descente, ajouter une pause en bas.', alt: ['extension_triceps_elastique', 'extension_triceps_halteres'] }),
   x('extension_triceps_halteres', 'Extension triceps au-dessus de la tête', ['triceps'], [], ['dumbbells'], 'extension', 1, 'triceps_ext', {
     step: 1, stress: ['elbow', 'shoulder'], ins: ['Un haltère tenu à deux mains au-dessus de la tête.', 'Fléchissez les coudes derrière la tête, coudes fixes.', 'Étendez jusqu’en haut.'],
     safe: ['Charge modérée.', 'Gainez pour ne pas cambrer.'], prog: 'Double progression.', alt: ['pushdown_poulie', 'extension_triceps_elastique', 'dips_chaises'] }),

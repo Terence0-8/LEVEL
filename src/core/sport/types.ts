@@ -59,6 +59,8 @@ export interface Exercise {
   unilateral?: boolean
   /** Pompes classiques : exclues des programmes ordinaires, autorisées seulement dans un circuit HIIT full-body si l'utilisateur le souhaite */
   classicPushup?: boolean
+  /** Toute variante de pompes (classiques, inclinées, au mur, en piqué, triceps) : exclue des programmes ordinaires, circuit HIIT full-body seulement, si l'utilisateur l'autorise */
+  pushup?: boolean
   hiitOnly?: boolean
   /** Zones sollicitées (filtrage selon les contraintes physiques) */
   stress: BodyArea[]

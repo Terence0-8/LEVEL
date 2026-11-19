@@ -27,7 +27,7 @@ export function Library() {
   const [open, setOpen] = useState<Exercise | null>(null)
   const [creating, setCreating] = useState(false)
   const [limit, setLimit] = useState(18)
-  const all = useMemo(() => [...EXERCISES.filter((e) => (e.kind === 'strength' || e.kind === 'mobility') && !e.hiitOnly), ...sport.custom], [sport.custom])
+  const all = useMemo(() => [...EXERCISES.filter((e) => e.kind === 'strength' || e.kind === 'mobility' || e.pushup), ...sport.custom], [sport.custom])
   const eq = useMemo(() => new Set([...equipmentFor(sport.profile, 'bodyweight'), ...equipmentFor(sport.profile, 'equipment')]), [sport.profile])
   const prefOf = (id: string) => sport.prefs.find((p) => p.exerciseId === id)
   const list = all.filter((e) => (group === 'all' || e.primary.includes(group)) && (!avail || e.equipment.every((x) => eq.has(x))) && (!q || e.name.toLowerCase().includes(q.toLowerCase())))
@@ -35,7 +35,7 @@ export function Library() {
   return (
     <Card>
       <SectionTitle title="Bibliothèque d’exercices" aside={`${list.length} exercice${list.length > 1 ? 's' : ''}`} />
-      <p className={s.dim}>Choisissez vos exercices : Level propose, mais ne modifie jamais votre sélection durablement sans votre validation. Les pompes classiques sont réservées au circuit HIIT.</p>
+      <p className={s.dim}>Choisissez vos exercices : Level propose, mais ne modifie jamais votre sélection durablement sans votre validation. Les pompes (toutes variantes) sont réservées aux circuits HIIT full-body, si vous les autorisez dans votre profil.</p>
       <div className={s.filters}>
         <input className={inputClass} type="search" placeholder="Rechercher un exercice" aria-label="Rechercher un exercice" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className={inputClass} aria-label="Groupe musculaire" value={group} onChange={(e) => setGroup(e.target.value as MuscleGroup | 'all')}>
@@ -59,6 +59,7 @@ export function Library() {
                     {pref?.status === 'excluded' ? <Badge tone="danger">Exclu</Badge> : null}
                     {pref?.status === 'avoid_temp' ? <Badge tone="info">Évité{pref.until ? ` jusqu’au ${pref.until}` : ''}</Badge> : null}
                     {e.custom ? <Badge>Perso</Badge> : null}
+                    {e.pushup ? <Badge tone="info">Circuit HIIT uniquement</Badge> : null}
                   </span>
                 </span>
               </button>
@@ -110,7 +111,7 @@ function ExerciseDetail({ ex, onOpen }: { ex: Exercise; onOpen: (e: Exercise) =>
         <h3 className={s.h3}>Alternatives</h3>
         <div className={s.chips}>{ex.alternatives.map((id) => all(id)).filter((e): e is Exercise => !!e).map((a) => <button key={a.id} className={s.chip} onClick={() => onOpen(a)}>{a.name}</button>)}</div>
       </section>
-      {ex.hiitOnly ? <p className={s.note}>Réservé au circuit HIIT full-body, si vous l’autorisez dans votre profil.</p> : (
+      {ex.hiitOnly ? <p className={s.note}>Réservé aux circuits HIIT full-body, si vous autorisez les pompes dans votre profil. Cet exercice n’est jamais proposé dans un programme ordinaire.</p> : (
         <section>
           <h3 className={s.h3}>Mes préférences</h3>
           <div className={s.chips}>

@@ -396,6 +396,19 @@ describe('préférences, séances personnelles, alternatives', () => {
     expect(ev[0].attribute).toBe('mobilite')
     expect(computeProgression(await events()).attributes.find((a) => a.id === 'mobilite')!.value).toBeGreaterThan(0)
   })
+  it('pompes (toutes variantes) : refusées dans les séances personnelles et les échanges ; circuit HIIT seulement si autorisées', async () => {
+    await gymProfile()
+    for (const id of ['pompes_classiques', 'pompes_inclinees', 'pompes_piquees', 'pompes_triceps_mur'])
+      expect(await code(sport.createPersonalSession('Poussée', [id, 'curl_halteres']))).toBe('invalid')
+    const { session } = await sport.generateStrength({ focus: ['dos'] })
+    await sport.startSession(session.id)
+    expect(await code(sport.swapExerciseInSession(session.id, session.slots[0].id, 'equipment', 'pompes_inclinees'))).toBe('invalid')
+    const off = (await sport.generateHiit(20)).session
+    expect(off.slots.some((s) => s.bodyweight && /^pompes_/.test(s.bodyweight.exerciseId))).toBe(false)
+    await sport.saveProfile({ allowPushupsInHiit: true })
+    const on = (await sport.generateHiit(20)).session
+    expect(on.slots.filter((s) => s.bodyweight && /^pompes_/.test(s.bodyweight.exerciseId))).toHaveLength(1)
+  })
   it('profil : valeurs validées, jamais bloquant', async () => {
     expect((await sport.getProfile()).equipmentProfile).toBe('none')
     expect(await code(sport.saveProfile({ sessionMinutes: 5 }))).toBe('invalid')
