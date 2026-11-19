@@ -7,11 +7,12 @@ import { Icon } from '@/design/Icon'
 import { formatDayLabel, formatNumber, formatTime } from '@/lib/format'
 import type { WidgetId } from '@/core/homeLayout'
 import type { DemoView } from '@/mocks/demoView'
+import type { Progress } from '@/app/AppState'
+import { HomeRealQuests } from './HomeRealQuests'
 import { QuestList } from '../shared/QuestList'
-import { DemoGate } from '../shared/DemoGate'
 import s from './HomePage.module.css'
 
-function Hero({ demo, name }: { demo: DemoView; name: string }) {
+function Hero({ demo, name }: { demo: Progress; name: string }) {
   const g = demo.global
   return (
     <Card variant="event" className={s.span2}>
@@ -25,7 +26,7 @@ function Hero({ demo, name }: { demo: DemoView; name: string }) {
           <h1>{name}</h1>
           <div className={s.rankChip}>
             <Badge tone="gold"><span className={s.rankLetter}>Rang {demo.rank.rank}</span> · {demo.rank.title}</Badge>
-            <DemoTag />
+            {demo.isDemo ? <DemoTag /> : null}
           </div>
           <div className={s.xpRow}><span>Progression</span><span className="num">{formatNumber(g.xpIntoLevel)} / {formatNumber(g.xpForNext)} XP</span></div>
           <ProgressBar value={g.progress} tone="event" label="XP vers le niveau suivant" />
@@ -35,7 +36,7 @@ function Hero({ demo, name }: { demo: DemoView; name: string }) {
   )
 }
 
-function Domains({ demo }: { demo: DemoView }) {
+function Domains({ demo }: { demo: Progress }) {
   const items = [
     { key: 'LIFE', to: '/life', p: demo.life, tone: 'gold' as const },
     { key: 'SPORT', to: '/sport', p: demo.sportLevel, tone: 'info' as const },
@@ -56,7 +57,7 @@ function Domains({ demo }: { demo: DemoView }) {
   )
 }
 
-function Attributes({ demo }: { demo: DemoView }) {
+function Attributes({ demo }: { demo: Progress }) {
   const top = [...demo.attributes].sort((a, b) => b.value - a.value).slice(0, 4)
   return (
     <Card>
@@ -108,16 +109,17 @@ function SportPreview({ demo }: { demo: DemoView }) {
   )
 }
 
-function Activity({ demo }: { demo: DemoView }) {
+function Activity({ demo }: { demo: Progress }) {
   return (
     <Card>
       <SectionTitle title="Activités récentes" aside={<Link to="/history" style={{ color: 'var(--c-gold)' }}>Historique</Link>} />
+      {demo.activities.length === 0 ? <p style={{ color: 'var(--c-text-dim)', fontSize: 14 }}>Rien pour l'instant. Validez une quête dans LIFE pour lancer votre journal.</p> : null}
       <ul className={s.feed}>
         {demo.activities.slice(0, 5).map((a) => (
           <li key={a.id}>
             <span className={s.feedIcon}><Icon name={a.domain === 'SPORT' ? 'sport' : 'life'} size={18} /></span>
             <span className={s.t}><div>{a.label}</div><small>{formatDayLabel(a.at)} · {formatTime(a.at)}</small></span>
-            <span className={`${s.xp} num`}>+{a.xp}</span>
+            <span className={`${s.xp} num`}>{a.xp > 0 ? '+' : ''}{a.xp}</span>
           </li>
         ))}
       </ul>
@@ -126,28 +128,23 @@ function Activity({ demo }: { demo: DemoView }) {
 }
 
 export function HomePage() {
-  const { displayName, toggleDemoQuest } = useAppState()
+  const { displayName, toggleDemoQuest, progress, demo } = useAppState()
+  const widgets: Record<Exclude<WidgetId, 'hero' | 'domains'>, ReactElement | null> = {
+    quests: demo ? <Quests demo={demo} toggle={toggleDemoQuest} /> : <HomeRealQuests />,
+    sport: demo ? <SportPreview demo={demo} /> : null,
+    attributes: <Attributes demo={progress} />,
+    activity: <Activity demo={progress} />,
+  }
+  const top = progress.layout[1]
   return (
-    <DemoGate>
-      {(demo) => {
-        const widgets: Record<Exclude<WidgetId, 'hero' | 'domains'>, ReactElement> = {
-          quests: <Quests demo={demo} toggle={toggleDemoQuest} />,
-          sport: <SportPreview demo={demo} />,
-          attributes: <Attributes demo={demo} />,
-          activity: <Activity demo={demo} />,
-        }
-        const top = demo.layout[1]
-        return (
-          <div className={s.grid}>
-            {demo.layout.map((w) => {
-              if (w.id === 'hero') return <Hero key={w.id} demo={demo} name={displayName} />
-              if (w.id === 'domains') return <Domains key={w.id} demo={demo} />
-              return <div key={w.id}>{widgets[w.id]}</div>
-            })}
-            <p className={`${s.why} ${s.span2}`}>Organisation automatique · en tête : « {top.reason} ».</p>
-          </div>
-        )
-      }}
-    </DemoGate>
+    <div className={s.grid}>
+      {progress.layout.map((w) => {
+        if (w.id === 'hero') return <Hero key={w.id} demo={progress} name={displayName} />
+        if (w.id === 'domains') return <Domains key={w.id} demo={progress} />
+        const el = widgets[w.id]
+        return el ? <div key={w.id}>{el}</div> : null
+      })}
+      {top ? <p className={`${s.why} ${s.span2}`}>Organisation automatique · en tête : « {top.reason} ».</p> : null}
+    </div>
   )
 }

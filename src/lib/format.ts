@@ -1,12 +1,12 @@
+import { dayKey } from '@/core/dates'
+
 const dayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 const timeFmt = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' })
 
 export const formatNumber = (n: number) => new Intl.NumberFormat('fr-FR').format(n)
 export const formatTime = (iso: string) => timeFmt.format(new Date(iso))
 
-export function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+export { dayKey }
 
 /** "Aujourd'hui", "Hier" ou "mardi 4 novembre". */
 export function formatDayLabel(iso: string, now = new Date()): string {

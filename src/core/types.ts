@@ -35,7 +35,10 @@ export interface Activity {
   at: string
   label: string
   domain: Domain
+  /** Négatif pour une correction */
   xp: number
+  /** Gain depuis annulé par une correction */
+  corrected?: boolean
 }
 
 export interface LevelProgress {

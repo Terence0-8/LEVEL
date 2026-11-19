@@ -17,20 +17,19 @@ const cls = (base: string, active: boolean) => (active ? `${base} ${s.active}` :
 
 /** Annonce spectaculaire quand le niveau global ou le rang change (événement important → or lumineux). */
 function useLevelUp() {
-  const { demo } = useAppState()
-  const prev = useRef<number | null>(null)
+  const { progress } = useAppState()
+  const prev = useRef<{ demo: boolean; level: number } | null>(null)
   const [msg, setMsg] = useState<{ title: string; sub: string } | null>(null)
-  const level = demo?.global.level ?? null
-  const rank = demo?.rank
+  const { level, isDemo, rank } = { level: progress.global.level, isDemo: progress.isDemo, rank: progress.rank }
   useEffect(() => {
-    if (level !== null && prev.current !== null && level > prev.current) {
-      setMsg({ title: `Niveau ${level}`, sub: rank && rank.minLevel === level ? `Nouveau rang ${rank.rank} · ${rank.title}` : 'Niveau supérieur atteint' })
+    const before = prev.current
+    prev.current = { demo: isDemo, level }
+    if (before && before.demo === isDemo && level > before.level) {
+      setMsg({ title: `Niveau ${level}`, sub: rank.minLevel === level ? `Nouveau rang ${rank.rank} · ${rank.title}` : 'Niveau supérieur atteint' })
       const t = setTimeout(() => setMsg(null), 4200)
-      prev.current = level
       return () => clearTimeout(t)
     }
-    prev.current = level
-  }, [level, rank])
+  }, [level, isDemo, rank])
   return msg
 }
 

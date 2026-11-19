@@ -17,28 +17,44 @@ Pas d'état global externe (Redux/Zustand) : React Context + requêtes live Dexi
 ## Structure
 ```
 src/
-  core/      Règles métier pures (xp, rank, homeLayout, types) + tests. Aucune dépendance.
-  data/      Persistance : db.ts (schéma Dexie), repositories.ts (accès), hooks.ts (live queries)
+  core/      Règles métier pures + tests, aucune dépendance : xp, rank, homeLayout, ledger (journal),
+             rewards (barèmes), awards (planification des gains), quest, questState (état dérivé), progression, attributes, dates
+  data/      Persistance : db.ts (schéma Dexie v2), repositories.ts (profil/réglages), questService.ts (commandes LIFE
+             transactionnelles), hooks.ts (live queries)
   mocks/     Données FICTIVES (demoData) + projection UI (demoView). Jamais importé par core/data.
   design/    Tokens, styles globaux, Icon, Logo, composants (Card, ProgressBar…), charts SVG
   app/       App (routes), Shell (navigation, layouts, level-up), AppState (contexte)
-  features/  home, life, sport, rpg, history, profile, shared
+  features/  home, life (QuestCard, QuestForm, RewardsPanel, CategoriesPanel), sport, rpg, history, profile, shared
   lib/       Utilitaires (formatage)
 scripts/     smoke.cjs
 ```
 Sens des dépendances : `features → app/design/core/data/mocks` ; `data → core` ; `core → ∅`.
 
 ## Persistance
-Base IndexedDB `level`, schéma v1 : `profile` (singleton `me`), `settings` (clé/valeur), `demoQuestState` (uniquement lié à la démo). Les repositories encapsulent Dexie ; l'UI passe par `AppState`. Stockage durable demandé via `navigator.storage.persist()`. Les `get()` sont en lecture seule (requis par `useLiveQuery`).
-Évolutions prévues : nouvelles tables via `version(n)`, sauvegardes chiffrées (WebCrypto) en export/import de fichier.
+Base IndexedDB `level`, schéma **v2** : `profile`, `settings`, `demoQuestState` (v1) ; `categories`, `quests`, `xpEvents` (v2). Les `get()` sont en lecture seule (requis par `useLiveQuery`). Stockage durable demandé via `navigator.storage.persist()`. Sauvegardes chiffrées (WebCrypto) prévues.
+
+## Journal d'XP (cœur de la progression)
+- `xpEvents` est **append-only** et la seule source de vérité : aucun solde n'est stocké. Niveaux, rangs, attributs, XP par domaine/catégorie se **recalculent** (`computeProgression`) en additionnant les événements.
+- Événement : `id`, `kind` (`award`|`reversal`), `source` (`quest`|`step`|`activity`|`bonus`), `sourceId`, `questId`, `stepId`, `awardKey`, `cycleKey`, `domain`, `categoryId`, `attribute`, `amount`, `baseAmount` (avant amortissement), `micro`, `at`, `reason`, `label` (intitulé figé), `status` (`valid`|`reversed`), `correctsEventId`, `reversedByEventId`.
+- **Correction** = nouvel événement `reversal` (montant opposé, `correctsEventId`) ; l'original passe à `reversed`. Σ des montants = XP courante ; `auditLedger` vérifie que ce total égale la somme des gains non annulés, qu'aucune clé n'a deux gains ouverts, qu'aucune annulation n'est orpheline.
+- **Unicité** : `awardKey` = `quest:{id}:{cycle}` ou `step:{questId}:{stepId}:{cycle}`. `planAward` refuse un second gain ouvert ; toutes les commandes sont des transactions Dexie sérialisées (test d'appels concurrents).
+- **État dérivé** : une quête « validée », une étape « faite », une série, un statut se déduisent du journal (`questState.ts`). Aucun drapeau stocké à synchroniser.
+- Répartition par étapes : part = (récompense − base déjà accordée) ÷ étapes restantes ; la dernière prend le reste → somme = récompense exacte.
+- Le service `questService` orchestre (lecture du contexte, appel de `core/awards`, écriture) ; les règles restent dans `core/`. `core/rewards.ts` concentre **tous** les barèmes numériques, marqués provisoires.
+
+## Données réelles vs démo
+`AppState.progress` expose la progression réelle (journal) ou, si le réglage est actif, celle de `mocks/` : jamais un mélange. SPORT reste alimenté par la démo uniquement.
 
 ## Données de démo
-`mocks/` est la seule source de données fictives, projetées par `buildDemoView` (qui appelle le moteur `core`). Le réglage « Données de démonstration » les masque : les pages affichent alors un état vide. Quand les vraies données arriveront, elles alimenteront la même forme de vue, depuis `data/`.
+`mocks/` est la seule source de données fictives, projetées par `buildDemoView`. Désactivées par défaut depuis la v0.2. SPORT affiche un état vide tant que la démo est masquée.
 
 ## Accueil adaptatif
 `core/homeLayout.ts` : fonction pure `arrangeHome(contexte)` → widgets triés par priorité avec raison explicite (échéance < 24 h, soirée, séance prévue, récupération basse…).
 
 ## Décisions et hypothèses
+- Statut de quête dérivé (jamais stocké) ; catégories archivées plutôt que supprimées ; suppression de quête = XP retirée par corrections, quête effacée, journal conservé (libellé figé).
+- Snapshot catégorie/attribut dans l'événement : changer la catégorie d'une quête n'altère pas l'historique.
+- `crypto.randomUUID()` pour les identifiants (disponible hors ligne, contexte sécurisé/localhost).
 - Niveau global = XP LIFE + SPORT (pas de XP globale séparée).
 - Animations désactivables (réglage + `prefers-reduced-motion`).
 - Responsive : breakpoint unique 900 px (barre inférieure ↔ menu latéral).

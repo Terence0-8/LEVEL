@@ -8,9 +8,11 @@ export interface Settings {
   /** Affiche les données fictives de démonstration */
   showDemoData: boolean
   reducedMotion: boolean
+  /** Les catégories LIFE initiales ont été créées (évite de les recréer si l'utilisateur les supprime) */
+  categoriesSeeded: boolean
 }
 
-export const DEFAULT_SETTINGS: Settings = { showDemoData: true, reducedMotion: false }
+export const DEFAULT_SETTINGS: Settings = { showDemoData: false, reducedMotion: false, categoriesSeeded: false }
 
 export function createRepositories(database: LevelDB = db) {
   return {

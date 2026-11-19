@@ -4,16 +4,15 @@ import { Icon } from '@/design/Icon'
 import { RANK_THRESHOLDS } from '@/core/rank'
 import { useAppState } from '@/app/AppState'
 import { formatNumber } from '@/lib/format'
-import { DemoGate } from '../shared/DemoGate'
 import s from '../pages.module.css'
 
 export function RpgPage() {
-  const { displayName } = useAppState()
+  const { displayName, progress: demo } = useAppState()
   return (
     <div className={s.stack}>
       <PageHeader title="RPG" subtitle="Profil, niveaux, attributs et rang." />
-      <DemoGate>
-        {(demo) => (
+      <>
+        {(() => (
           <>
             <Card variant="event">
               <div className={s.profileHead}>
@@ -35,7 +34,7 @@ export function RpgPage() {
 
             <div className={s.grid2}>
               <Card>
-                <SectionTitle title="Niveaux" aside={<DemoTag />} />
+                <SectionTitle title="Niveaux" aside={demo.isDemo ? <DemoTag /> : undefined} />
                 <div style={{ display: 'grid', gap: 16 }}>
                   {[{ n: 'LIFE', p: demo.life, t: 'gold' as const }, { n: 'SPORT', p: demo.sportLevel, t: 'info' as const }].map(({ n, p, t }) => (
                     <div key={n}>
@@ -49,7 +48,7 @@ export function RpgPage() {
                 </div>
               </Card>
               <Card>
-                <SectionTitle title="Attributs" aside={<DemoTag />} />
+                <SectionTitle title="Attributs" aside={demo.isDemo ? <DemoTag /> : undefined} />
                 <div className={s.center}><RadarChart attributes={demo.attributes} /></div>
               </Card>
             </div>
@@ -78,8 +77,8 @@ export function RpgPage() {
               </Card>
             </div>
           </>
-        )}
-      </DemoGate>
+        ))()}
+      </>
     </div>
   )
 }

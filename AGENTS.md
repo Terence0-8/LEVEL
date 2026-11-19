@@ -7,6 +7,9 @@ Level est une application personnelle de progression (LIFE · SPORT · RPG), ins
 - **Données locales** (IndexedDB via Dexie). Les données personnelles ne quittent jamais l'appareil.
 - **Règles métier hors de l'UI** : tout calcul (XP, niveaux, rangs, agencement) vit dans `src/core/`, pur et testé.
 - **Données fictives isolées** dans `src/mocks/` uniquement, toujours étiquetées « Démo » dans l'UI. `core/` et `data/` n'importent jamais `mocks/`.
+- **L'XP vit uniquement dans le journal** (`xpEvents`, append-only). Jamais de solde stocké ni modifié à la main : gains et corrections sont des événements ; tout se recalcule depuis le journal. Toute récompense passe par `core/awards` + `questService` (transaction, clé d'unicité).
+- **Aucune pénalité d'XP**, jamais : une quête manquée n'enlève rien.
+- **Barèmes numériques uniquement dans `core/rewards.ts`**, marqués provisoires tant qu'ils ne sont pas calibrés.
 - **Honnêteté** : ne jamais présenter un module comme fonctionnel s'il ne l'est pas (utiliser `<Notice>`).
 - **Peu de dépendances** : justifier toute nouvelle dépendance dans `docs/ARCHITECTURE.md`.
 - Ne pas contredire une exigence de `PRODUCT_SPEC.md` sans le signaler et le documenter.
@@ -16,7 +19,7 @@ Level est une application personnelle de progression (LIFE · SPORT · RPG), ins
 |---|---|
 | `npm run dev` | Serveur de développement |
 | `npm run build` | Typecheck + build de production (PWA) |
-| `npm test` | Tests unitaires (Vitest) |
+| `npm test` | Tests unitaires et d'intégration (Vitest, fake-indexeddb) |
 | `npm run typecheck` | Vérification TypeScript |
 | `node scripts/smoke.cjs <dossier>` | Test navigateur (Playwright) sur `vite preview --port 4173` |
 
