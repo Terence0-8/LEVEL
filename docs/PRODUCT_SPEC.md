@@ -9,7 +9,7 @@ Sombre, mystérieuse, élégante ; interface quotidienne sobre, événements RPG
 ## Navigation
 Accueil · LIFE · SPORT · RPG · Historique ; Profil & réglages en accès secondaire. Mobile : barre inférieure ; desktop (≥ 900 px) : menu latéral. L'accueil est **adaptatif** : Level ordonne les widgets selon échéances, moment de la journée et récupération ; l'utilisateur ne les réorganise pas.
 
-## Périmètre (v0.4)
+## Périmètre (v0.5)
 | Domaine | État |
 |---|---|
 | Navigation, layouts mobile/desktop, composants | ✅ Opérationnel |
@@ -31,7 +31,8 @@ Accueil · LIFE · SPORT · RPG · Historique ; Profil & réglages en accès sec
 | Rapports PDF (bilans) | ⏳ Non démarré — **distincts** de la sauvegarde |
 | Accueil adaptatif | ✅ sur données réelles ou de démo |
 | Persistance locale, PWA hors ligne | ✅ Opérationnel |
-| SPORT | 🚧 Structure visuelle sur données de démo uniquement |
+| **SPORT** : profil, bibliothèque, musculation guidée, course, planning, récupération, XP, statistiques, historique corrigeable | ✅ Opérationnel (voir « Module SPORT » : limites listées) |
+| SPORT : GPS, montre connectée, photos d'exercices, bilans PDF, notifications | ⏳ Non démarré / hors périmètre v0.5 |
 | Habitudes avancées, objectifs, budgets | ⏳ Non démarré (volontairement) |
 | Prestige, notifications, sauvegardes chiffrées, bilans | ⏳ Non démarré |
 
@@ -110,3 +111,56 @@ Modifier difficulté, effort, catégorie (ou tout autre champ) **ne réécrit ja
 | Honnêteté | L'interface ne dit « récupération testée » qu'après un déchiffrement réel avec un secret saisi ; sinon « intégrité vérifiée » (clé de l'appareil) ou « cet appareil uniquement ». |
 
 Hypothèses : phrase de 10 caractères minimum ; sans phrase secrète définie, les sauvegardes locales existent mais sont signalées « cet appareil uniquement » et le bandeau d'alerte reste affiché.
+
+## Module SPORT (v0.5)
+**Principe** : coaching personnalisé, hors ligne. Level organise, analyse et propose ; l'utilisateur garde le contrôle des objectifs et de toute modification durable. **SPORT réutilise le journal d'XP existant** (`xpEvents`, domaine SPORT) : aucun second moteur. **1 XP SPORT = 1 XP LIFE** pour le niveau global (la somme des deux alimente le niveau global ; LIFE et SPORT gardent leur niveau propre). Barèmes propres à la discipline, **provisoires et centralisés** dans `core/sport/config.ts`.
+
+### Profil sportif (configuration progressive, jamais bloquante)
+Expérience, objectifs, priorités musculaires (Développement / Progression / Entretien par groupe), jours et fréquences, durée par séance, matériel (Sans matériel par défaut / Domicile / Salle), contraintes physiques, familles de course, objectif de course, option « pompes classiques en HIIT ». Enregistrement immédiat. **Trois niveaux** : *déclaré* (saisi), *mesuré* (issu des séances, indisponible avant 6 séances), *opérationnel* (celui qui pilote Level : prudent, « avancé » plafonné à « intermédiaire » tant qu'il n'est pas démontré, mesure limitée à un cran au-dessus du déclaré). Évaluation progressive : première exposition à un exercice = test **non maximal** (≥ 4 répétitions en réserve / 3 avant l'échec).
+
+### Musculation
+| Sujet | Règle |
+|---|---|
+| Bibliothèque | 11 groupes musculaires, ~75 exercices utiles (musculation, mobilité, circuit HIIT), fiche complète : muscles principaux/secondaires, matériel, famille biomécanique (poussée, tirage, flexion, extension, charnière, rotation, stabilisation), niveau, exécution, sécurité, progression, alternatives, illustration. |
+| Images | Illustrations **schématiques** générées localement en SVG (départ / fin, muscles en or) : quelques octets, hors ligne, pas de photographie. |
+| Matériel | Un programme = **deux variantes cohérentes** (avec / sans matériel), mêmes groupes et mouvements, même historique. Bascule possible en séance **sans perdre** les séries saisies. Exercices et performances **restent distincts** : aucune conversion répétitions ↔ charge. Profil « Sans matériel » : chaise/table solide et tapis ; une seule variante. |
+| Pompes classiques | **Exclues des programmes ordinaires** ; seulement dans un circuit HIIT full-body, si l'utilisateur l'autorise. Les pompes inclinées et en piqué (variantes différentes) restent possibles. |
+| Préférences | Favoris, exclusions, évitements temporaires (jusqu'à une date), contraintes physiques, exercices personnalisés, séances personnelles. Exercice impossible → alternative **proposée**, jamais appliquée durablement sans validation (remplacement ponctuel pour la séance seulement). |
+| Génération | Adaptative, sans split fixe : priorités × besoin hebdomadaire (14/10/6 séries selon la priorité) × fraîcheur du groupe × fatigue locale × récupération × durée × historique ; équilibre poussée/tirage ; ordre des exercices (polyarticulaires d'abord). |
+| Séance guidée | Mobile-first : gros boutons, saisie rapide (répétitions, charge, effort, technique, douleur), chronomètre de repos et de maintien **par horodatages absolus** (exact en arrière-plan), passer / réorganiser / corriger une série / interrompre et reprendre, **sauvegarde après chaque série**, écran maintenu allumé (Screen Wake Lock) quand la plateforme le permet. |
+| Progression | Recommandation par exercice après **≥ 3 expositions** (répétitions, charges, technique, effort, récupération, douleurs) : augmenter / maintenir / réduire / récupérer. **Jamais appliquée sans confirmation.** Pas d'augmentation jour après jour (≥ 6 jours entre deux), ni en vigilance/alerte, ni hors phase de développement. La stagnation n'est pas un échec. Douleur → prudence avant tout. |
+| Cycle adaptatif | Développement (3 sem.) → consolidation → allègement → reprise ; effet sur volume, charges et autorisation d'augmenter ; redémarrage manuel. |
+
+### Course à pied (indépendante, saisie manuelle)
+Familles : endurance fondamentale, fractionné, sortie longue, tempo, récupération active, côtes — **choisies par l'utilisateur** (Level n'ajoute jamais une famille exclue). Enregistré : distance, durée, **allure moyenne calculée**, type, difficulté ressentie, commentaire, **intervalles individuels** du fractionné. Proposition de sortie : premier test prudent (20 min, allure de conversation), puis volume ≤ +10 %/sem., **un seul levier** (volume, sortie longue ou intensité) par semaine, pas d'exigeant en vigilance/alerte, rien en alerte ; une récupération qui dépasse la difficulté permise est signalée et plafonnée en XP. Pas de GPS ni de montre.
+
+### Planning et coordination
+Une séance par jour ; musculation prioritaire dans les arbitrages ; jours disponibles respectés ; séance manquée → réorganisation du reste de la semaine **sans empiler** (aucune pénalité) ; séances prévues préparées au dernier moment avec les données du jour. Seconde séance le même jour : possible à l'initiative de l'utilisateur, enregistrée, mais **une seule séance récompensée par jour**.
+
+### Récupération et sécurité (estimation non médicale)
+Questionnaire d'environ 30 s : fatigue (4 niveaux), sommeil (4), courbatures (aucune/légères/modérées/importantes, zone facultative), douleur inhabituelle (non/légère/importante, zone). Combiné à la charge des séances (**fatigue locale par groupe** à décroissance exponentielle, distincte de la fatigue générale). Trois niveaux : **NORMAL / VIGILANCE / ALERTE**. Alerte (douleur importante, douleur légère 3 jours de suite dans la même zone, fatigue forte + sommeil très mauvais, indice très bas) : la zone concernée (muscle, articulation, ou tout si non localisée) est **bloquée jusqu'à réévaluation** (nouvelle saisie) ; aucune séance proposée ; une séance prévue voit ses exercices bloqués écartés au démarrage. La sécurité passe avant les objectifs et les récompenses ; aucun encouragement à dépasser une douleur.
+
+### XP et attributs SPORT (barèmes provisoires)
+| Récompense | Règle |
+|---|---|
+| Séance terminée / écourtée | Base × taux de réalisation × facteur de durée ; **proportionnelle** au travail réalisé ; en dessous de 25 % : enregistrée, sans XP. |
+| Course | Selon la durée (≥ 10 min) ; récupération active plafonnée. |
+| Régularité | Objectif hebdomadaire atteint sur des jours distincts (1/semaine). |
+| Records personnels | Après ≥ 3 expositions, amélioration ≥ 2 %, technique propre, sans douleur ; ≤ 2 par séance. |
+| Récupération respectée | Repos choisi en vigilance/alerte, sans séance ce jour ; ≤ 2/semaine. |
+| Progression confirmée | Quand l'utilisateur applique une recommandation (Maîtrise technique) ; ≤ 3/semaine. |
+| Activité imprévue | Enregistrée, comptée dans la récupération et les statistiques, **sans XP**. |
+Attributs SPORT : Force, Endurance, Discipline (partagés avec LIFE), Mobilité (séances de mobilité), Coordination (circuits HIIT), Maîtrise technique (progressions confirmées), Résilience (repos respecté).
+
+### Statistiques, historique, corrections
+Volume (séries, tonnage, répétitions poids du corps, durée), répartition musculaire, records, régularité, progression de course, mensurations facultatives (poids, taille), périodes semaine / mois / 3 mois / année / tout, bilan après séance, bilans hebdomadaire et 30 jours. Historique consultable en détail ; **toute correction** (statut, date, série, suppression) recalcule XP, niveaux, attributs, records et recommandations par **événements de correction tracés** dans le journal (aucune réécriture).
+
+### Limites connues de la v0.5 (à ne pas présenter comme faites)
+- Illustrations schématiques, pas de photographies ni d'animations.
+- Génération automatique de séances de **mobilité** non fournie (les exercices existent ; séances personnelles possibles). Circuit HIIT : format fixe 6 exercices.
+- Séances personnelles : création seulement (pas d'édition de modèle).
+- Progression au poids du corps : cible de répétitions/durée ; la variante plus difficile n'est que suggérée en texte.
+- Bilans : affichés dans l'application (pas de notification, ni PDF).
+- Alertes de fin de repos : vibration seulement ; aucune notification si l'application est en arrière-plan (limite du web sans serveur) — le chronomètre reste exact au retour.
+- Mensurations : poids et tour de taille dans le formulaire.
+- Barèmes, seuils de récupération et demi-vie de fatigue : hypothèses à calibrer.

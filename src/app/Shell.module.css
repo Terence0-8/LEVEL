@@ -27,3 +27,7 @@
   .spacer { flex: 1; }
   .main { padding: 36px 40px 56px; width: 100%; }
 }
+
+/* Séance guidée : interface épurée plein écran, sans navigation (hors fenêtres larges où le menu reste utile) */
+.immersive .top, .immersive .tabs { display: none; }
+.immersive .main { padding-bottom: 28px; }

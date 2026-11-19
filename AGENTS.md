@@ -10,10 +10,11 @@ Level est une application personnelle de progression (LIFE · SPORT · RPG), ins
 - **L'XP vit uniquement dans le journal** (`xpEvents`, append-only). Jamais de solde stocké ni modifié à la main : gains et corrections sont des événements ; tout se recalcule depuis le journal. Toute récompense passe par `core/awards` + `questService` (transaction, clé d'unicité).
 - **Aucune pénalité d'XP**, jamais : une quête manquée n'enlève rien. L'analyse d'un manque n'écrit jamais dans le journal d'XP.
 - **Pas de réécriture silencieuse** : modifier difficulté/effort/catégorie ne change pas les gains acquis ; toute modification crée une révision.
-- **Dates** : `at` = accomplissement déclaré, `recordedAt` = enregistrement ; validation rétroactive bornée par `retroactiveMaxDays`.
+- **Dates** : `at` = accomplissement déclaré, `recordedAt` = enregistrement ; validation rétroactive LIFE à toute date passée, confirmation au-delà de `retroactiveConfirmAfterDays`.
 - **Seuils de niveaux et de rangs** (`xp.ts`, `rank.ts`) : ne pas modifier sans décision explicite (test de non-régression).
 - **Barèmes numériques uniquement dans `core/rewards.ts`**, marqués provisoires tant qu'ils ne sont pas calibrés.
 - **Sauvegardes** : toute nouvelle table Dexie doit être ajoutée à `TABLE_KEYS` (`core/backupFormat.ts`) et `DB_SCHEMA_VERSION` incrémentée (un test échoue sinon). Ne jamais afficher « récupérable » sans déchiffrement réellement testé. Aucune clé, phrase ou donnée en clair dans les journaux, URLs ou requêtes. Les rapports PDF ne remplacent jamais la sauvegarde.
+- **SPORT** : l'XP SPORT passe par `sportService.syncXp` (recalcul déterministe dans `xpEvents`) ; ne jamais écrire d'XP SPORT ailleurs. Barèmes uniquement dans `core/sport/config.ts`. 1 XP SPORT = 1 XP LIFE pour le niveau global. Sécurité avant récompenses : aucune séance en ALERTE, aucun encouragement à dépasser une douleur, blocage levé seulement par réévaluation. Aucune augmentation de charge sans confirmation. Pompes classiques = circuit HIIT uniquement (option utilisateur). Variantes avec/sans matériel : mêmes objectifs, performances par exercice, jamais de conversion.
 - **Honnêteté** : ne jamais présenter un module comme fonctionnel s'il ne l'est pas (utiliser `<Notice>`).
 - **Peu de dépendances** : justifier toute nouvelle dépendance dans `docs/ARCHITECTURE.md`.
 - Ne pas contredire une exigence de `PRODUCT_SPEC.md` sans le signaler et le documenter.
@@ -25,7 +26,8 @@ Level est une application personnelle de progression (LIFE · SPORT · RPG), ins
 | `npm run build` | Typecheck + build de production (PWA) |
 | `npm test` | Tests unitaires et d'intégration (Vitest, fake-indexeddb) |
 | `npm run typecheck` | Vérification TypeScript |
-| `node scripts/smoke.cjs <dossier>` | Test navigateur (Playwright) sur `vite preview --port 4173` |
+| `node scripts/smoke.cjs <dossier> <dossier2>` | Test navigateur LIFE + sauvegardes (Playwright) sur `vite preview --port 4173` |
+| `node scripts/smoke-sport.cjs <dossier>` | Test navigateur du module SPORT |
 
 ## Conventions
 - Alias `@/` → `src/`. TypeScript strict. Composants fonctionnels React.

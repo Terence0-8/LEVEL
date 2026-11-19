@@ -11,6 +11,10 @@ export type AttributeId =
   | 'discipline'
   | 'intellect'
   | 'prosperite'
+  | 'mobilite'
+  | 'coordination'
+  | 'maitrise'
+  | 'resilience'
 
 export interface Attribute {
   id: AttributeId

@@ -81,8 +81,9 @@ export function createBackupScheduler(main: LevelDB, service: BackupService, dep
     on(main.quests, 'deleting', () => 'critical')
     on(main.xpEvents, 'creating', (_pk: unknown, obj: { kind?: string }) => (obj?.kind === 'reversal' ? 'critical' : 'normal'))
     // Changements ordinaires
+    on(main.sportSessions, 'deleting', () => 'critical')
     on(main.xpEvents, 'updating', () => 'normal')
-    for (const t of [main.quests, main.categories, main.analyses, main.revisions, main.profile] as const) {
+    for (const t of [main.quests, main.categories, main.analyses, main.revisions, main.profile, main.sportProfile, main.sportSessions, main.recoveryChecks, main.exerciseStates, main.progressionLog, main.bodyMeasures, main.customExercises, main.exercisePrefs] as const) {
       on(t, 'creating', () => 'normal')
       on(t, 'updating', () => 'normal')
     }

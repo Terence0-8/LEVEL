@@ -2,6 +2,7 @@ import { Badge, Card, DemoTag, PageHeader, ProgressBar, SectionTitle } from '@/d
 import { RadarChart, Ring } from '@/design/charts'
 import { Icon } from '@/design/Icon'
 import { RANK_THRESHOLDS } from '@/core/rank'
+import { LIFE_ATTRIBUTE_IDS, SPORT_ATTRIBUTE_IDS } from '@/core/attributes'
 import { useAppState } from '@/app/AppState'
 import { formatNumber } from '@/lib/format'
 import s from '../pages.module.css'
@@ -48,10 +49,17 @@ export function RpgPage() {
                 </div>
               </Card>
               <Card>
-                <SectionTitle title="Attributs" aside={demo.isDemo ? <DemoTag /> : undefined} />
-                <div className={s.center}><RadarChart attributes={demo.attributes} /></div>
+                <SectionTitle title="Attributs LIFE" aside={demo.isDemo ? <DemoTag /> : undefined} />
+                <div className={s.center}><RadarChart attributes={demo.attributes.filter((a) => LIFE_ATTRIBUTE_IDS.includes(a.id))} /></div>
               </Card>
             </div>
+
+            {demo.attributes.some((a) => SPORT_ATTRIBUTE_IDS.includes(a.id) && !LIFE_ATTRIBUTE_IDS.includes(a.id)) ? (
+              <Card>
+                <SectionTitle title="Attributs SPORT" aside="Force, Endurance et Discipline sont partagés avec LIFE" />
+                <div className={s.center}><RadarChart attributes={demo.attributes.filter((a) => SPORT_ATTRIBUTE_IDS.includes(a.id))} /></div>
+              </Card>
+            ) : null}
 
             <div className={s.grid2}>
               <Card>

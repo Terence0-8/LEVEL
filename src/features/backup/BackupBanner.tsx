@@ -6,7 +6,7 @@ import s from './backup.module.css'
 export function BackupBanner() {
   const { ready, health } = useBackupData()
   const { pathname } = useLocation()
-  if (!ready || health.level === 'ok' || pathname === '/backups') return null
+  if (!ready || health.level === 'ok' || pathname === '/backups' || pathname.startsWith('/sport/seance/')) return null
   return (
     <Link to="/backups" className={`${s.banner} ${s[health.level]}`} role="status">
       <b>{health.level === 'critical' ? 'Sauvegardes : action requise' : 'Sauvegardes : action recommandée'}</b>

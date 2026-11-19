@@ -1,56 +1,47 @@
-import { Badge, Card, DemoTag, Notice, PageHeader, ProgressBar, SectionTitle, Stat } from '@/design/components'
-import { Ring } from '@/design/charts'
-import { Icon } from '@/design/Icon'
-import { DemoGate } from '../shared/DemoGate'
-import s from '../pages.module.css'
+import { NavLink, useParams } from 'react-router-dom'
+import { useAppState } from '@/app/AppState'
+import { PageHeader } from '@/design/components'
+import { Dashboard } from './Dashboard'
+import { HistoryPanel } from './HistoryPanel'
+import { Library } from './Library'
+import { PlanPanel } from './PlanPanel'
+import { ProfilePanel } from './ProfilePanel'
+import { RecoveryPanel } from './RecoveryPanel'
+import { RunPanel } from './RunPanel'
+import { SportDemo } from './SportDemo'
+import { StatsPanel } from './StatsPanel'
+import { StrengthPanel } from './StrengthPanel'
+import s from './sport.module.css'
+
+const SECTIONS = [
+  ['', 'Tableau de bord'], ['muscu', 'Musculation'], ['course', 'Course'], ['planning', 'Planning'],
+  ['recuperation', 'Récupération'], ['progression', 'Progression'], ['historique', 'Historique'], ['profil', 'Profil'],
+] as const
 
 export function SportPage() {
+  const { demo, sport } = useAppState()
+  const { section = '' } = useParams()
+  if (demo) return <SportDemo />
+  const level = sport.recovery.level
+
   return (
-    <div className={s.stack}>
-      <PageHeader title="SPORT" subtitle="Entraînements, course et récupération." />
-      <Notice title="Module en préparation">bibliothèque d'exercices, programmes, suivi de course et calcul de récupération ne sont pas encore disponibles. Cet écran présente la structure visée.</Notice>
-      <DemoGate>
-        {({ sport, sportLevel }) => (
-          <div className={s.grid2}>
-            <Card>
-              <SectionTitle title="Séances à venir" aside={<DemoTag />} />
-              {sport.sessions.map((x) => (
-                <div key={x.id} className={s.session}>
-                  <span className={s.ico}><Icon name={x.kind === 'Course' ? 'route' : 'dumbbell'} /></span>
-                  <div className={s.grow}><b>{x.name}</b><small>{x.when} · {x.focus}</small></div>
-                  <Badge tone="info">{x.duration} min</Badge>
-                </div>
-              ))}
-            </Card>
-            <Card>
-              <SectionTitle title="Récupération" aside={<DemoTag />} />
-              <div className={s.center} style={{ marginBottom: 14 }}>
-                <Ring progress={sport.recovery / 100} size={120} tone="success" label={`Récupération ${sport.recovery} %`}>
-                  <div style={{ fontFamily: 'var(--font-title)', fontSize: 28 }}>{sport.recovery}</div>
-                  <div style={{ fontSize: 10, color: 'var(--c-text-dim)', letterSpacing: '0.2em' }}>%</div>
-                </Ring>
-              </div>
-              <div style={{ display: 'grid', gap: 10 }}>
-                {sport.recoveryFactors.map((f) => (
-                  <div key={f.label}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--c-text-dim)', marginBottom: 5 }}><span>{f.label}</span><span className="num">{f.value}</span></div>
-                    <ProgressBar value={f.value / 100} tone="success" thin label={f.label} />
-                  </div>
-                ))}
-              </div>
-            </Card>
-            <Card>
-              <SectionTitle title="Cette semaine" aside={<DemoTag />} />
-              <div className={s.kv}>
-                <Stat value={`${sport.weekDone}/${sport.weekGoal}`} label="Séances" />
-                <Stat value={`${sport.weekKm} km`} label="Course" />
-                <Stat value={`Niv. ${sportLevel.level}`} label="SPORT" />
-              </div>
-              <div style={{ marginTop: 16 }}><ProgressBar value={sport.weekKm / sport.weekKmGoal} tone="info" label="Objectif kilométrique" /></div>
-            </Card>
-          </div>
-        )}
-      </DemoGate>
+    <div className={s.page}>
+      <PageHeader title="SPORT" subtitle="Coaching sportif personnalisé : musculation, course, récupération. Vos données restent sur cet appareil." />
+      <nav className={s.sections} aria-label="Sections SPORT">
+        {SECTIONS.map(([id, label]) => (
+          <NavLink key={id} to={id ? `/sport/${id}` : '/sport'} end className={() => (section === id ? `${s.sec} ${s.secOn}` : s.sec)}>
+            {label}{id === 'recuperation' && level !== 'NORMAL' ? <i className={`${s.dot} ${level === 'ALERTE' ? s.dotAlert : s.dotWarn}`} aria-label={level} /> : null}
+          </NavLink>
+        ))}
+      </nav>
+      {section === '' ? <Dashboard /> : null}
+      {section === 'muscu' ? <><StrengthPanel /><Library /></> : null}
+      {section === 'course' ? <RunPanel /> : null}
+      {section === 'planning' ? <PlanPanel /> : null}
+      {section === 'recuperation' ? <RecoveryPanel /> : null}
+      {section === 'progression' ? <StatsPanel /> : null}
+      {section === 'historique' ? <HistoryPanel /> : null}
+      {section === 'profil' ? <ProfilePanel /> : null}
     </div>
   )
 }

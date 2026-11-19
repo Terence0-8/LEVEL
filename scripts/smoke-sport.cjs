@@ -1,0 +1,231 @@
+/* Test de fumée navigateur du module SPORT (Playwright). Usage : npm run build && npx vite preview --port 4173 &
+ * node scripts/smoke-sport.cjs [dossier-captures] */
+const { chromium } = require('playwright')
+const BASE = process.env.BASE || 'http://localhost:4173/'
+const OUT = process.argv[2] || '/tmp'
+const results = []
+const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name} ${extra}`) }
+
+;(async () => {
+  const browser = await chromium.launch()
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 })
+  const page = await ctx.newPage()
+  const errors = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+  const go = async (hash) => { await page.evaluate((h) => { location.hash = h }, hash); await page.waitForTimeout(700) }
+  const shot = (n, full = true) => page.screenshot({ path: `${OUT}/${n}.png`, fullPage: full })
+  const vis = (loc) => loc.first().isVisible().catch(() => false)
+  const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+
+  await page.goto(BASE + '#/sport'); await page.waitForSelector('h1'); await page.waitForTimeout(900)
+  check('SPORT : tableau de bord réel (sans démo)', await vis(page.getByText(/Profil sportif à \d+ %/)))
+  check('SPORT : 8 sections de navigation', (await page.getByRole('navigation', { name: 'Sections SPORT' }).getByRole('link').count()) === 8)
+  check('Aucun blocage : module utilisable avec un profil vide', await vis(page.getByRole('button', { name: 'Préparer une séance' })))
+  await shot('sport-dashboard-mobile')
+
+  // ── Profil progressif
+  await go('/sport/profil')
+  await page.getByRole('radio', { name: 'Intermédiaire' }).click()
+  await page.getByRole('button', { name: 'Prendre du muscle' }).click()
+  await page.locator('label', { hasText: /^Dos/ }).locator('select').selectOption('develop')
+  await page.locator('label', { hasText: /^Pectoraux/ }).locator('select').selectOption('progress')
+  for (const d of ['Lun', 'Mer', 'Ven']) await page.getByRole('button', { name: d, exact: true }).click()
+  await page.fill('#pf-min', '45')
+  await page.getByRole('radio', { name: 'Salle' }).click()
+  await page.getByLabel('Zone concernée').selectOption('knee'); await page.getByRole('button', { name: 'Ajouter', exact: true }).click(); await page.waitForTimeout(300)
+  check('Contrainte physique ajoutée', await vis(page.getByText('Genou')))
+  await page.getByRole('button', { name: 'Retirer' }).first().click(); await page.waitForTimeout(300)
+  check('Niveaux : déclaré / mesuré / opérationnel', (await vis(page.getByText('Niveau déclaré'))) && (await vis(page.getByText('Disponible après 6 séances'))) && (await vis(page.getByText('Niveau opérationnel'))))
+  await page.reload(); await page.waitForSelector('h1'); await page.waitForTimeout(700)
+  check('Profil enregistré immédiatement (persisté après rechargement)', (await page.getByRole('radio', { name: 'Intermédiaire' }).getAttribute('aria-checked')) === 'true' && (await page.locator('#pf-min').inputValue()) === '45')
+  await shot('sport-profile-mobile')
+
+  // ── Bibliothèque
+  await go('/sport/muscu')
+  check('Bibliothèque : exercices listés', (await page.locator('li button', { hasText: /Rowing|Squat|Développé/ }).count()) > 3)
+  await page.getByLabel('Rechercher un exercice').fill('pompes')
+  check('Pompes inclinées proposées', await vis(page.getByText('Pompes inclinées (mains surélevées)')))
+  check('Pompes classiques absentes des programmes ordinaires', (await page.getByText(/Pompes classiques/).count()) === 0)
+  await page.getByLabel('Rechercher un exercice').fill('Développé couché aux haltères')
+  await page.locator('li button', { hasText: 'Développé couché aux haltères' }).first().click(); await page.waitForTimeout(500)
+  check('Fiche : exécution, sécurité, progression, alternatives', (await vis(page.getByRole('heading', { name: 'Exécution' }))) && (await vis(page.getByRole('heading', { name: 'Sécurité' }))) && (await vis(page.getByRole('heading', { name: 'Progression' }))) && (await vis(page.getByRole('heading', { name: 'Alternatives' }))))
+  check('Fiche : illustration', await vis(page.getByRole('img', { name: /Illustration schématique/ })))
+  await shot('sport-exercise-sheet-mobile', false)
+  await page.getByRole('button', { name: 'Favori', exact: true }).click(); await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Fermer', exact: true }).first().click(); await page.waitForTimeout(300)
+  check('Favori enregistré', await vis(page.getByText('Favori', { exact: true })))
+  await page.getByLabel('Rechercher un exercice').fill('')
+  await shot('sport-library-mobile')
+
+  // ── Séance guidée
+  await page.locator('#gs-focus').selectOption({ label: 'Dos' })
+  await page.getByRole('button', { name: 'Générer la séance' }).click(); await page.waitForURL(/seance/); await page.waitForTimeout(600)
+  check('Séance générée : écran de démarrage avec variantes', (await vis(page.getByRole('button', { name: 'Démarrer la séance' }))) && (await vis(page.getByRole('radio', { name: 'Sans matériel' }))))
+  await shot('sport-player-start-mobile')
+  await page.getByRole('button', { name: 'Démarrer la séance' }).click(); await page.waitForTimeout(500)
+  const exName = async () => (await page.getByRole('heading', { level: 1 }).last().textContent()) || ''
+  const eqName = await exName()
+  check('Interface d’entraînement : objectif, charge, repos, illustration', (await vis(page.getByText('Objectif'))) && (await vis(page.getByText('Repos', { exact: true }))) && (await vis(page.getByRole('img', { name: /Illustration/ }))))
+  await page.getByRole('button', { name: 'Augmenter Répétitions' }).click()
+  await page.getByRole('button', { name: 'Valider la série' }).click(); await page.waitForTimeout(500)
+  check('Série enregistrée immédiatement', (await page.getByLabel('Séries saisies').locator('li').count()) === 1)
+  check('Chronomètre de repos affiché', await vis(page.getByRole('timer')))
+  await shot('sport-player-exercise-mobile')
+  // bascule sans matériel : la série déjà saisie est conservée
+  await page.getByRole('radio', { name: 'Sans matériel' }).click(); await page.waitForTimeout(500)
+  const bwName = await exName()
+  check('Variante sans matériel : autre exercice, mêmes objectifs', bwName !== eqName, `${eqName} → ${bwName}`)
+  check('Séries déjà saisies conservées après bascule', (await page.getByLabel('Séries saisies').locator('li').count()) === 1)
+  await page.getByRole('button', { name: 'Valider la série' }).click(); await page.waitForTimeout(400)
+  await page.getByRole('radio', { name: 'Avec matériel' }).click(); await page.waitForTimeout(400)
+  const nLogs = await page.getByLabel('Séries saisies').locator('li').count()
+  check('Deux séries distinctes (un exercice chacune), sans conversion', nLogs === 2, `count=${nLogs} slot=${await page.getByText(/Série \d\/\d/).first().textContent()}`)
+  await page.reload(); await page.waitForSelector('h1'); await page.waitForTimeout(800)
+  check('Rechargement en pleine séance : performances conservées', (await page.getByLabel('Séries saisies').locator('li').count()) === 2)
+  // interruption et reprise
+  await page.getByRole('button', { name: /Interrompre/ }).click(); await page.waitForURL(/sport\/muscu/); await page.waitForTimeout(500)
+  check('Séance interrompue listée pour reprise', await vis(page.getByText('Séances en attente')))
+  await page.getByRole('link', { name: 'Reprendre' }).first().click(); await page.waitForTimeout(500)
+  check('Écran de reprise', await vis(page.getByRole('button', { name: 'Reprendre la séance' })))
+  await page.getByRole('button', { name: 'Reprendre la séance' }).click(); await page.waitForTimeout(500)
+  // correction d'une série pendant la séance
+  await page.getByLabel('Séries saisies').locator('li button').first().click(); await page.waitForTimeout(300)
+  await page.getByRole('button', { name: 'Augmenter Répétitions' }).last().click()
+  await page.getByRole('button', { name: 'Enregistrer', exact: true }).click(); await page.waitForTimeout(400)
+  check('Correction d’une série pendant la séance', (await page.getByLabel('Séries saisies').locator('li').count()) === 2)
+  // réorganiser
+  await page.getByRole('button', { name: 'Réorganiser' }).click(); await page.waitForTimeout(300)
+  check('Réorganisation possible', (await page.getByRole('button', { name: 'Monter' }).count()) > 0)
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300)
+  // saisir assez de séries (≥ 25 %) puis terminer en séance écourtée
+  for (let i = 0; i < 8; i++) { const b = page.getByRole('button', { name: 'Valider la série' }); if (await b.isVisible().catch(() => false)) { await b.click(); await page.waitForTimeout(220) } else { const next = page.getByRole('button', { name: /Suivant/ }); if (await next.isEnabled().catch(() => false)) { await next.click(); await page.waitForTimeout(150) } } }
+  await page.getByRole('button', { name: 'Terminer maintenant' }).click(); await page.waitForTimeout(400)
+  check('Fin de séance : confirmation proportionnelle', await vis(page.getByText(/récompense sera proportionnelle/)))
+  await shot('sport-finish-confirm-mobile', false)
+  await page.getByRole('button', { name: 'Terminer', exact: true }).click(); await page.waitForTimeout(800)
+  check('Bilan après séance avec XP SPORT', await vis(page.getByText(/^\+\d+ XP$/)))
+  check('Séance écourtée : récompense proportionnelle (pas de XP maximale)', await vis(page.getByRole('heading', { name: 'Séance écourtée' })) || await vis(page.getByRole('heading', { name: 'Séance terminée' })))
+  await shot('sport-summary-mobile')
+
+  // ── XP dans le moteur RPG existant
+  await go('/rpg')
+  check('RPG : attributs SPORT (radar dédié)', await vis(page.getByText('Attributs SPORT')))
+  await go('/sport')
+  const xpText = async () => ((await page.getByText(/\d+ \/ \d+ XP/).first().textContent()) || '').replace(/\s| | /g, '')
+  const xpWith = await xpText()
+  check('Niveau SPORT alimenté par le journal', !/^0\//.test(xpWith), xpWith)
+  await shot('sport-dashboard-after-mobile')
+
+  // ── Historique : consulter, corriger, supprimer (recalcul de l'XP)
+  await go('/sport/historique')
+  await page.locator('li button', { hasText: /Musculation/ }).first().click(); await page.waitForTimeout(500)
+  check('Historique : détail des séries et XP de la séance', (await vis(page.getByText(/XP de cette séance/))) && (await page.locator('button', { hasText: /rép\./ }).count()) > 0)
+  await shot('sport-history-detail-mobile', false)
+  await page.getByRole('radio', { name: 'Abandonnée' }).click()
+  await page.getByRole('button', { name: 'Enregistrer la correction' }).click(); await page.waitForTimeout(700)
+  check('Correction : XP recalculée avec message', await vis(page.getByText(/Corrigé : \d+ gain/)))
+  await page.getByRole('button', { name: 'Fermer', exact: true }).first().click(); await page.waitForTimeout(300)
+  await go('/sport'); const xpAb = await xpText()
+  check('XP retirée après correction (abandonnée)', /^0\//.test(xpAb), xpAb)
+  await go('/sport/historique')
+  await page.locator('li button', { hasText: /Musculation/ }).first().click(); await page.waitForTimeout(400)
+  await page.getByRole('radio', { name: 'Écourtée' }).click(); await page.getByRole('button', { name: 'Enregistrer la correction' }).click(); await page.waitForTimeout(600)
+  await page.getByRole('button', { name: 'Fermer', exact: true }).first().click(); await page.waitForTimeout(300)
+  await go('/sport'); check('XP restaurée après re-correction', (await xpText()) === xpWith)
+  await go('/sport/historique')
+  await page.locator('li button', { hasText: /Musculation/ }).first().click(); await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Supprimer', exact: true }).first().click(); await page.waitForTimeout(300)
+  check('Suppression : confirmation explicite', await vis(page.getByRole('heading', { name: 'Supprimer cette séance ?' })))
+  await page.getByRole('button', { name: 'Supprimer', exact: true }).last().click(); await page.waitForTimeout(800)
+  await go('/sport'); check('XP retirée après suppression', /^0\//.test(await xpText()))
+
+  // ── Récupération : alerte, blocage, réévaluation, repos
+  await go('/sport/recuperation')
+  await page.getByRole('button', { name: /Questionnaire du jour/ }).click(); await page.waitForTimeout(400)
+  await page.getByRole('radio', { name: 'Importante', exact: true }).click(); await page.locator('#ck-area').selectOption({ label: 'Épaules' })
+  await shot('sport-checkin-mobile', false)
+  await page.getByRole('button', { name: 'Évaluer', exact: true }).click(); await page.waitForTimeout(600)
+  check('Douleur importante → ALERTE avec blocage et rappel non médical', (await vis(page.getByText(/d’alerte/))) && (await vis(page.getByText(/Estimation non médicale/))))
+  await page.getByRole('button', { name: 'Terminé' }).click(); await page.waitForTimeout(400)
+  check('Bandeau d’alerte visible', await vis(page.getByText('Alerte : repos et prudence')))
+  await shot('sport-recovery-alert-mobile')
+  await go('/sport/muscu')
+  check('Alerte : génération de séance bloquée', await page.getByRole('button', { name: 'Générer la séance' }).isDisabled())
+  await go('/sport/recuperation')
+  await page.getByRole('button', { name: 'Me réévaluer' }).click(); await page.waitForTimeout(300)
+  await page.getByRole('radio', { name: 'Marquée' }).click(); await page.getByRole('button', { name: 'Évaluer', exact: true }).click(); await page.waitForTimeout(500)
+  await page.getByRole('button', { name: 'Terminé' }).click(); await page.waitForTimeout(300)
+  check('Réévaluation : alerte levée, vigilance', await vis(page.getByText('Vigilance', { exact: true })))
+  await page.getByRole('button', { name: /Je me repose aujourd’hui/ }).click(); await page.waitForTimeout(600)
+  check('Respect de la récupération reconnu', await vis(page.getByText('Repos choisi ✓')))
+  await go('/history'); check('Journal : « Repos respecté » (Résilience)', await vis(page.getByText('Repos respecté')))
+  await go('/sport/recuperation')
+  await page.getByRole('button', { name: 'Me réévaluer' }).click(); await page.waitForTimeout(300)
+  await page.getByRole('button', { name: 'Évaluer', exact: true }).click(); await page.waitForTimeout(500)
+  await page.getByRole('button', { name: 'Terminé' }).click(); await page.waitForTimeout(300)
+  check('Retour à la normale après réévaluation', await vis(page.getByText('Normal', { exact: true })))
+
+  // ── Course
+  await go('/sport/course')
+  check('Course : premier test prudent proposé', await vis(page.getByText(/test prudent/)))
+  await page.getByRole('button', { name: 'Enregistrer cette sortie' }).click(); await page.waitForTimeout(400)
+  await page.fill('#rn-km', '5'); await page.fill('#rn-min', '28'); await page.fill('#rn-sec', '0'); await page.waitForTimeout(200)
+  check('Allure moyenne calculée', await vis(page.getByText('5:36 /km')))
+  await page.fill('#rn-date', daysAgo(1))
+  await shot('sport-run-sheet-mobile', false)
+  await page.getByRole('button', { name: 'Enregistrer', exact: true }).click(); await page.waitForTimeout(700)
+  check('Course enregistrée (XP d’endurance)', await vis(page.getByText('Course enregistrée')))
+  await page.getByRole('button', { name: 'Terminé' }).click(); await page.waitForTimeout(400)
+  check('Sortie listée avec allure', await vis(page.getByText(/5 km · 28:00/)))
+  await shot('sport-run-mobile')
+
+  // ── Activité imprévue : sans XP
+  await go('/sport')
+  await page.getByRole('button', { name: /Activité imprévue/ }).click(); await page.waitForTimeout(400)
+  await page.fill('#up-title', 'Football entre amis'); await page.getByRole('button', { name: 'Enregistrer', exact: true }).click(); await page.waitForTimeout(500)
+  check('Activité imprévue : enregistrée sans XP', await vis(page.getByText(/ne rapportent pas d’XP/)))
+  await page.getByRole('button', { name: 'Terminé' }).click(); await page.waitForTimeout(300)
+
+  // ── Planning
+  await go('/sport/planning')
+  await page.getByRole('button', { name: /Planifier ma semaine|Réorganiser ma semaine/ }).click(); await page.waitForTimeout(700)
+  check('Planning : séances placées, une par jour', (await page.locator('ul li', { hasText: /prévue|proposée/ }).count()) >= 1)
+  await shot('sport-plan-mobile')
+
+  // ── Statistiques
+  await go('/sport/progression')
+  check('Statistiques : volume, répartition, records, régularité, bilans', (await vis(page.getByText('Volume d’entraînement'))) && (await vis(page.getByText('Répartition musculaire'))) && (await vis(page.getByText('Records personnels'))) && (await vis(page.getByText('Fréquence et régularité'))) && (await vis(page.getByText('Bilans'))))
+  await page.getByRole('radio', { name: 'Année' }).click(); await page.waitForTimeout(300)
+  await page.getByRole('radio', { name: 'Tout' }).click(); await page.waitForTimeout(300)
+  check('Périodes semaine / mois / 3 mois / année / tout', (await page.getByRole('radio', { name: /^(Semaine|Mois|3 mois|Année|Tout)$/ }).count()) === 5)
+  await shot('sport-stats-mobile')
+
+  // ── Sauvegarde chiffrée : couvre le SPORT
+  await go('/backups')
+  await page.getByRole('button', { name: /Sauvegarder maintenant/ }).click(); await page.waitForTimeout(1200)
+  check('Sauvegarde manuelle après données SPORT', (await page.getByText(/^Manuelle/).count()) > 0)
+
+  // ── Hors ligne : génération, séance, saisie, persistance
+  await page.evaluate(() => navigator.serviceWorker.ready); await page.reload(); await page.waitForTimeout(1200)
+  await ctx.setOffline(true)
+  await go('/sport/muscu'); await page.reload(); await page.waitForSelector('h1', { timeout: 8000 }); await page.waitForTimeout(700)
+  await page.locator('#gs-focus').selectOption({ label: 'Épaules' })
+  await page.getByRole('button', { name: 'Générer la séance' }).click(); await page.waitForURL(/seance/); await page.waitForTimeout(500)
+  await page.getByRole('button', { name: 'Démarrer la séance' }).click(); await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Valider la série' }).click(); await page.waitForTimeout(400)
+  await page.reload(); await page.waitForSelector('h1', { timeout: 8000 }); await page.waitForTimeout(800)
+  check('Hors ligne : séance guidée, saisie conservée après rechargement', (await page.getByLabel('Séries saisies').locator('li').count()) === 1)
+  await ctx.setOffline(false)
+
+  // ── Desktop
+  const d = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
+  await d.goto(BASE + '#/sport'); await d.waitForSelector('h1'); await d.waitForTimeout(900)
+  check('Desktop : menu latéral et tableau de bord', (await d.locator('aside').isVisible()) && (await d.getByText('Progression générale').isVisible()))
+  await d.screenshot({ path: `${OUT}/sport-dashboard-desktop.png`, fullPage: true })
+
+  check('Aucune erreur console / page', errors.length === 0, errors.join(' | '))
+  await browser.close()
+  console.log(`\n${results.filter(Boolean).length}/${results.length} contrôles réussis`)
+  process.exit(results.every(Boolean) ? 0 : 1)
+})()

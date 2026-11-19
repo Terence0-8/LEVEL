@@ -10,11 +10,34 @@ import { arrangeHome, type WidgetPlacement } from '@/core/homeLayout'
 import { cycleProgress, questStatus } from '@/core/questState'
 import { isRecurring, type Category, type Quest } from '@/core/quest'
 import type { XpEvent } from '@/core/ledger'
+import { cycleInfo, type CycleInfo } from '@/core/sport/cycle'
+import { defaultProfile, measuredLevel, operationalLevel, type SportProfile } from '@/core/sport/profile'
+import { evaluateRecovery, type RecoveryState } from '@/core/sport/recovery'
+import type { Pref } from '@/core/sport/generator'
+import type { BodyMeasure, ExerciseState, ProgressionDecision, RecoveryCheck, SportSession } from '@/core/sport/session'
+import type { Exercise, Experience } from '@/core/sport/types'
+import { dayKey } from '@/core/dates'
 import { findMissed, type MissedAnalysis, type MissedItem } from '@/core/missed'
 import type { QuestRevision } from '@/core/revision'
 
 /** Progression affichée : réelle (journal d'XP) ou de démonstration (mocks), jamais mélangées. */
 export type Progress = ProgressSummary & { isDemo: boolean; layout: WidgetPlacement[] }
+
+export interface SportState {
+  profile: SportProfile
+  prefs: Pref[]
+  custom: Exercise[]
+  sessions: SportSession[]
+  checks: RecoveryCheck[]
+  states: ExerciseState[]
+  decisions: ProgressionDecision[]
+  measures: BodyMeasure[]
+  recovery: RecoveryState
+  cycle: CycleInfo
+  measured: Experience | null
+  operational: Experience
+  today: string
+}
 
 interface AppState {
   displayName: string
@@ -29,6 +52,7 @@ interface AppState {
   revisions: QuestRevision[]
   /** Éléments non réalisés, pas encore analysés (aucun effet sur l'XP) */
   missed: MissedItem[]
+  sport: SportState
   now: Date
   toggleDemoQuest: (id: string) => void
 }
@@ -46,7 +70,7 @@ function useNow() {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions } = usePersistedState()
+  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw } = usePersistedState()
   const now = useNow()
 
   const demo = useMemo(() => (settings.showDemoData ? buildDemoView(doneQuests) : null), [settings.showDemoData, doneQuests])
@@ -85,12 +109,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const missed = useMemo(() => findMissed(quests, events, analyses, now), [quests, events, analyses, now])
 
+  const sport = useMemo<SportState>(() => {
+    const prof = sportRaw.profile ?? defaultProfile('')
+    const today = dayKey(now)
+    const recovery = evaluateRecovery({ checks: sportRaw.checks, sessions: sportRaw.sessions, now, today, custom: sportRaw.custom })
+    const measured = measuredLevel(sportRaw.sessions, sportRaw.decisions.filter((d) => d.applied && d.action === 'increase').length, now)
+    return { ...sportRaw, profile: prof, recovery, cycle: cycleInfo(prof.cycleStartWeek, now), measured, operational: operationalLevel(prof.experience, measured), today }
+  }, [sportRaw, now])
+
   const value = useMemo<AppState>(
     () => ({
-      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, now,
+      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, now,
       toggleDemoQuest: (id) => void repos.demo.toggleQuest(id),
     }),
-    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, now],
+    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, now],
   )
 
   if (!ready) return <div style={{ minHeight: '100vh' }} aria-busy="true" />

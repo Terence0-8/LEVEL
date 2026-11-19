@@ -42,3 +42,10 @@ export function dateOfWeekKey(key: string): Date {
   const mondayW1 = addDays(jan4, -((jan4.getDay() || 7) - 1))
   return addDays(mondayW1, (w - 1) * 7)
 }
+
+/** Lundi (minuit local) de la semaine contenant `d`. */
+export function mondayOf(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  x.setDate(x.getDate() - ((x.getDay() || 7) - 1))
+  return x
+}

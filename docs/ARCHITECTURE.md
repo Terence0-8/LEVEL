@@ -25,7 +25,10 @@ src/
   mocks/     Données FICTIVES (demoData) + projection UI (demoView). Jamais importé par core/data.
   design/    Tokens, styles globaux, Icon, Logo, composants (Card, ProgressBar…), charts SVG
   app/       App (routes), Shell (navigation, layouts, level-up), AppState (contexte)
+  data/sportService.ts  Commandes SPORT transactionnelles ; syncXp = recalcul déterministe de l'XP SPORT dans xpEvents
   data/backup/  Sauvegardes : crypto (WebCrypto), backupDb (base séparée), snapshot, backupService, scheduler
+  core/sport/ Règles SPORT pures : types, config (barèmes), exercises (bibliothèque), profile (niveaux), recovery, cycle,
+             generator, progression, running, planner, xp (récompenses souhaitées), stats, session (modèles)
   features/  home, life (QuestCard, QuestForm, RewardsPanel, CategoriesPanel), sport, rpg, history, profile, shared
   lib/       Utilitaires (formatage)
 scripts/     smoke.cjs
@@ -33,7 +36,7 @@ scripts/     smoke.cjs
 Sens des dépendances : `features → app/design/core/data/mocks` ; `data → core` ; `core → ∅`.
 
 ## Persistance
-Base IndexedDB `level`, schéma **v3** : `profile`, `settings`, `demoQuestState` (v1) ; `categories`, `quests`, `xpEvents` (v2) ; `analyses`, `revisions` (v3). Chaque montée de version ajoute des tables sans toucher aux données existantes ; les champs ajoutés aux événements après la v0.2 sont complétés à la lecture par `normalizeEvent`. Les `get()` sont en lecture seule (requis par `useLiveQuery`). Stockage durable demandé via `navigator.storage.persist()`. Sauvegardes chiffrées (WebCrypto) prévues.
+Base IndexedDB `level`, schéma **v4** : `profile`, `settings`, `demoQuestState` (v1) ; `categories`, `quests`, `xpEvents` (v2) ; `analyses`, `revisions` (v3) ; `sportProfile`, `exercisePrefs`, `customExercises`, `sportSessions`, `recoveryChecks`, `exerciseStates`, `progressionLog`, `bodyMeasures` (v4). Chaque montée de version ajoute des tables sans toucher aux données existantes ; les champs ajoutés aux événements après la v0.2 sont complétés à la lecture par `normalizeEvent`. Les `get()` sont en lecture seule (requis par `useLiveQuery`). Stockage durable demandé via `navigator.storage.persist()`. Sauvegardes chiffrées (WebCrypto) prévues.
 
 ## Journal d'XP (cœur de la progression)
 - `xpEvents` est **append-only** et la seule source de vérité : aucun solde n'est stocké. Niveaux, rangs, attributs, XP par domaine/catégorie se **recalculent** (`computeProgression`) en additionnant les événements.
@@ -87,3 +90,18 @@ Base IndexedDB `level`, schéma **v3** : `profile`, `settings`, `demoQuestState`
 - Quelqu'un ayant accès au profil du navigateur peut utiliser la clé de l'appareil : les sauvegardes locales ne protègent pas contre un attaquant local ; le fichier exporté, lui, dépend de la force de la phrase.
 - Rien n'oblige l'utilisateur à exporter régulièrement : l'application n'a pas d'accès au système de fichiers en arrière-plan.
 - Perte simultanée de la phrase et de la clé de secours (et de l'appareil) = perte définitive, par conception.
+
+## Module SPORT (v0.5)
+**Journal partagé, pas de second moteur.** `core/sport/xp.ts#desiredSportAwards` calcule de façon **déterministe** toutes les récompenses SPORT attendues à partir de l'historique (séances, questionnaires, décisions de progression). `sportService.syncXp` (transaction) compare avec les gains ouverts du journal (`awardKey` préfixé `sport:`) et ne fait que : **annuler** (événement de correction opposé, tracé) les gains devenus faux, **inscrire** les manquants. Clés : `sport:session:{id}:base`, `…:pr:{exercice}`, `sport:week:{sem}:regularity`, `sport:rest:{jour}`, `sport:progress:{décision}`. Conséquence : toute correction (statut, date, série, suppression d'une séance) se propage à XP, niveaux, attributs, records (recalculés chronologiquement) sans code de recalcul spécifique ; idempotent (rejouer ne crée rien). Événements SPORT : `source: 'activity'`, `domain: 'SPORT'`, `sourceId` = séance/semaine/jour/décision. Le niveau global est la somme LIFE + SPORT (inchangé).
+
+**Choix de modélisation.**
+- Une séance = **un document** (`sportSessions`) contenant ses emplacements (`slots`) et séries : l'enregistrement d'une série est une écriture atomique unique (sauvegarde immédiate).
+- Un emplacement porte **deux choix** (`equipment` / `bodyweight`) ; chaque `SetLog` mémorise l'`exerciseId` réellement exécuté : basculer de variante ne perd rien et ne convertit rien. Les statistiques additionnent par groupe musculaire (même historique de développement) mais les performances restent par exercice.
+- Chronomètres : `restEndsAt` (horodatage absolu), `startedAt` + `pausedMs`/`pausedAt` ; l'interface ne compte pas, elle **déduit** de l'horloge (exacte après mise en veille).
+- Récupération et sécurité sont des **fonctions pures** de (questionnaires, séances, date) : `evaluateRecovery`. Un blocage se lève par réévaluation (la dernière saisie du jour fait foi ; l'historique est conservé).
+- Génération pure (`generateStrengthSession`) : n'écrit rien ; le service enregistre. Les séances du planning sont des **coquilles** remplies au dernier moment (données du jour).
+- Mises à jour de profil par **fonction sur la dernière version** (transaction) : des modifications rapides ne s'écrasent pas (test de non-régression).
+- Illustrations : composant SVG paramétré par « pose » (20 poses), aucune ressource binaire.
+- Sauvegardes : les 8 tables SPORT sont dans `TABLE_KEYS` ; schéma de sauvegarde v4 ; migration des sauvegardes plus anciennes (tables vides).
+
+**Dépendances ajoutées : aucune.**

@@ -37,9 +37,10 @@ function useLevelUp() {
 export function Shell() {
   const loc = useLocation()
   const toast = useLevelUp()
+  const immersive = loc.pathname.startsWith('/sport/seance/')
 
   return (
-    <div className={s.shell}>
+    <div className={`${s.shell} ${immersive ? s.immersive : ''}`}>
       <aside className={s.side} aria-label="Navigation principale">
         <div className={s.brand}><LogoWordmark /></div>
         {NAV.map((n) => (

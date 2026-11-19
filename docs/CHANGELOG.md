@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 — Module SPORT
+- Profil sportif progressif (niveaux déclaré / mesuré / opérationnel), enregistrement immédiat, jamais bloquant.
+- Bibliothèque de ~75 exercices sur 11 groupes (fiches complètes, illustrations SVG locales), préférences (favoris, exclusions, évitements temporaires), exercices et séances personnalisés ; pompes classiques réservées au circuit HIIT.
+- Génération adaptative de séances (priorités, récupération, historique, durée, matériel) en deux variantes cohérentes ; séance guidée mobile-first (saisie rapide, repos par horodatages, interruption/reprise, bascule de variante sans perte, correction, écran allumé).
+- Progression par recommandations à confirmer (≥ 3 expositions) et cycle adaptatif.
+- Course : saisie manuelle, allure calculée, intervalles, propositions prudentes (un levier par semaine, +10 %).
+- Planning une séance par jour sans empilement, réorganisation après séance manquée.
+- Récupération : questionnaire 30 s, indice (estimation non médicale), fatigue locale, NORMAL/VIGILANCE/ALERTE avec blocage jusqu'à réévaluation.
+- XP SPORT dans le **journal existant** (recalcul déterministe `syncXp`), 7 attributs SPORT, radar LIFE/SPORT, records, régularité, repos respecté ; activités imprévues sans XP.
+- Statistiques (volume, répartition, records, régularité, course, mensurations) et historique corrigeable avec recalcul.
+- Schéma Dexie v4, sauvegardes étendues (8 tables), planificateur de sauvegarde sur les changements SPORT.
+- **Correctif** : des modifications rapides du profil pouvaient s'écraser (mise à jour sur copie périmée) ; corrigé et testé.
+- Tests : 225 unitaires/intégration (Vitest), 71 + 54 contrôles navigateur (LIFE/sauvegardes + SPORT).
+
 ## 0.4.0 — Sécurisation des données et sauvegardes
 - Sauvegardes locales chiffrées (AES-256-GCM) dans une base IndexedDB séparée : périodiques, après modification, après opération importante, avant/après restauration ; déduplication ; rétention graduée ; vérification par relecture/déchiffrement à la création et au démarrage.
 - Phrase secrète (PBKDF2 600 000) + clé de secours (160 bits) : chiffrement à enveloppe ; test réel du déchiffrement avec les deux secrets à la configuration ; changement de phrase ; réinitialisation depuis l'appareil en dernier recours.
