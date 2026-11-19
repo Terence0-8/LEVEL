@@ -1,0 +1,82 @@
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Icon, type IconName } from '@/design/Icon'
+import { LogoWordmark } from '@/design/Logo'
+import { useAppState } from './AppState'
+import s from './Shell.module.css'
+
+export const NAV: Array<{ to: string; label: string; icon: IconName }> = [
+  { to: '/', label: 'Accueil', icon: 'home' },
+  { to: '/life', label: 'LIFE', icon: 'life' },
+  { to: '/sport', label: 'SPORT', icon: 'sport' },
+  { to: '/rpg', label: 'RPG', icon: 'rpg' },
+  { to: '/history', label: 'Historique', icon: 'history' },
+]
+
+const cls = (base: string, active: boolean) => (active ? `${base} ${s.active}` : base)
+
+/** Annonce spectaculaire quand le niveau global ou le rang change (événement important → or lumineux). */
+function useLevelUp() {
+  const { demo } = useAppState()
+  const prev = useRef<number | null>(null)
+  const [msg, setMsg] = useState<{ title: string; sub: string } | null>(null)
+  const level = demo?.global.level ?? null
+  const rank = demo?.rank
+  useEffect(() => {
+    if (level !== null && prev.current !== null && level > prev.current) {
+      setMsg({ title: `Niveau ${level}`, sub: rank && rank.minLevel === level ? `Nouveau rang ${rank.rank} · ${rank.title}` : 'Niveau supérieur atteint' })
+      const t = setTimeout(() => setMsg(null), 4200)
+      prev.current = level
+      return () => clearTimeout(t)
+    }
+    prev.current = level
+  }, [level, rank])
+  return msg
+}
+
+export function Shell() {
+  const loc = useLocation()
+  const toast = useLevelUp()
+
+  return (
+    <div className={s.shell}>
+      <aside className={s.side} aria-label="Navigation principale">
+        <div className={s.brand}><LogoWordmark /></div>
+        {NAV.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => cls(s.link, isActive)}>
+            <Icon name={n.icon} /> {n.label}
+          </NavLink>
+        ))}
+        <div className={s.spacer} />
+        <NavLink to="/profile" className={({ isActive }) => cls(s.link, isActive)}>
+          <Icon name="user" /> Profil & réglages
+        </NavLink>
+      </aside>
+
+      <div>
+        <header className={s.top}>
+          <LogoWordmark />
+          <NavLink to="/profile" className={s.avatarBtn} aria-label="Profil et réglages"><Icon name="user" size={20} /></NavLink>
+        </header>
+        <main className={s.main}>
+          <div key={loc.pathname} className={s.page}><Outlet /></div>
+        </main>
+      </div>
+
+      <nav className={s.tabs} aria-label="Navigation principale">
+        {NAV.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => cls(s.tab, isActive)}>
+            <Icon name={n.icon} size={22} /> {n.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      {toast ? (
+        <div className={s.toast} role="status" aria-live="polite">
+          <small>LEVEL UP</small><b>{toast.title}</b><div style={{ fontSize: 12, color: 'var(--c-text)' }}>{toast.sub}</div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+

@@ -1,0 +1,33 @@
+:root {
+  /* Palette Level */
+  --c-bg: #0b0d11;
+  --c-panel: #12141a;
+  --c-card: #1e2128;
+  --c-surface: #2a2f37;
+  --c-gold: #c9b17a;
+  --c-gold-bright: #f5d889;
+  --c-text: #e8e1d3;
+  --c-text-dim: #9d9889;
+  --c-text-faint: #6b6a66;
+  --c-success: #4caf7a;
+  --c-danger: #e55b5b;
+  --c-info: #6ca8ff;
+  --c-line: rgba(232, 225, 211, 0.08);
+  --c-line-strong: rgba(201, 177, 122, 0.28);
+
+  --font-title: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --font-ui: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 24px -12px rgba(0, 0, 0, 0.7);
+  --shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 18px 40px -16px rgba(0, 0, 0, 0.85);
+  --glow-gold: 0 0 24px rgba(245, 216, 137, 0.28);
+
+  --ease: cubic-bezier(0.22, 0.8, 0.28, 1);
+  --nav-h: 64px;
+  --side-w: 248px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
