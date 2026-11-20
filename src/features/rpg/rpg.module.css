@@ -60,3 +60,37 @@
 :global(html[data-reduced-motion='true']) .celebrate, :global(html[data-reduced-motion='true']) .celebrate * { animation: none !important; }
 :global(html[data-reduced-motion='true']) .burst::before, :global(html[data-reduced-motion='true']) .burst::after { display: none; }
 @media (prefers-reduced-motion: reduce) { .celebrate, .celebrate *, .burst::before, .burst::after { animation: none !important; } }
+
+/* Journal RPG : identité visuelle par importance */
+.month { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--c-text-dim); margin: 14px 0 8px; }
+.entry { width: 100%; text-align: left; display: grid; gap: 6px; padding: 14px; border-radius: var(--r-lg); border: 1px solid var(--c-line); background: var(--c-card); position: relative; transition: border-color 0.2s; }
+.entry:hover { border-color: var(--c-line-strong); }
+.entryTop { display: flex; gap: 10px; align-items: flex-start; }
+.entryIcon { flex: none; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: var(--c-surface); color: var(--c-text-dim); }
+.entryHead { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.entryHead b { font-family: var(--font-title); letter-spacing: 0.04em; font-size: 15px; font-weight: 600; }
+.entryHead small { color: var(--c-text-dim); font-size: 12px; }
+.entryBody { color: var(--c-text-dim); font-size: 14px; line-height: 1.5; }
+.entryMeta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.imp_info { }
+.imp_important { border-color: rgba(201,177,122,0.45); } .imp_important .entryIcon { color: var(--c-gold); }
+.imp_major { border-color: var(--c-gold); background: linear-gradient(180deg, rgba(201,177,122,0.08), var(--c-card)); } .imp_major .entryIcon { color: var(--c-gold-bright); background: rgba(201,177,122,0.14); }
+.imp_exceptional { border-color: var(--c-gold-bright); background: linear-gradient(180deg, rgba(245,216,137,0.12), var(--c-card)); box-shadow: var(--glow-gold); } .imp_exceptional .entryIcon { color: #0b0d11; background: var(--c-gold-bright); }
+.fresh::after { content: ''; position: absolute; top: 12px; right: 12px; width: 9px; height: 9px; border-radius: 50%; background: var(--c-gold-bright); box-shadow: 0 0 10px rgba(245,216,137,0.7); }
+.revoked { opacity: 0.55; }
+.tagChip { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--c-line); color: var(--c-text-dim); white-space: nowrap; }
+.tagChip.fact { color: var(--c-success); border-color: rgba(76,175,122,0.4); }
+.tagChip.estimate { color: var(--c-info); border-color: rgba(100,160,220,0.4); }
+.tagChip.interpretation { color: #c8a2e8; border-color: rgba(200,162,232,0.4); }
+.tagChip.recommendation { color: var(--c-gold-bright); border-color: var(--c-gold); }
+.obs { display: grid; gap: 8px; padding: 14px; border-radius: var(--r-lg); border: 1px solid var(--c-line); background: var(--c-card); }
+.obs.attention { border-color: rgba(245,216,137,0.45); }
+.obs.positive { border-color: rgba(76,175,122,0.35); }
+.obs h3 { font-size: 15px; letter-spacing: 0.02em; }
+.evid { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13px; color: var(--c-text-dim); }
+.rec { display: grid; gap: 10px; padding: 16px; border-radius: var(--r-lg); border: 1px solid var(--c-gold); background: rgba(201,177,122,0.05); }
+.rec dl { margin: 0; display: grid; gap: 8px; }
+.rec dt { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--c-gold); }
+.rec dd { margin: 2px 0 0; font-size: 14px; line-height: 1.5; }
+.decisions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sectionHint { color: var(--c-text-faint); font-size: 12.5px; }

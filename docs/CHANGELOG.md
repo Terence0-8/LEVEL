@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.0 — RPG V1.2 : événements, immersion et intelligence locale
+
+**Livré**
+- **Journal d'événements RPG** (`core/rpgEvents.ts`, `data/eventService.ts`) : 28 types répartis en Progression, LIFE, SPORT, Régularité et évolution ; quatre niveaux d'importance (information, important, majeur, exceptionnel). Chaque événement a un identifiant déterministe unique, une date réelle, une origine, une référence à l'objet, des faits chiffrés et un état de consultation. Une action ordinaire n'est jamais un événement.
+- **Cohérence** : détection recalculée depuis les faits ; aucune écriture dans le journal d'XP ; un fait contredit par une correction rend l'événement « révoqué » (conservé, signalé) ; historique reconstitué à la première synchronisation d'une mise à jour (jamais présenté comme nouveau). Prestiges, récompenses et succès réutilisent leurs tables.
+- **Centre d'activité** (`/rpg/journal`) : chronologie par mois sans limite d'ancienneté, filtres (Tout, LIFE, SPORT, Progression RPG, Succès et récompenses, Importants), détail contextualisé, accès à la fonctionnalité, « nouveau » / consulté sans suppression.
+- **Analyse locale** (`core/insights.ts`) : régularité (jamais la quantité), pauses et reprises sans jugement, tendance de fréquence, semaine inhabituelle ; LIFE (catégories en progression ou laissées de côté, prévu/réalisé, projets bloqués, échéances, indicateurs) ; SPORT (volume, performances, groupes musculaires, fréquence, récupération, charge en hausse) ; transversal (surcharge, échéances rapprochées, capacité, projets accumulés, baisse de réalisation). Fenêtres jour / semaine / mois / tendance longue ; fiabilité selon l'échantillon ; sous le minimum, la règle se tait.
+- **Recommandations explicables** (`core/recommendations.ts`) : constat, justification chiffrée, recommandation, bénéfice, confiance. Décisions : accepter, reporter, refuser, ignorer (historique minimal) ; non re-proposées sans changement significatif de la situation. Seule action appliquable : une proposition LIFE existante, après confirmation. **Sécurité SPORT** : aucune reprise ni incitation à s'entraîner si la récupération n'est pas normale.
+- **Narration** (`core/narration.ts`) : textes à gabarits déterministes, variés, fondés uniquement sur les faits de l'événement (test : aucun chiffre inventé). Rapports narratifs de bilan (état général, LIFE, SPORT, attributs, accomplissements, difficultés, recommandations, prochaines étapes).
+- **Accueil** : une carte « En ce moment » (événement marquant, observation fiable, recommandation) ; la hiérarchie des alertes et la priorité de la récupération sont inchangées. **Événements majeurs** : carte distincte en couche supérieure (visible même sous une feuille).
+- **Notifications** (moteur existant) : nouvelle catégorie réglable ; majeurs un par un, importants groupés, informations jamais notifiées ; jamais pour un événement consulté, reconstitué ou ancien ; priorités par type ; une recommandation à la fois ; ton jamais culpabilisant ; tranquillité et plafond respectés.
+- **Bilans** : chaque section est étiquetée *Mesuré*, *Estimation*, *Lecture du moteur* ou *Recommandation* (écran et PDF) ; synthèse narrative hebdomadaire et mensuelle ; événements importants du jour.
+- **Données** : Dexie v8 (`rpgEvents`, `recommendationStates`), sauvegardes chiffrées, restauration, compatibilité avec les sauvegardes antérieures (tables créées vides, journal reconstitué).
+
+**Limites**
+- Les seuils d'analyse, de fiabilité et d'importance sont provisoires (`INSIGHT_CONFIG`, `EVENT_CONFIG`).
+- Les observations demandent plusieurs semaines de données : sur un historique court, Level se tait volontairement.
+- Pas de détection de causes (motivation, émotion) ; les « lectures du moteur » restent prudentes.
+- Les événements ne sont pas recalculés pour des données supprimées en dehors des corrections gérées (ils passent en « révoqués »).
+
 ## 0.8.0 — RPG V1.1 : progression, prestige et récompenses
 
 **Livré**

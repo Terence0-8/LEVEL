@@ -4,6 +4,8 @@ import { Icon, type IconName } from '@/design/Icon'
 import { LogoWordmark } from '@/design/Logo'
 import { useAppState } from './AppState'
 import { REWARD_BY_ID } from '@/core/prestigeRewards'
+import { narrateEvent } from '@/core/narration'
+import type { RpgEvent } from '@/core/rpgEvents'
 import { BackupBanner } from '@/features/backup/BackupBanner'
 import s from './Shell.module.css'
 
@@ -55,9 +57,26 @@ function useLevelUp() {
   return msg
 }
 
+/** Événements majeurs ou exceptionnels apparus pendant la session : présentation plus marquée (niveaux et rangs ont déjà leur bandeau). */
+function useMajorEvent() {
+  const { intel, demo } = useAppState()
+  const known = useRef<Set<string> | null>(null)
+  const [ev, setEv] = useState<RpgEvent | null>(null)
+  useEffect(() => {
+    if (demo) return
+    const ids = new Set(intel.unseen.map((e) => e.id))
+    if (known.current === null) { known.current = ids; return }
+    const fresh = intel.unseen.find((e) => !known.current!.has(e.id) && (e.importance === 'major' || e.importance === 'exceptional') && e.type !== 'level-up' && e.type !== 'rank-up')
+    known.current = ids
+    if (fresh) { setEv(fresh); const t = setTimeout(() => setEv(null), 7000); return () => clearTimeout(t) }
+  }, [intel.unseen, demo])
+  return [ev] as const
+}
+
 export function Shell() {
   const loc = useLocation()
   const toast = useLevelUp()
+  const [majorEv] = useMajorEvent()
   const { prefs } = useAppState()
   const fxDef = prefs.rpg.effect ? REWARD_BY_ID[prefs.rpg.effect] : undefined
   const fx = fxDef?.effect.type === 'levelup-effect' ? s[fxDef.effect.css] : ''
@@ -100,6 +119,13 @@ export function Shell() {
         ))}
       </nav>
 
+      {majorEv ? (
+        <div popover="manual" ref={(el: HTMLDivElement | null) => { if (el && !el.matches(':popover-open')) { try { el.showPopover() } catch { /* navigateur sans Popover API : repli sur la position fixe */ } } }} className={`${s.eventToast} ${majorEv.importance === 'exceptional' ? s.eventExceptional : ''}`} role="status" aria-live="polite">
+          <small>{majorEv.importance === 'exceptional' ? 'MOMENT EXCEPTIONNEL' : 'MOMENT MARQUANT'}</small>
+          <b>{majorEv.title}</b>
+          <span>{narrateEvent(majorEv).body}</span>
+        </div>
+      ) : null}
       {toast ? (
         <div className={`${s.toast} ${fx ?? ''} ${toast.rank ? s.toastRank : ''}`} role="status" aria-live="polite">
           <small>{toast.rank ? 'NOUVEAU RANG' : 'LEVEL UP'}</small><b>{toast.title}</b><div style={{ fontSize: 12, color: 'var(--c-text)' }}>{toast.sub}</div>

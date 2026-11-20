@@ -4,13 +4,14 @@ import { Card, PageHeader, SectionTitle } from '@/design/components'
 import { Segmented, smallBtn } from '@/design/Form'
 import { Icon } from '@/design/Icon'
 import sheet from '@/design/sheet.module.css'
+import { TAG_LABEL } from '@/core/narration'
 import { buildReport, reportFileName, shiftAnchor, type ReportKind } from '@/core/reports'
 import { renderReportPdf } from '@/core/reports/pdf'
 import s from './ReportsPage.module.css'
 
 /** Bilans consultables dans l'application, exportables en PDF. Un PDF de bilan n'est PAS une sauvegarde. */
 export function ReportsPage() {
-  const { events, quests, categories, sport, analyses, moves, commitments, now, demo, goals, projects, indicators, readings, prefs, prestiges, rewards, achievements } = useAppState()
+  const { events, quests, categories, sport, analyses, moves, commitments, now, demo, goals, projects, indicators, readings, prefs, prestiges, rewards, achievements, rpgEvents, intel } = useAppState()
   const [kind, setKind] = useState<ReportKind>('day')
   const [anchor, setAnchor] = useState(() => now)
   const [done, setDone] = useState<string | null>(null)
@@ -20,7 +21,8 @@ export function ReportsPage() {
     recovery: sport.recovery, sportTarget: sport.profile.availability.strengthPerWeek,
     life: { goals, projects, indicators, readings, prefs: prefs.planning },
     rpg: { prestiges, rewards, achievements },
-  }), [kind, anchor, now, events, quests, categories, sport, analyses, moves, commitments, goals, projects, indicators, readings, prefs.planning, prestiges, rewards, achievements])
+    intel: { events: rpgEvents, observations: intel.observations, recommendations: intel.recommendations },
+  }), [kind, anchor, now, events, quests, categories, sport, analyses, moves, commitments, goals, projects, indicators, readings, prefs.planning, prestiges, rewards, achievements, rpgEvents, intel])
 
   const exportPdf = () => {
     const blob = new Blob([renderReportPdf(report) as BlobPart], { type: 'application/pdf' })
@@ -54,10 +56,11 @@ export function ReportsPage() {
 
       <div className={s.doc} aria-live="polite">
         {report.sections.map((sec) => {
-          const hasContent = Boolean(sec.stats?.length || sec.table?.rows.length || sec.lines?.length)
+          const hasContent = Boolean(sec.stats?.length || sec.table?.rows.length || sec.lines?.length || sec.tagged?.length)
           return (
             <Card key={sec.id}>
-              <SectionTitle title={sec.title} />
+              <SectionTitle title={sec.title} aside={sec.tag ? <span className={`${s.tag} ${s[sec.tag]}`}>{TAG_LABEL[sec.tag]}</span> : undefined} />
+              {sec.tagged?.length ? <ul className={s.narr}>{sec.tagged.map((p, i) => <li key={i}><span className={`${s.tag} ${s[p.tag]}`}>{TAG_LABEL[p.tag]}</span><span>{p.text}</span></li>)}</ul> : null}
               {sec.stats?.length ? (
                 <div className={s.stats}>{sec.stats.map((st) => <div key={st.label} className={s.stat}><span>{st.label}</span><b className="num">{st.value}</b>{st.hint ? <small>{st.hint}</small> : null}</div>)}</div>
               ) : null}

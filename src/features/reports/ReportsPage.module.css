@@ -19,3 +19,12 @@
 .export { display: grid; gap: 4px; justify-items: end; }
 .export small { color: var(--c-text-faint); font-size: 12px; max-width: 280px; text-align: right; }
 @media (max-width: 560px) { .export { justify-items: stretch; } .export small { text-align: left; } }
+
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--c-line); color: var(--c-text-dim); white-space: nowrap; letter-spacing: 0; }
+.tag.fact { color: var(--c-success); border-color: rgba(76,175,122,0.4); }
+.tag.estimate { color: var(--c-info); border-color: rgba(100,160,220,0.4); }
+.tag.interpretation { color: #c8a2e8; border-color: rgba(200,162,232,0.4); }
+.tag.recommendation { color: var(--c-gold-bright); border-color: var(--c-gold); }
+.narr { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 10px; }
+.narr li { display: grid; gap: 4px; font-size: 14px; line-height: 1.5; }
+.narr li .tag { justify-self: start; }

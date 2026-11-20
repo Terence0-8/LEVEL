@@ -17,6 +17,10 @@ import { availableTitles, ACHIEVEMENT_BY_ID, type AchievementRow } from '@/core/
 import type { CycleState, PrestigeRecord } from '@/core/prestige'
 import { REWARD_BY_ID, totalBonusPct, type RewardRow } from '@/core/prestigeRewards'
 import { rpgService } from '@/data/rpgService'
+import { eventService } from '@/data/eventService'
+import { analyse, type Observation } from '@/core/insights'
+import { buildRecommendations, filterRecommendations, type RecState, type Recommendation } from '@/core/recommendations'
+import type { RpgEvent } from '@/core/rpgEvents'
 import type { Domain } from '@/core/types'
 import type { Category, Quest } from '@/core/quest'
 import type { XpEvent } from '@/core/ledger'
@@ -43,6 +47,16 @@ export interface RpgView {
   bonus: Record<Domain, number>
   prestigeReady: Domain[]
   recent: Array<{ kind: 'achievement' | 'reward'; id: string; name: string; at: string }>
+}
+
+/** Intelligence locale : observations, recommandations (filtrées par les décisions passées) et événements à consulter. */
+export interface IntelView {
+  observations: Observation[]
+  recommendations: Recommendation[]
+  /** Événements non consultés, valides, hors historique reconstitué */
+  unseen: RpgEvent[]
+  /** Événement important le plus récent (valide) */
+  latest: RpgEvent | null
 }
 
 export interface SportState {
@@ -96,6 +110,9 @@ interface AppState {
   rewards: RewardRow[]
   achievements: AchievementRow[]
   rpg: RpgView
+  rpgEvents: RpgEvent[]
+  recStates: RecState[]
+  intel: IntelView
   now: Date
   toggleDemoQuest: (id: string) => void
 }
@@ -113,7 +130,7 @@ function useNow() {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs, goals, projects, indicators, readings, prestiges, rewards, achievements } = usePersistedState()
+  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs, goals, projects, indicators, readings, prestiges, rewards, achievements, rpgEvents, recStates } = usePersistedState()
   const now = useNow()
 
   const demo = useMemo(() => (settings.showDemoData ? buildDemoView(doneQuests) : null), [settings.showDemoData, doneQuests])
@@ -152,13 +169,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [events, prestiges, achievements, rewards, prefs.rpg.title])
 
+  const intel = useMemo<IntelView>(() => {
+    if (demo) return { observations: [], recommendations: [], unseen: [], latest: null }
+    const observations = analyse({ plan, checks: sport.checks, categories, sportTarget: sport.profile.availability.strengthPerWeek, findings: analysis.findings }, sport.recovery)
+    const recommendations = filterRecommendations(buildRecommendations({ observations, lifeProposals: analysis.proposals, recovery: sport.recovery, now, hasSport: sport.sessions.length > 0 }), recStates, now)
+    const valid = rpgEvents.filter((e) => !e.revokedAt)
+    return { observations, recommendations, unseen: valid.filter((e) => !e.seenAt && !e.backfill), latest: valid.find((e) => e.importance !== 'info') ?? null }
+  }, [demo, plan, sport, categories, analysis, recStates, rpgEvents, now])
+
   const dashboard = useMemo<Dashboard | null>(() => (demo ? null : buildDashboard({ plan, checks: sport.checks, missedCount: missed.length, sportTarget: sport.profile.availability.strengthPerWeek, findings: analysis.findings, prestigeReady: rpg.prestigeReady, recentUnlocks: rpg.recent.filter((r) => now.getTime() - new Date(r.at).getTime() < 14 * 86_400_000).length })), [demo, plan, sport.checks, sport.profile.availability.strengthPerWeek, missed.length, analysis.findings, rpg])
 
   const progress = useMemo<Progress>(() => {
     if (demo) return { ...demo, isDemo: true }
     const p = computeProgression(events, prestiges)
-    return { ...p, isDemo: false, layout: dashboard ? arrangeGlobalHome(dashboard.home) : [] }
-  }, [demo, events, prestiges, dashboard])
+    return { ...p, isDemo: false, layout: dashboard ? arrangeGlobalHome({ ...dashboard.home, insight: !!intel.latest || intel.observations.some((o) => o.reliability !== 'low') || intel.recommendations.length > 0 }) : [] }
+  }, [demo, events, prestiges, dashboard, intel])
 
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = String(settings.reducedMotion)
@@ -181,14 +206,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(h)
   }, [demo, ready, events, sport.sessions, sport.checks, goals, projects, indicators, readings, prestiges])
 
-  useNotificationRunner({ enabled: !demo && ready, prefs, quests, events, sessions: sport.sessions, checks: sport.checks, recovery: sport.recovery, commitments, progress, prestigeReady: rpg.prestigeReady.map((d) => ({ domain: d, number: rpg.cycles[d].nextNumber })), recentUnlocks: rpg.recent.filter((x) => x.kind === 'achievement' && ACHIEVEMENT_BY_ID[x.id]?.rarity !== 'common').map((x) => ({ id: x.id, title: x.name, at: x.at })) })
+  useEffect(() => {
+    // Journal RPG : recalculé depuis les faits (jamais en démonstration) ; après la synchronisation des succès et des récompenses
+    if (demo || !ready) return
+    const h = setTimeout(() => void eventService.sync().catch(() => undefined), 1800)
+    return () => clearTimeout(h)
+  }, [demo, ready, events, quests, sport.sessions, sport.checks, goals, projects, indicators, readings, prestiges, rewards, achievements])
+
+  useNotificationRunner({ enabled: !demo && ready, prefs, quests, events, sessions: sport.sessions, checks: sport.checks, recovery: sport.recovery, commitments, progress, rpgEvents: rpgEvents.filter((e) => !e.revokedAt), recommendation: intel.recommendations[0] ?? null })
 
   const value = useMemo<AppState>(
     () => ({
-      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, lifeFindings: analysis.findings, lifeProposals: analysis.proposals, prestiges, rewards, achievements, rpg, now,
+      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, lifeFindings: analysis.findings, lifeProposals: analysis.proposals, prestiges, rewards, achievements, rpg, rpgEvents, recStates, intel, now,
       toggleDemoQuest: (id) => void repos.demo.toggleQuest(id),
     }),
-    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, analysis, prestiges, rewards, achievements, rpg, now],
+    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, analysis, prestiges, rewards, achievements, rpg, rpgEvents, recStates, intel, now],
   )
 
   if (!ready) return <div style={{ minHeight: '100vh' }} aria-busy="true" />

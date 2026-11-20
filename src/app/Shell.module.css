@@ -41,3 +41,14 @@
 @keyframes embers { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(-34px); opacity: 0; } }
 :global(html[data-reduced-motion='true']) .fxHalo::before, :global(html[data-reduced-motion='true']) .fxEmbers::after { display: none; }
 @media (prefers-reduced-motion: reduce) { .fxHalo::before, .fxEmbers::after { display: none; } }
+
+/* Événements majeurs du journal : carte plus marquée que le bandeau de niveau, toujours ponctuelle */
+.eventToast { inset: auto; margin: 0; overflow: visible; color: inherit; position: fixed; z-index: 55; left: 50%; top: 76px; transform: translateX(-50%); width: min(92vw, 420px); pointer-events: none; display: grid; gap: 4px; padding: 16px 20px; border-radius: var(--r-lg); background: linear-gradient(180deg, #2b2616, #17161a); border: 1px solid var(--c-gold); box-shadow: var(--shadow-raised), 0 0 30px rgba(201,177,122,0.25); animation: eventIn 0.7s var(--ease) both; }
+.eventToast small { font-size: 10px; letter-spacing: 0.3em; color: var(--c-gold); }
+.eventToast b { font-family: var(--font-title); font-size: 18px; letter-spacing: 0.05em; color: var(--c-gold-bright); }
+.eventToast span { font-size: 13px; color: var(--c-text-dim); line-height: 1.45; }
+.eventExceptional { border: 2px solid var(--c-gold-bright); box-shadow: var(--shadow-raised), 0 0 46px rgba(245,216,137,0.45); }
+@keyframes eventIn { 0% { opacity: 0; transform: translate(-50%, -18px) scale(0.96); } 100% { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@media (min-width: 900px) { .eventToast { top: 24px; left: calc(50% + var(--side-w, 240px) / 2); } }
+:global(html[data-reduced-motion='true']) .eventToast { animation: none; }
+@media (prefers-reduced-motion: reduce) { .eventToast { animation: none; } }

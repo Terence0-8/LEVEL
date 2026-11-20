@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Badge, Card, ProgressBar, SectionTitle } from '@/design/components'
 import { Icon } from '@/design/Icon'
+import { narrateEvent } from '@/core/narration'
 import { questService } from '@/data/questService'
 import { useAppState } from '@/app/AppState'
 import type { Dashboard } from '@/core/dashboard'
@@ -171,6 +172,25 @@ export function RecentUnlocks() {
         {rpg.recent.slice(0, 3).map((x) => (
           <li key={`${x.kind}${x.id}`}><Icon name="rpg" size={18} /><span><b>{x.name}</b><small>{x.kind === 'reward' ? 'Récompense de prestige' : 'Succès débloqué'}</small></span></li>
         ))}
+      </ul>
+    </Card>
+  )
+}
+
+/** « En ce moment » : UNE carte regroupant l'événement important le plus récent, une observation fiable et la recommandation prioritaire. */
+export function LatestInsight() {
+  const { intel } = useAppState()
+  const ev = intel.latest
+  const obs = intel.observations.find((o) => o.reliability !== 'low' && o.tone !== 'attention') ?? intel.observations.find((o) => o.reliability !== 'low')
+  const rec = intel.recommendations[0]
+  const n = ev ? narrateEvent(ev) : null
+  return (
+    <Card variant={ev && (ev.importance === 'major' || ev.importance === 'exceptional') && !ev.seenAt ? 'event' : 'default'}>
+      <SectionTitle title="En ce moment" aside={more('/rpg/journal', 'Journal')} />
+      <ul className={s.unlocks}>
+        {ev && n ? <li><Icon name="rpg" size={18} /><span><b>{ev.title}</b><small>{n.body}</small></span></li> : null}
+        {obs ? <li><Icon name="compass" size={18} /><span><b>{obs.title}</b><small>{obs.detail}</small></span></li> : null}
+        {rec ? <li><Icon name="target" size={18} /><span><b>{rec.title}</b><small><Link to="/rpg/analyse" style={{ color: 'var(--c-gold)' }}>Voir la recommandation et décider</Link></small></span></li> : null}
       </ul>
     </Card>
   )

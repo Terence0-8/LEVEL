@@ -35,7 +35,7 @@ const xpToMax = () => { let s = 0; for (let l = 1; l < 36; l++) s += Math.round(
 
   // ── 1. Progression : rangs E → SSS, niveaux de domaine, attributs ───────────────────────────────
   await page.goto(BASE + '#/rpg'); await page.waitForSelector('h1'); await page.waitForTimeout(1000)
-  check('RPG : 5 sections (Progression, Attributs, Distinctions, Récompenses, Prestige)', (await page.getByRole('navigation', { name: 'Sections RPG' }).getByRole('link').count()) === 5)
+  check('RPG : 7 sections (Progression, Journal, Analyse, Attributs, Distinctions, Récompenses, Prestige)', (await page.getByRole('navigation', { name: 'Sections RPG' }).getByRole('link').count()) === 7)
   check('Niveaux LIFE et SPORT indépendants, rang E au départ', await vis(page.getByText(/Niveau 1 · rang E/)))
   const rungs = await page.locator('[class*="rung"] [class*="letter"]').allTextContents()
   check('Échelle des rangs : E, D, C, B, A, S, SS, SSS', JSON.stringify(rungs) === JSON.stringify(['SSS', 'SS', 'S', 'A', 'B', 'C', 'D', 'E']), JSON.stringify(rungs))

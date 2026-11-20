@@ -8,14 +8,16 @@ import { LIFE_ATTRIBUTE_IDS, SPORT_ATTRIBUTE_IDS } from '@/core/attributes'
 import { useAppState } from '@/app/AppState'
 import { formatNumber } from '@/lib/format'
 import { ACHIEVEMENT_BY_ID } from '@/core/achievements'
+import { AnalysisPanel } from './AnalysisPanel'
 import { AttributesPanel } from './AttributesPanel'
+import { JournalPanel } from './JournalPanel'
 import { DistinctionsPanel } from './DistinctionsPanel'
 import { PrestigePanel } from './PrestigePanel'
 import { RpgRewardsPanel } from './RpgRewardsPanel'
 import r from './rpg.module.css'
 import s from '../pages.module.css'
 
-const SECTIONS = [['', 'Progression'], ['attributs', 'Attributs'], ['distinctions', 'Distinctions'], ['recompenses', 'Récompenses'], ['prestige', 'Prestige']] as const
+const SECTIONS = [['', 'Progression'], ['journal', 'Journal'], ['analyse', 'Analyse'], ['attributs', 'Attributs'], ['distinctions', 'Distinctions'], ['recompenses', 'Récompenses'], ['prestige', 'Prestige']] as const
 
 export function RpgPage() {
   const { section = '' } = useParams()
@@ -28,6 +30,8 @@ export function RpgPage() {
       </nav>
       {section === '' ? <Progression /> : null}
       {section !== '' && demo ? <Notice title="Données de démonstration">cette section décrit votre vraie progression : désactivez la démonstration dans Profil & réglages pour la consulter.</Notice> : null}
+      {section === 'journal' && !demo ? <JournalPanel /> : null}
+      {section === 'analyse' && !demo ? <AnalysisPanel /> : null}
       {section === 'attributs' && !demo ? <AttributesPanel /> : null}
       {section === 'distinctions' && !demo ? <DistinctionsPanel /> : null}
       {section === 'recompenses' && !demo ? <RpgRewardsPanel /> : null}

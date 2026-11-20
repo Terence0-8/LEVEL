@@ -64,7 +64,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   await put('commitments', [{ id: 'cm1', title: 'Rendez-vous notaire', date: D.tomorrow, start: '10:00', minutes: 60, important: true, note: '', createdAt: new Date().toISOString() }])
   const stamp = new Date().toISOString()
   await put('sportSessions', [{ id: 'ss1', kind: 'strength', origin: 'planned', date: D.tomorrow, status: 'planned', title: 'Haut du corps', plannedMinutes: 45, variant: 'equipment', slots: [], startedAt: null, endedAt: null, pausedMs: 0, pausedAt: null, restEndsAt: null, notes: '', createdAt: stamp, updatedAt: stamp }])
-  await page.reload(); await page.waitForSelector('h1'); await page.waitForTimeout(3500)
+  await page.reload(); await page.waitForSelector('h1'); await page.waitForTimeout(7000)
 
   // ── 3. Accueil adaptatif et alertes ─────────────────────────────────────
   check('Accueil : alertes et recommandations (échéance importante demain)', (await vis(page.getByRole('heading', { name: 'À savoir maintenant' }))) && (await vis(page.getByText('Échéance importante demain'))))
@@ -232,7 +232,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
       await new Promise((res, rej) => { const tx = db.transaction(store, 'readwrite'); rows.forEach((r) => tx.objectStore(store).put(r)); tx.oncomplete = res; tx.onerror = () => rej(tx.error) }); db.close()
     }, { store, rows })
     await put2('quests', [quest('qx', 'Envoyer le dossier', { priority: 'high', dueDate: D.tomorrow, plannedFor: D.tomorrow })])
-    await p2.reload(); await p2.waitForSelector('h1'); await p2.waitForTimeout(4000)
+    await p2.reload(); await p2.waitForSelector('h1'); await p2.waitForTimeout(7500)
     await p2.evaluate(() => { location.hash = '/profile' }); await p2.waitForTimeout(900)
     check('Repli : permission refusée → explication honnête et rappels dans l’application', await p2.getByText(/refusées dans ce navigateur/).first().isVisible())
     check('Repli : la notification d’échéance attend dans la boîte de réception', await p2.getByText(/Échéance demain : Envoyer le dossier/).first().isVisible())

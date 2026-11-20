@@ -8,7 +8,7 @@ import { formatDayLabel, formatNumber, formatTime } from '@/lib/format'
 import type { WidgetId } from '@/core/homeLayout'
 import type { DemoView } from '@/mocks/demoView'
 import type { Progress } from '@/app/AppState'
-import { Alerts, Deadlines, NextSession, Priorities, RecoveryCard, RecentUnlocks, WeekProgress } from './GlobalWidgets'
+import { Alerts, Deadlines, NextSession, Priorities, RecoveryCard, LatestInsight, RecentUnlocks, WeekProgress } from './GlobalWidgets'
 import { REWARD_BY_ID } from '@/core/prestigeRewards'
 import { QuestList } from '../shared/QuestList'
 import s from './HomePage.module.css'
@@ -143,6 +143,7 @@ export function HomePage() {
     deadlines: dashboard ? <Deadlines d={dashboard} /> : null,
     week: dashboard ? <WeekProgress d={dashboard} /> : null,
     rpg: dashboard && rpg.recent.length ? <RecentUnlocks /> : null,
+    insight: dashboard ? <LatestInsight /> : null,
     attributes: <Attributes demo={progress} />,
     activity: <Activity demo={progress} />,
   }

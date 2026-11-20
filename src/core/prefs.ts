@@ -2,11 +2,11 @@
  * Préférences GÉNÉRALES de l'application (nouvelles : notifications, planning, RPG).
  * Les réglages propres à LIFE (catégories) et à SPORT (profil) restent dans leurs modules : ils ne sont pas dupliqués ici.
  */
-export type NotifCategory = 'fixed' | 'quests' | 'deadlines' | 'sport' | 'recovery' | 'progress' | 'reviews'
+export type NotifCategory = 'fixed' | 'quests' | 'deadlines' | 'sport' | 'recovery' | 'progress' | 'reviews' | 'insights'
 
 export const NOTIF_CATEGORY_LABEL: Record<NotifCategory, string> = {
   fixed: 'Rappels à heures fixes', quests: 'Quêtes du jour', deadlines: 'Échéances', sport: 'Sport', recovery: 'Questionnaire de récupération',
-  progress: 'Progression et montées de niveau', reviews: 'Bilans périodiques',
+  progress: 'Progression et montées de niveau', reviews: 'Bilans périodiques', insights: 'Événements marquants et recommandations',
 }
 export const NOTIF_CATEGORIES = Object.keys(NOTIF_CATEGORY_LABEL) as NotifCategory[]
 
@@ -48,7 +48,7 @@ export const DEFAULT_PREFS: AppPrefs = {
   planning: { dailyCapacityMin: 240, days: [0, 1, 2, 3, 4, 5, 6], marginPct: 20 },
   notifications: {
     enabled: true, frequency: 'normal', quiet: { enabled: true, start: '22:00', end: '07:00' },
-    categories: { fixed: true, quests: true, deadlines: true, sport: true, recovery: true, progress: true, reviews: true },
+    categories: { fixed: true, quests: true, deadlines: true, sport: true, recovery: true, progress: true, reviews: true, insights: true },
     reminders: [],
   },
   rpg: { celebrations: true, title: null, effect: null, frame: null },

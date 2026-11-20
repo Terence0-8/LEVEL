@@ -1,4 +1,5 @@
 import { frDate, type ReportDoc } from './index'
+import { TAG_LABEL } from '../narration'
 
 /**
  * Écrivain PDF minimal, sans dépendance, 100 % hors ligne. Polices standard (Helvetica, jeu WinAnsi) : aucun fichier de police à embarquer,
@@ -82,8 +83,17 @@ export function renderReportPdf(doc: ReportDoc): Uint8Array {
 
   for (const sec of doc.sections) {
     need(60)
-    text(sec.title, M, 13, true); y -= 17
-    const hasContent = Boolean(sec.stats?.length || sec.table?.rows.length || sec.lines?.length)
+    text(sec.title, M, 13, true)
+    if (sec.tag) text(`(${TAG_LABEL[sec.tag]})`, M + textWidth(sec.title, 13, true) + 8, 9, false, 0.5)
+    y -= 17
+    for (const p of sec.tagged ?? []) {
+      const label = `[${TAG_LABEL[p.tag]}] `
+      const ls = wrap(label + p.text, 10, W - 2 * M - 14)
+      need(ls.length * 14)
+      text('\u2022', M, 10)
+      ls.forEach((l) => { text(l, M + 14, 10, false, p.tag === 'recommendation' ? 0.05 : 0.15); y -= 14 })
+    }
+    const hasContent = Boolean(sec.stats?.length || sec.table?.rows.length || sec.lines?.length || sec.tagged?.length)
     if (!hasContent) {
       for (const l of wrap(sec.empty ?? 'Rien à signaler.', 10, W - 2 * M)) { need(14); text(l, M, 10, false, 0.45); y -= 14 }
     }

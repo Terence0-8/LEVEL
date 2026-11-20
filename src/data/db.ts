@@ -13,6 +13,8 @@ import type { Goal, Indicator, Project, Reading } from '@/core/goals'
 import type { PrestigeRecord } from '@/core/prestige'
 import type { RewardRow } from '@/core/prestigeRewards'
 import type { AchievementRow } from '@/core/achievements'
+import type { RpgEvent } from '@/core/rpgEvents'
+import type { RecState } from '@/core/recommendations'
 
 /**
  * Base locale de Level (IndexedDB). Le schéma est versionné : toute évolution
@@ -77,6 +79,11 @@ export class LevelDB extends Dexie {
   rpgRewards!: Table<RewardRow, string>
   /** Succès débloqués avec leur date d'obtention (clé = identifiant : impossible en double) */
   achievements!: Table<AchievementRow, string>
+  // ── RPG V1.2 (v8) ──
+  /** Journal RPG : événements importants (clé déterministe unique ; jamais supprimés, éventuellement « révoqués » après correction) */
+  rpgEvents!: Table<RpgEvent, string>
+  /** Décisions sur les recommandations (historique minimal : les recommandations elles-mêmes sont recalculées) */
+  recommendationStates!: Table<RecState, string>
 
   constructor(name = 'level') {
     super(name)
@@ -205,6 +212,37 @@ export class LevelDB extends Dexie {
       achievements: 'id, unlockedAt',
     }).upgrade(async (tx) => {
       await tx.table('categories').where('id').equals('cat-social').modify((c: { attribute: string }) => { if (c.attribute === 'vitalite') c.attribute = 'relations' })
+    })
+    // v8 : RPG V1.2 — journal d'événements et décisions sur les recommandations (tables ajoutées, données existantes inchangées).
+    this.version(8).stores({
+      profile: 'id',
+      settings: 'key',
+      demoQuestState: 'questId',
+      categories: 'id, order',
+      quests: 'id, archived, createdAt',
+      xpEvents: 'id, awardKey, questId, at, domain',
+      analyses: 'id, questId, createdAt',
+      revisions: 'id, questId, at',
+      sportProfile: 'id',
+      exercisePrefs: 'exerciseId',
+      customExercises: 'id',
+      sportSessions: 'id, date, status, kind',
+      recoveryChecks: 'id, day, at',
+      exerciseStates: 'exerciseId',
+      progressionLog: 'id, exerciseId, at',
+      bodyMeasures: 'id, date',
+      commitments: 'id, date',
+      planningMoves: 'id, refId, at',
+      notificationLog: 'id, key, at',
+      goals: 'id, status, categoryId',
+      projects: 'id, status, goalId',
+      indicators: 'id, categoryId',
+      indicatorReadings: 'id, indicatorId, at',
+      prestiges: 'id, domain, number',
+      rpgRewards: 'id, acquiredAt',
+      achievements: 'id, unlockedAt',
+      rpgEvents: 'id, at, category, importance',
+      recommendationStates: 'id',
     })
   }
 }

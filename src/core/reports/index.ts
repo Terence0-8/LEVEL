@@ -13,6 +13,10 @@ import { levelFromXp } from '../xp'
 import { cycleStates, type PrestigeRecord } from '../prestige'
 import { ACHIEVEMENT_BY_ID, type AchievementRow } from '../achievements'
 import { REWARD_BY_ID, type RewardRow } from '../prestigeRewards'
+import { reportNarrative, type NarrativeParagraph, type Tag } from '../narration'
+import type { Observation } from '../insights'
+import type { Recommendation } from '../recommendations'
+import { IMPORTANCE_RANK, type RpgEvent } from '../rpgEvents'
 import type { RecoveryState } from '../sport/recovery'
 import type { RecoveryCheck, SportSession } from '../sport/session'
 import { muscleSplit, periodReview, personalRecords, regularity, volume } from '../sport/stats'
@@ -38,6 +42,10 @@ export interface ReportTable { head: string[]; rows: string[][] }
 export interface ReportSection {
   id: string
   title: string
+  /** Nature du contenu : mesuré, estimation, lecture du moteur ou recommandation */
+  tag?: Tag
+  /** Paragraphes étiquetés individuellement (synthèse du moteur) */
+  tagged?: NarrativeParagraph[]
   /** Chiffres clés */
   stats?: ReportStat[]
   table?: ReportTable
@@ -77,6 +85,8 @@ export interface ReportInput {
   life?: LifeData & { prefs: PlanningPrefs }
   /** Prestiges, récompenses et succès (facultatif) : niveaux de domaine par cycle et section « Distinctions et prestiges » */
   rpg?: { prestiges: PrestigeRecord[]; rewards: RewardRow[]; achievements: AchievementRow[] }
+  /** Journal d'événements, observations et recommandations (facultatif) : ajoute la synthèse du moteur aux bilans */
+  intel?: { events: RpgEvent[]; observations: Observation[]; recommendations: Recommendation[] }
   /** Nom d'affichage facultatif (jamais envoyé nulle part) */
   name?: string
 }
@@ -429,6 +439,29 @@ export function buildReport(i: ReportInput): ReportDoc {
     const reco = sections.find((s) => s.id === 'reco')
     if (reco && ls.advice.length) reco.lines = [...ls.advice, ...(reco.lines ?? [])]
   }
+  if (i.intel) {
+    const inPeriod = i.intel.events.filter((e) => !e.revokedAt && inP(dayOf(e.at), from, to) && IMPORTANCE_RANK[e.importance] >= IMPORTANCE_RANK.important)
+    if (i.kind === 'day') {
+      if (inPeriod.length) sections.splice(Math.max(0, sections.findIndex((s) => s.id === 'tomorrow')), 0, { id: 'events', title: 'Événements importants', lines: inPeriod.map((e) => e.title) })
+    } else {
+      const wins: Record<string, Array<Observation['window']>> = { week: ['week', 'month'], month: ['month', 'long'] }
+      const sb = statesAt(i, from, true), sa = statesAt(i, to)
+      const attrs = attrDelta(i.events, from, to).map(([id, v]) => ({ label: ATTRIBUTE_LABELS[id], xp: v }))
+      const activeDays = new Set(xp.events.filter((e) => e.amount > 0).map((e) => dayOf(e.at))).size
+      let blocked: string[] = []
+      if (i.life) blocked = analyseLife({ ...i.life, quests: i.quests, events: i.events, now: i.now }).filter((f) => f.kind === 'step-blocked' || f.kind === 'project-late').slice(0, 3).map((f) => `${f.title} — ${f.detail}`)
+      const narr = reportNarrative({
+        kind: i.kind, xp: { life: xp.life, sport: xp.sport, total: xp.total }, prevTotal: prev.total, activeDays, periodDays: daysBetweenKeys(from, to) + 1,
+        life: life.planned ? { done: life.done, planned: life.planned } : null,
+        sport: { done: sp.done, planned: sp.planned, sessions: vol.count, sets: vol.sets },
+        levels: (['LIFE', 'SPORT'] as const).map((d) => ({ domain: d, from: sb[d].level.level, to: sa[d].level.level, rankFrom: sb[d].rank.rank, rankTo: sa[d].rank.rank })).filter((l) => sa[l.domain].cycle === sb[l.domain].cycle),
+        attributes: attrs, events: inPeriod, observations: i.intel.observations.filter((o) => wins[i.kind].includes(o.window)), recommendations: i.intel.recommendations, blocked,
+      })
+      for (const s of narr) sections.push({ id: `narr-${s.id}`, title: s.title, tagged: s.paragraphs })
+    }
+  }
+  const TAGS: Record<string, Tag> = { xp: 'fact', achievements: 'fact', undone: 'fact', sport: 'fact', recovery: 'fact', regularity: 'fact', progress: 'fact', attributes: 'fact', goals: 'fact', projects: 'fact', gap: 'fact', general: 'fact', levels: 'fact', records: 'fact', wins: 'fact', events: 'fact', rpg: 'fact', steps: 'fact', tomorrow: 'fact', indicators: 'fact', objectives: 'fact', time: 'estimate', trends: 'interpretation', difficulties: 'interpretation', reco: 'recommendation' }
+  for (const s of sections) if (!s.tag && !s.tagged && TAGS[s.id]) s.tag = TAGS[s.id]
   return {
     kind: i.kind, title: REPORT_LABEL[i.kind], subtitle: rangeLabel, from, to, generatedAt: i.now.toISOString(),
     sections, note: PLANNING_NOTE,

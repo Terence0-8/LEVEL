@@ -162,3 +162,29 @@ Principes : aucun moteur XP parallèle ; le journal n'est jamais réécrit ; le 
 | Coût du cycle n | coût du niveau × (1 + 0,2·(n−1)) |
 | Bonus d'XP | 5 %, ×0,8 par palier, 6 paliers (≈ +18 % cumulés) |
 | Propositions par prestige | 4 maximum, une par catégorie |
+
+## RPG V1.2 : événements, analyse, recommandations, narration (v0.9)
+| Brique | Rôle (pur et déterministe) | Emplacement |
+|---|---|---|
+| Événements | `detectEvents(ctx)` : tous les faits actuellement vrais, clé unique, date réelle ; filtres du journal | `core/rpgEvents.ts` |
+| Analyse | `analyse(ctx, récupération)` : observations (nature, fenêtre, fiabilité, échantillon, signature) | `core/insights.ts` |
+| Recommandations | `buildRecommendations`, `filterRecommendations` (décisions et signature) | `core/recommendations.ts` |
+| Narration | `narrateEvent`, `reportNarrative` (gabarits, faits uniquement) | `core/narration.ts` |
+| Service | `sync` (inscrit les clés manquantes, révoque ce qu'une correction contredit), consultation, décisions | `data/eventService.ts` |
+| Bilans | sections étiquetées + synthèse du moteur | `core/reports/index.ts`, `pdf.ts` |
+| Notifications | candidats `insights` (moteur existant) | `core/notifications.ts` |
+| Interface | `features/rpg/JournalPanel.tsx`, `AnalysisPanel.tsx`, carte d'accueil, carte d'événement majeur (Popover API) | |
+
+Principes : aucun moteur concurrent ; le journal d'XP n'est jamais écrit ; les événements sont une couche d'historique recalculable, les observations et recommandations sont recalculées à chaque affichage (seules les *décisions* sont stockées) ; une recommandation n'applique jamais rien seule ; Level ne déduit aucune cause psychologique ; rien ne dépend du réseau.
+
+### Paramètres provisoires
+| Paramètre | Valeur |
+|---|---|
+| Séries de quêtes (événement) | 7, 30, 100 jours |
+| Semaines régulières / régularité sportive | 4, 8, 12, 26 (≥ 3 jours actifs / objectif de séances) |
+| Reprise après pause | ≥ 14 jours sans activité |
+| Fiabilité | échantillon : faible < moyen < élevé selon la règle (ex. régularité : 6 / 10 semaines) |
+| Tendance de fréquence | ≥ 8 semaines d'historique |
+| Charge en hausse | ≥ 130 % de la moyenne des 3 semaines précédentes, ≥ 2 séances |
+| Report d'une recommandation | 7 jours |
+| Notifications | important : groupées ; majeur : une par une ; information : jamais |

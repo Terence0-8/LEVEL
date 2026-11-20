@@ -33,7 +33,9 @@ export function usePersistedState() {
   const prestiges = useLiveQuery(() => db.prestiges.orderBy('number').toArray(), [])
   const rewards = useLiveQuery(() => db.rpgRewards.orderBy('acquiredAt').toArray(), [])
   const achievements = useLiveQuery(() => db.achievements.orderBy('unlockedAt').toArray(), [])
-  const ready = [prestiges, rewards, achievements, goals, projects, indicators, readings, commitments, moves, notifLog, prefsRow, profile, settings, doneRows, quests, categories, events, analyses, revisions, sportProfile, prefs, customEx, sportSessions, checks, exStates, decisions, measures].every((x) => x !== undefined)
+  const rpgEvents = useLiveQuery(() => db.rpgEvents.orderBy('at').reverse().toArray(), [])
+  const recStates = useLiveQuery(() => db.recommendationStates.toArray(), [])
+  const ready = [rpgEvents, recStates, prestiges, rewards, achievements, goals, projects, indicators, readings, commitments, moves, notifLog, prefsRow, profile, settings, doneRows, quests, categories, events, analyses, revisions, sportProfile, prefs, customEx, sportSessions, checks, exStates, decisions, measures].every((x) => x !== undefined)
   return {
     ready,
     profile: profile ?? null,
@@ -48,6 +50,8 @@ export function usePersistedState() {
     projects: projects ?? [],
     indicators: indicators ?? [],
     readings: readings ?? [],
+    rpgEvents: rpgEvents ?? [],
+    recStates: recStates ?? [],
     prestiges: prestiges ?? [],
     rewards: rewards ?? [],
     achievements: achievements ?? [],

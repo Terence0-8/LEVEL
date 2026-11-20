@@ -5,7 +5,7 @@
  */
 
 type ClassicWidgetId = 'hero' | 'domains' | 'quests' | 'sport' | 'attributes' | 'activity'
-export type WidgetId = ClassicWidgetId | 'alerts' | 'recovery' | 'deadlines' | 'week' | 'rpg'
+export type WidgetId = ClassicWidgetId | 'alerts' | 'recovery' | 'deadlines' | 'week' | 'rpg' | 'insight'
 
 export interface HomeContext {
   now: Date
@@ -83,6 +83,8 @@ export interface GlobalHomeContext {
   deadlines: number
   /** Succès ou récompenses obtenus récemment (le bloc n'apparaît que s'il y en a) */
   recentUnlocks?: number
+  /** Un événement important, une observation fiable ou une recommandation existe : une seule carte « En ce moment » */
+  insight?: boolean
 }
 
 export function arrangeGlobalHome(ctx: GlobalHomeContext): WidgetPlacement[] {
@@ -98,6 +100,7 @@ export function arrangeGlobalHome(ctx: GlobalHomeContext): WidgetPlacement[] {
   }
   if (ctx.alerts > 0) p.alerts = { id: 'alerts', priority: ctx.criticalAlert ? 99 : 72, reason: ctx.criticalAlert ? 'Alerte à traiter en premier' : 'Recommandations du moment' }
   if (ctx.deadlines > 0) p.deadlines = { id: 'deadlines', priority: ctx.deadlinesSoon > 0 ? 88 : 48, reason: ctx.deadlinesSoon > 0 ? 'Échéance dans moins de 48 h' : 'Échéances à venir' }
+  if (ctx.insight) p.insight = { id: 'insight', priority: 57, reason: 'Observation du moment' }
   if ((ctx.recentUnlocks ?? 0) > 0) p.rpg = { id: 'rpg', priority: 42, reason: 'Distinctions récentes' }
   p.recovery = { id: 'recovery', priority: 40, reason: 'État de récupération' }
 

@@ -6,6 +6,9 @@ import { cycleProgress } from './questState'
 import type { Commitment } from './planning'
 import type { RecoveryState } from './sport/recovery'
 import type { RecoveryCheck, SportSession } from './sport/session'
+import { narrateEvent } from './narration'
+import type { Recommendation } from './recommendations'
+import { IMPORTANCE_RANK, type RpgEvent } from './rpgEvents'
 
 /**
  * Notifications LOCALES. Ce module décide QUOI notifier et QUAND (pur, testable) ; la remise (système ou dans l'application)
@@ -50,10 +53,13 @@ export interface NotifContext {
   commitments: Commitment[]
   levels: SeenLevels
   seen: SeenLevels | null
-  /** Domaines dont le prestige est disponible (rappel unique, jamais de déclenchement automatique) */
-  prestigeReady?: Array<{ domain: 'LIFE' | 'SPORT'; number: number }>
-  /** Succès débloqués récemment (annonce unique, 48 h) */
-  recentUnlocks?: Array<{ id: string; title: string; at: string }>
+  /**
+   * Journal d'événements RPG (V1.2). Lorsqu'il est fourni, il REMPLACE les annonces de niveaux et de rangs : une seule source de vérité,
+   * des notifications priorisées par importance, groupées, jamais pour une action banale, jamais pour un événement déjà consulté.
+   */
+  rpgEvents?: RpgEvent[]
+  /** Recommandation prioritaire (déjà filtrée par les décisions passées) */
+  recommendation?: Recommendation | null
 }
 
 const hhmm = (now: Date) => now.getHours() * 60 + now.getMinutes()
@@ -107,16 +113,22 @@ export function candidates(c: NotifContext): Candidate[] {
   }
 
   // Progression : montées de niveau et changements de rang (rien lors de la première observation)
-  if (c.seen) {
+  if (c.seen && !c.rpgEvents) {
     const dom: Array<['global' | 'life' | 'sport', string]> = [['global', 'Niveau global'], ['life', 'Niveau LIFE'], ['sport', 'Niveau SPORT']]
     for (const [k, label] of dom) if (c.levels[k] > c.seen[k]) out.push({ key: `levelup:${k}:${c.levels[k]}`, category: 'progress', title: `${label} ${c.levels[k]}`, body: 'Montée de niveau : bravo pour votre régularité.', route: '/rpg', priority: 60 })
     const rk: Array<['rankGlobal' | 'rankLife' | 'rankSport', string]> = [['rankGlobal', 'global'], ['rankLife', 'LIFE'], ['rankSport', 'SPORT']]
     for (const [k, label] of rk) if (c.levels[k] !== c.seen[k]) out.push({ key: `rank:${label}:${c.levels[k]}`, category: 'progress', title: `Nouveau rang ${label} : ${c.levels[k]}`, body: 'Votre rang a évolué.', route: '/rpg', priority: 62 })
   }
 
-  // Prestige disponible (facultatif) et succès débloqués : une seule annonce chacun
-  for (const p of c.prestigeReady ?? []) out.push({ key: `prestige:ready:${p.domain}:${p.number}`, category: 'progress', title: `Prestige ${p.domain} disponible`, body: 'Facultatif : ouvrez un nouveau cycle quand vous le souhaitez.', route: '/rpg/prestige', priority: 58 })
-  for (const u of c.recentUnlocks ?? []) if (now.getTime() - new Date(u.at).getTime() < 48 * 3_600_000) out.push({ key: `unlock:${u.id}`, category: 'progress', title: `Succès débloqué : ${u.title}`, body: 'Retrouvez-le dans vos distinctions.', route: '/rpg/distinctions', priority: 52 })
+  // Événements RPG (V1.2) : majeurs un par un, importants groupés, informations jamais notifiées ; rien si déjà consulté
+  if (c.rpgEvents) {
+    const recent = c.rpgEvents.filter((e) => !e.seenAt && !e.revokedAt && !e.backfill && IMPORTANCE_RANK[e.importance] >= IMPORTANCE_RANK.important && now.getTime() - new Date(e.at).getTime() < 48 * 3_600_000)
+    for (const e of recent.filter((x) => IMPORTANCE_RANK[x.importance] >= IMPORTANCE_RANK.major)) out.push({ key: `event:${e.id}`, category: 'insights', title: e.title, body: narrateEvent(e).body, route: '/rpg/journal', priority: (e.importance === 'exceptional' ? 96 : 88) + (e.type === 'rank-up' ? 4 : e.type === 'goal-achieved' || e.type === 'project-done' ? 2 : 0) })
+    const minor = recent.filter((x) => x.importance === 'important')
+    if (minor.length === 1) out.push({ key: `event:${minor[0].id}`, category: 'insights', title: minor[0].title, body: narrateEvent(minor[0]).body, route: '/rpg/journal', priority: 55 })
+    else if (minor.length > 1) out.push({ key: `events:group:${minor.map((x) => x.id).sort().join('|')}`, category: 'insights', title: `${minor.length} nouveaux moments dans votre journal`, body: `${minor.slice(0, 2).map((x) => x.title).join(' · ')}${minor.length > 2 ? '…' : ''}`, route: '/rpg/journal', priority: 54 })
+  }
+  if (c.recommendation && c.recommendation.confidence !== 'low') out.push({ key: `rec:${c.recommendation.id}:${c.recommendation.signature}`, category: 'insights', title: 'Une recommandation pour vous', body: c.recommendation.title, route: '/rpg/analyse', priority: 34 })
 
   // Bilans : quotidien (20 h 30), hebdomadaire (dimanche 18 h), mensuel (dernier jour 18 h)
   if (t >= at(20, 30)) out.push({ key: `review:daily:${day}`, category: 'reviews', title: 'Votre bilan du jour est prêt', body: 'Accomplissements, XP gagnée et priorités de demain.', route: '/bilans', priority: 30 })

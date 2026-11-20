@@ -87,7 +87,7 @@ export function createBackupScheduler(main: LevelDB, service: BackupService, dep
     on(main.projects, 'deleting', () => 'critical')
     on(main.indicators, 'deleting', () => 'critical')
     on(main.xpEvents, 'updating', () => 'normal')
-    for (const t of [main.quests, main.categories, main.analyses, main.revisions, main.profile, main.sportProfile, main.sportSessions, main.recoveryChecks, main.exerciseStates, main.progressionLog, main.bodyMeasures, main.customExercises, main.exercisePrefs, main.commitments, main.planningMoves, main.settings, main.goals, main.projects, main.indicators, main.indicatorReadings, main.prestiges, main.rpgRewards, main.achievements] as const) {
+    for (const t of [main.quests, main.categories, main.analyses, main.revisions, main.profile, main.sportProfile, main.sportSessions, main.recoveryChecks, main.exerciseStates, main.progressionLog, main.bodyMeasures, main.customExercises, main.exercisePrefs, main.commitments, main.planningMoves, main.settings, main.goals, main.projects, main.indicators, main.indicatorReadings, main.prestiges, main.rpgRewards, main.achievements, main.rpgEvents, main.recommendationStates] as const) {
       on(t, 'creating', () => 'normal')
       on(t, 'updating', () => 'normal')
     }

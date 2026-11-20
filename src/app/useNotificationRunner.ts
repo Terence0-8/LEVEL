@@ -7,6 +7,8 @@ import type { Quest } from '@/core/quest'
 import type { XpEvent } from '@/core/ledger'
 import type { RecoveryState } from '@/core/sport/recovery'
 import type { RecoveryCheck, SportSession } from '@/core/sport/session'
+import type { Recommendation } from '@/core/recommendations'
+import type { RpgEvent } from '@/core/rpgEvents'
 import { notificationService } from '@/data/notificationService'
 
 interface Args {
@@ -19,8 +21,8 @@ interface Args {
   recovery: RecoveryState
   commitments: Commitment[]
   progress: ProgressSummary
-  prestigeReady: Array<{ domain: 'LIFE' | 'SPORT'; number: number }>
-  recentUnlocks: Array<{ id: string; title: string; at: string }>
+  rpgEvents: RpgEvent[]
+  recommendation: Recommendation | null
 }
 
 /**
@@ -37,11 +39,12 @@ export function useNotificationRunner(args: Args) {
       if (!a.enabled) return
       const ctx: NotifContext = {
         now: new Date(), prefs: a.prefs.notifications, quests: a.quests, events: a.events, sessions: a.sessions, checks: a.checks,
-        recovery: a.recovery, commitments: a.commitments, levels: levelsOf(a.progress), seen: a.prefs.seen, prestigeReady: a.prestigeReady, recentUnlocks: a.recentUnlocks,
+        recovery: a.recovery, commitments: a.commitments, levels: levelsOf(a.progress), seen: a.prefs.seen, rpgEvents: a.rpgEvents, recommendation: a.recommendation,
       }
       void notificationService.tick(ctx).catch(() => undefined)
     }
-    const first = setTimeout(run, 2_000)
+    // Après les synchronisations des succès (≈ 1,2 s) et du journal (≈ 1,8 s) : le premier choix tient compte des événements, pas seulement de la recommandation
+    const first = setTimeout(run, 5_000)
     const id = setInterval(run, 60_000)
     const onVisible = () => { if (document.visibilityState === 'visible') run() }
     document.addEventListener('visibilitychange', onVisible)
