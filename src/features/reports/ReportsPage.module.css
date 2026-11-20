@@ -1,0 +1,21 @@
+.wrap { display: grid; gap: 16px; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.nav { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; }
+.nav .label { flex: 1; text-align: center; font-family: var(--font-title); letter-spacing: 0.05em; text-transform: capitalize; }
+.doc { display: grid; gap: 14px; }
+.doc h2 { font-size: 16px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat { padding: 10px 12px; border-radius: var(--r-md); background: var(--c-panel); border: 1px solid var(--c-line); }
+.stat b { display: block; font-family: var(--font-title); font-size: 22px; color: var(--c-gold-bright); line-height: 1.2; }
+.stat span { font-size: 12px; color: var(--c-text-dim); }
+.stat small { display: block; font-size: 12px; color: var(--c-text-faint); margin-top: 2px; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+.table th { text-align: left; font-weight: 500; font-size: 12px; color: var(--c-text-dim); padding: 6px 8px; border-bottom: 1px solid var(--c-line-strong); }
+.table td { padding: 7px 8px; border-bottom: 1px solid var(--c-line); }
+.table td:last-child, .table th:last-child { text-align: right; }
+.lines { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; color: var(--c-text); font-size: 14px; }
+.empty { color: var(--c-text-dim); font-size: 14px; }
+.note { font-size: 12px; color: var(--c-text-faint); line-height: 1.5; }
+.export { display: grid; gap: 4px; justify-items: end; }
+.export small { color: var(--c-text-faint); font-size: 12px; max-width: 280px; text-align: right; }
+@media (max-width: 560px) { .export { justify-items: stretch; } .export small { text-align: left; } }

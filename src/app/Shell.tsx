@@ -10,27 +10,33 @@ export const NAV: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/', label: 'Accueil', icon: 'home' },
   { to: '/life', label: 'LIFE', icon: 'life' },
   { to: '/sport', label: 'SPORT', icon: 'sport' },
+  { to: '/planning', label: 'Planning', icon: 'calendar' },
   { to: '/rpg', label: 'RPG', icon: 'rpg' },
+  { to: '/bilans', label: 'Bilans', icon: 'report' },
   { to: '/history', label: 'Historique', icon: 'history' },
 ]
+
+/** Barre du bas (mobile) : l'Historique reste accessible depuis l'accueil et le menu latéral. */
+const TAB_NAV = NAV.filter((n) => n.to !== '/history')
 
 const cls = (base: string, active: boolean) => (active ? `${base} ${s.active}` : base)
 
 /** Annonce spectaculaire quand le niveau global ou le rang change (événement important → or lumineux). */
 function useLevelUp() {
-  const { progress } = useAppState()
+  const { progress, prefs } = useAppState()
+  const celebrate = prefs.rpg.celebrations
   const prev = useRef<{ demo: boolean; level: number } | null>(null)
   const [msg, setMsg] = useState<{ title: string; sub: string } | null>(null)
   const { level, isDemo, rank } = { level: progress.global.level, isDemo: progress.isDemo, rank: progress.rank }
   useEffect(() => {
     const before = prev.current
     prev.current = { demo: isDemo, level }
-    if (before && before.demo === isDemo && level > before.level) {
+    if (celebrate && before && before.demo === isDemo && level > before.level) {
       setMsg({ title: `Niveau ${level}`, sub: rank.minLevel === level ? `Nouveau rang ${rank.rank} · ${rank.title}` : 'Niveau supérieur atteint' })
       const t = setTimeout(() => setMsg(null), 4200)
       return () => clearTimeout(t)
     }
-  }, [level, isDemo, rank])
+  }, [level, isDemo, rank, celebrate])
   return msg
 }
 
@@ -69,7 +75,7 @@ export function Shell() {
       </div>
 
       <nav className={s.tabs} aria-label="Navigation principale">
-        {NAV.map((n) => (
+        {TAB_NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => cls(s.tab, isActive)}>
             <Icon name={n.icon} size={22} /> {n.label}
           </NavLink>

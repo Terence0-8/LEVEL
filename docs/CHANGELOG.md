@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.6.0 — Étape 5 : moteur transversal et orchestration globale
+
+**Opérationnel**
+- Accueil global adaptatif (`core/dashboard.ts`, `arrangeGlobalHome`) : XP et niveaux LIFE/SPORT avec rang par domaine, quêtes prioritaires (avec raisons), prochaine séance, récupération, échéances, semaine, alertes. Ordre automatique, aucune réorganisation manuelle ; les blocs sans contenu sont masqués.
+- Planning central (`/planning`, `core/planning.ts`, `data/planningService.ts`) : semaine LIFE + SPORT + engagements, charge vs capacité (marge conservée), conflits (chevauchement, surcharge, récupération, double séance, jour indisponible, échéance à risque), suggestions plafonnées, propositions à confirmer (déplacer, simplifier, retirer du jour, réorganiser le SPORT par son propre moteur, signaler les reports répétés). Garde-fous re-vérifiés à l'écriture ; trace dans `planningMoves`. Échéances, engagements et quêtes importantes jamais modifiés automatiquement.
+- Priorités transversales : urgence, importance, échéance, équilibre des catégories, ancienneté des reports, proxy « long terme ».
+- Notifications locales (`core/notifications.ts`, `data/notificationService.ts`) : rappels fixes, quêtes, échéances, sport, récupération, niveaux/rangs, bilans ; tranquillité (passage de minuit), catégories, fréquence (2/4/8 par jour), une seule notification à la fois (écart 30 min), déduplication, notification d'essai, boîte de réception.
+- Bilans jour/semaine/mois (`/bilans`, `core/reports`) avec export PDF sans dépendance (`reports/pdf.ts`, `level-bilan-…pdf`, distinct des sauvegardes).
+- RPG transversal : rangs LIFE et SPORT indépendants, contrôle de cohérence (`core/rpgConsistency.ts`) accessible dans les réglages.
+- Réglages centralisés (`/profile`) : profil, affichage, notifications, planning, résumés LIFE/SPORT (sans duplication), RPG, sécurité/sauvegardes. Préférences stockées dans `settings` (couvertes par les sauvegardes).
+- Dexie v5 : `commitments`, `planningMoves`, `notificationLog` (ajoutées aux sauvegardes ; anciennes sauvegardes migrées).
+
+**Limites assumées / à développer**
+- Notifications application fermée : impossible sans serveur push ; repli = évaluation tant que l'appli est ouverte + rattrapage à l'ouverture + boîte de réception. Remise système soumise à la permission du navigateur.
+- Prestige LIFE/SPORT : non développé (annoncé « à venir » dans le contrôle RPG).
+- Module Objectifs absent : le « long terme » repose sur un proxy (quêtes personnelles/exceptionnelles conséquentes).
+- Durées LIFE du bilan hebdomadaire : estimées à partir de l'effort prévu des quêtes accomplies.
+
+**Correctifs d'intégration** : valeur lue dans un callback différé après réinitialisation du champ contrôlé (capacité de planning) → champs numériques à validation à la sortie ; mises à jour de réglages fonctionnelles.
+
 ## 0.5.2 — Précision finale SPORT V1 : pompes
 - Toutes les variantes de pompes (classiques, inclinées au mur, en piqué, triceps au mur) sont exclues des programmes ordinaires ; elles restent dans la bibliothèque (badge « Circuit HIIT uniquement ») et ne servent qu'aux circuits HIIT full-body, si l'utilisateur les autorise (une variante par circuit, selon niveau et semaine).
 - Refus dans les séances personnelles et les échanges d'exercice ; plus citées comme alternatives.

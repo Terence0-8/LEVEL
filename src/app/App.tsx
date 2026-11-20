@@ -7,6 +7,8 @@ import { SportPage } from '@/features/sport/SportPage'
 import { RpgPage } from '@/features/rpg/RpgPage'
 import { HistoryPage } from '@/features/history/HistoryPage'
 import { ProfilePage } from '@/features/profile/ProfilePage'
+import { PlanningPage } from '@/features/planning/PlanningPage'
+import { ReportsPage } from '@/features/reports/ReportsPage'
 import { BackupPage } from '@/features/backup/BackupPage'
 import { SessionPlayer } from '@/features/sport/SessionPlayer'
 
@@ -23,6 +25,8 @@ export function App() {
             <Route path="sport/seance/:id" element={<SessionPlayer />} />
             <Route path="sport/:section" element={<SportPage />} />
             <Route path="rpg" element={<RpgPage />} />
+            <Route path="planning" element={<PlanningPage />} />
+            <Route path="bilans" element={<ReportsPage />} />
             <Route path="history" element={<HistoryPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="backups" element={<BackupPage />} />

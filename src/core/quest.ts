@@ -36,6 +36,8 @@ export interface Quest {
   /** Récompense XP totale (calculée par `core/rewards`) */
   rewardXp: number
   archived: boolean
+  /** Jour prévu au planning central (« YYYY-MM-DD »), distinct de l'échéance ; null/absent = non placée */
+  plannedFor?: string | null
   createdAt: number
   updatedAt: number
 }

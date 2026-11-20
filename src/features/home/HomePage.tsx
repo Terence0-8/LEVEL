@@ -8,7 +8,7 @@ import { formatDayLabel, formatNumber, formatTime } from '@/lib/format'
 import type { WidgetId } from '@/core/homeLayout'
 import type { DemoView } from '@/mocks/demoView'
 import type { Progress } from '@/app/AppState'
-import { HomeRealQuests } from './HomeRealQuests'
+import { Alerts, Deadlines, NextSession, Priorities, RecoveryCard, WeekProgress } from './GlobalWidgets'
 import { QuestList } from '../shared/QuestList'
 import s from './HomePage.module.css'
 
@@ -38,15 +38,15 @@ function Hero({ demo, name }: { demo: Progress; name: string }) {
 
 function Domains({ demo }: { demo: Progress }) {
   const items = [
-    { key: 'LIFE', to: '/life', p: demo.life, tone: 'gold' as const },
-    { key: 'SPORT', to: '/sport', p: demo.sportLevel, tone: 'info' as const },
+    { key: 'LIFE', to: '/life', p: demo.life, tone: 'gold' as const, rank: demo.lifeRank },
+    { key: 'SPORT', to: '/sport', p: demo.sportLevel, tone: 'info' as const, rank: demo.sportRank },
   ]
   return (
     <div className={`${s.domains} ${s.span2}`}>
-      {items.map(({ key, to, p, tone }) => (
+      {items.map(({ key, to, p, tone, rank }) => (
         <Link key={key} to={to}>
           <Card className={s.domain}>
-            <h3>{key}</h3>
+            <h3>{key}{rank ? <span className={s.domainRank}> · rang {rank.rank}</span> : null}</h3>
             <div className={s.lv}>{p.level}<small>NIV.</small></div>
             <ProgressBar value={p.progress} tone={tone} thin label={`Progression ${key}`} />
             <div className={`${s.domainXp} num`}>{formatNumber(p.xpIntoLevel)} / {formatNumber(p.xpForNext)} XP</div>
@@ -128,21 +128,26 @@ function Activity({ demo }: { demo: Progress }) {
 }
 
 export function HomePage() {
-  const { displayName, toggleDemoQuest, progress, demo } = useAppState()
-  const widgets: Record<Exclude<WidgetId, 'hero' | 'domains'>, ReactElement | null> = {
-    quests: demo ? <Quests demo={demo} toggle={toggleDemoQuest} /> : <HomeRealQuests />,
-    sport: demo ? <SportPreview demo={demo} /> : null,
+  const { displayName, toggleDemoQuest, progress, demo, dashboard } = useAppState()
+  const widgets: Partial<Record<WidgetId, ReactElement | null>> = {
+    quests: demo ? <Quests demo={demo} toggle={toggleDemoQuest} /> : dashboard ? <Priorities d={dashboard} /> : null,
+    sport: demo ? <SportPreview demo={demo} /> : dashboard ? <NextSession d={dashboard} /> : null,
+    alerts: dashboard ? <Alerts d={dashboard} /> : null,
+    recovery: dashboard ? <RecoveryCard d={dashboard} /> : null,
+    deadlines: dashboard ? <Deadlines d={dashboard} /> : null,
+    week: dashboard ? <WeekProgress d={dashboard} /> : null,
     attributes: <Attributes demo={progress} />,
     activity: <Activity demo={progress} />,
   }
-  const top = progress.layout[1]
+  const top = progress.layout.find((w) => w.id !== 'hero' && w.id !== 'domains')
   return (
     <div className={s.grid}>
       {progress.layout.map((w) => {
         if (w.id === 'hero') return <Hero key={w.id} demo={progress} name={displayName} />
         if (w.id === 'domains') return <Domains key={w.id} demo={progress} />
         const el = widgets[w.id]
-        return el ? <div key={w.id}>{el}</div> : null
+        if (!el) return null
+        return w.id === 'alerts' ? <div key={w.id} className={s.span2}>{el}</div> : <div key={w.id}>{el}</div>
       })}
       {top ? <p className={`${s.why} ${s.span2}`}>Organisation automatique · en tête : « {top.reason} ».</p> : null}
     </div>

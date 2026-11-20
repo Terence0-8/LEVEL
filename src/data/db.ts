@@ -7,6 +7,8 @@ import type { Pref } from '@/core/sport/generator'
 import type { SportProfile } from '@/core/sport/profile'
 import type { BodyMeasure, ExerciseState, ProgressionDecision, RecoveryCheck, SportSession } from '@/core/sport/session'
 import type { Exercise } from '@/core/sport/types'
+import type { Commitment, PlanMove } from '@/core/planning'
+import type { NotificationLogEntry } from '@/core/notifications'
 
 /**
  * Base locale de Level (IndexedDB). Le schéma est versionné : toute évolution
@@ -51,6 +53,13 @@ export class LevelDB extends Dexie {
   exerciseStates!: Table<ExerciseState, string>
   progressionLog!: Table<ProgressionDecision, string>
   bodyMeasures!: Table<BodyMeasure, string>
+  // ── Orchestration (v5) ──
+  /** Engagements saisis dans le planning central (rendez-vous, obligations) */
+  commitments!: Table<Commitment, string>
+  /** Trace des réorganisations de quêtes (manuelles ou proposées par Level) */
+  planningMoves!: Table<PlanMove, string>
+  /** Historique des notifications émises (déduplication, plafond, boîte de réception) */
+  notificationLog!: Table<NotificationLogEntry, string>
 
   constructor(name = 'level') {
     super(name)
@@ -97,6 +106,28 @@ export class LevelDB extends Dexie {
       exerciseStates: 'exerciseId',
       progressionLog: 'id, exerciseId, at',
       bodyMeasures: 'id, date',
+    })
+    // v5 : orchestration transversale (tables ajoutées, données existantes inchangées). Les préférences générales vivent dans `settings` (clé « appPrefs »).
+    this.version(5).stores({
+      profile: 'id',
+      settings: 'key',
+      demoQuestState: 'questId',
+      categories: 'id, order',
+      quests: 'id, archived, createdAt',
+      xpEvents: 'id, awardKey, questId, at, domain',
+      analyses: 'id, questId, createdAt',
+      revisions: 'id, questId, at',
+      sportProfile: 'id',
+      exercisePrefs: 'exerciseId',
+      customExercises: 'id',
+      sportSessions: 'id, date, status, kind',
+      recoveryChecks: 'id, day, at',
+      exerciseStates: 'exerciseId',
+      progressionLog: 'id, exerciseId, at',
+      bodyMeasures: 'id, date',
+      commitments: 'id, date',
+      planningMoves: 'id, refId, at',
+      notificationLog: 'id, key, at',
     })
   }
 }

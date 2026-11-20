@@ -9,6 +9,9 @@ export interface ProgressSummary {
   totalXp: number
   global: ReturnType<typeof levelFromXp>
   rank: ReturnType<typeof rankForLevel>
+  /** Rangs INDÉPENDANTS par domaine (chacun selon le niveau de son domaine) */
+  lifeRank?: ReturnType<typeof rankForLevel>
+  sportRank?: ReturnType<typeof rankForLevel>
   life: ReturnType<typeof levelFromXp> & { xp: number }
   sportLevel: ReturnType<typeof levelFromXp> & { xp: number }
   attributes: Attribute[]
@@ -24,6 +27,8 @@ export function computeProgression(events: XpEvent[]): ProgressSummary & { byCat
     totalXp: total,
     global,
     rank: rankForLevel(global.level),
+    lifeRank: rankForLevel(levelFromXp(dom.LIFE).level),
+    sportRank: rankForLevel(levelFromXp(dom.SPORT).level),
     life: { xp: dom.LIFE, ...levelFromXp(dom.LIFE) },
     sportLevel: { xp: dom.SPORT, ...levelFromXp(dom.SPORT) },
     attributes: buildAttributes(xpByAttribute(events)),

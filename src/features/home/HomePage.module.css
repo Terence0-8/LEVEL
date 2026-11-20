@@ -39,3 +39,21 @@
   .grid { grid-template-columns: 1fr 1fr; gap: 18px; }
   .hero { gap: 32px; padding: 8px; }
 }
+
+.muted { color: var(--c-text-dim); font-size: 14px; }
+.domainRank { color: var(--c-gold); letter-spacing: 0.12em; }
+.linkBtn { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border-radius: var(--r-md); border: 1px solid var(--c-line-strong); background: rgba(201,177,122,0.12); color: var(--c-gold-bright); font-weight: 600; }
+.alertList { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.alert { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--c-line); background: var(--c-panel); }
+.alert:hover { border-color: var(--c-line-strong); }
+.alertIcon { flex: none; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: var(--c-surface); color: var(--c-info); }
+.alertText { display: grid; gap: 2px; min-width: 0; }
+.alertText small { color: var(--c-text-dim); font-size: 13px; line-height: 1.4; }
+.alert.warn { border-color: rgba(229,91,91,0.4); }
+.alert.warn .alertIcon { color: var(--c-danger); background: rgba(229,91,91,0.1); }
+.alert.good .alertIcon { color: var(--c-success); background: rgba(76,175,122,0.12); }
+.dot.active { background: rgba(201,177,122,0.12); border-color: var(--c-gold); color: var(--c-gold); }
+.dot.today { box-shadow: 0 0 0 1px var(--c-gold-bright); }
+.weekRows { display: grid; gap: 12px; margin-top: 4px; }
+.weekRows .row { display: flex; justify-content: space-between; font-size: 12px; color: var(--c-text-dim); margin-bottom: 6px; }
+.row { display: flex; justify-content: space-between; font-size: 12px; color: var(--c-text-dim); margin-bottom: 6px; }

@@ -114,3 +114,15 @@ Base IndexedDB `level`, schéma **v4** : `profile`, `settings`, `demoQuestState`
 
 ### Pompes : HIIT uniquement (V1 final)
 `Exercise.pushup` marque toute variante de pompes (4 exercices) ; ces exercices sont `kind: 'hiit'` + `hiitOnly`. `usablePool` (programmes ordinaires) les exclut explicitement ; `sportService.createPersonalSession` et `swapExerciseInSession` les refusent ; aucune fiche ordinaire ne les cite en alternative (tests). `generateHiit` n'en inclut qu'une par circuit, seulement si `allowPushupsInHiit`, selon le niveau opérationnel et la semaine. Ils restent listés dans la bibliothèque.
+
+## Orchestration transversale (v0.6)
+| Brique | Rôle | Emplacement |
+|---|---|---|
+| Préférences | Planning, notifications, RPG, niveaux « vus » ; fusion assainie | `core/prefs.ts`, `data/prefsService.ts` (table `settings`, clé `appPrefs`) |
+| Planning | Plan, conflits, priorités, jour, propositions (pur) | `core/planning.ts` ; commandes `data/planningService.ts` |
+| Notifications | `candidates` + `selectNotifications` (pur) ; remise et repli | `core/notifications.ts`, `data/notificationService.ts`, `public/sw-notify.js` |
+| Bilans | `ReportDoc` unique → écran + PDF | `core/reports/index.ts`, `core/reports/pdf.ts` |
+| Tableau de bord | Agrégation d'accueil, alertes | `core/dashboard.ts`, `core/homeLayout.ts` (`arrangeGlobalHome`) |
+| RPG | Rangs par domaine, audit | `core/progression.ts`, `core/rpgConsistency.ts` |
+
+Principes : aucune règle LIFE/SPORT réécrite (le planning lit quêtes, séances et récupération ; la réorganisation SPORT est déléguée à `sportService.applyWeekPlan`, la simplification à `questService.updateQuest`). Toute proposition est confirmée par l'utilisateur, revérifiée à l'écriture et tracée. Les notifications ne se réveillent pas application fermée (limite PWA) : le service décrit honnêtement la capacité (`describeCapability`). Le PDF n'embarque aucune donnée de restauration.

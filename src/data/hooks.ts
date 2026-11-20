@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { normalizeEvent } from '@/core/ledger'
+import { mergePrefs } from '@/core/prefs'
 import { db } from './db'
 import { DEFAULT_SETTINGS, repos, type Settings } from './repositories'
 
@@ -21,7 +22,11 @@ export function usePersistedState() {
   const exStates = useLiveQuery(() => db.exerciseStates.toArray(), [])
   const decisions = useLiveQuery(() => db.progressionLog.orderBy('at').toArray(), [])
   const measures = useLiveQuery(() => db.bodyMeasures.orderBy('date').toArray(), [])
-  const ready = [profile, settings, doneRows, quests, categories, events, analyses, revisions, sportProfile, prefs, customEx, sportSessions, checks, exStates, decisions, measures].every((x) => x !== undefined)
+  const commitments = useLiveQuery(() => db.commitments.orderBy('date').toArray(), [])
+  const moves = useLiveQuery(() => db.planningMoves.orderBy('at').toArray(), [])
+  const notifLog = useLiveQuery(() => db.notificationLog.orderBy('at').reverse().toArray(), [])
+  const prefsRow = useLiveQuery(() => db.settings.get('appPrefs').then((r) => r ?? null), [])
+  const ready = [commitments, moves, notifLog, prefsRow, profile, settings, doneRows, quests, categories, events, analyses, revisions, sportProfile, prefs, customEx, sportSessions, checks, exStates, decisions, measures].every((x) => x !== undefined)
   return {
     ready,
     profile: profile ?? null,
@@ -32,6 +37,10 @@ export function usePersistedState() {
     events: (events ?? []).map(normalizeEvent),
     analyses: analyses ?? [],
     revisions: revisions ?? [],
+    commitments: commitments ?? [],
+    moves: moves ?? [],
+    notifLog: notifLog ?? [],
+    prefs: mergePrefs(prefsRow?.value),
     sportRaw: { profile: sportProfile ?? null, prefs: prefs ?? [], custom: customEx ?? [], sessions: sportSessions ?? [], checks: checks ?? [], states: exStates ?? [], decisions: decisions ?? [], measures: measures ?? [] },
   }
 }

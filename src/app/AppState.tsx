@@ -6,9 +6,13 @@ import { backups, backupScheduler } from '@/data/backup'
 import { buildDemoView, type DemoView } from '@/mocks/demoView'
 import type { Settings } from '@/data/repositories'
 import { computeProgression, type ProgressSummary } from '@/core/progression'
-import { arrangeHome, type WidgetPlacement } from '@/core/homeLayout'
-import { cycleProgress, questStatus } from '@/core/questState'
-import { isRecurring, type Category, type Quest } from '@/core/quest'
+import { arrangeGlobalHome, type WidgetPlacement } from '@/core/homeLayout'
+import { buildDashboard, type Dashboard } from '@/core/dashboard'
+import type { AppPrefs } from '@/core/prefs'
+import type { Commitment, PlanContext, PlanMove } from '@/core/planning'
+import type { NotificationLogEntry } from '@/core/notifications'
+import { useNotificationRunner } from './useNotificationRunner'
+import type { Category, Quest } from '@/core/quest'
 import type { XpEvent } from '@/core/ledger'
 import { cycleInfo, type CycleInfo } from '@/core/sport/cycle'
 import { defaultProfile, measuredLevel, operationalLevel, type SportProfile } from '@/core/sport/profile'
@@ -53,6 +57,15 @@ interface AppState {
   /** Éléments non réalisés, pas encore analysés (aucun effet sur l'XP) */
   missed: MissedItem[]
   sport: SportState
+  /** Préférences générales (planning, notifications, RPG) */
+  prefs: AppPrefs
+  commitments: Commitment[]
+  moves: PlanMove[]
+  notifLog: NotificationLogEntry[]
+  /** Contexte du planning central (LIFE + SPORT + engagements) */
+  plan: PlanContext
+  /** Tableau de bord global (null en mode démonstration) */
+  dashboard: Dashboard | null
   now: Date
   toggleDemoQuest: (id: string) => void
 }
@@ -70,28 +83,32 @@ function useNow() {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw } = usePersistedState()
+  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs } = usePersistedState()
   const now = useNow()
 
   const demo = useMemo(() => (settings.showDemoData ? buildDemoView(doneQuests) : null), [settings.showDemoData, doneQuests])
 
+  const missed = useMemo(() => findMissed(quests, events, analyses, now), [quests, events, analyses, now])
+
+  const sport = useMemo<SportState>(() => {
+    const prof = sportRaw.profile ?? defaultProfile('')
+    const today = dayKey(now)
+    const recovery = evaluateRecovery({ checks: sportRaw.checks, sessions: sportRaw.sessions, now, today, custom: sportRaw.custom })
+    const measured = measuredLevel(sportRaw.sessions, sportRaw.decisions.filter((d) => d.applied && d.action === 'increase').length, now)
+    return { ...sportRaw, profile: prof, recovery, cycle: cycleInfo(prof.cycleStartWeek, now), measured, operational: operationalLevel(prof.experience, measured), today }
+  }, [sportRaw, now])
+
+  const plan = useMemo<PlanContext>(() => ({
+    quests, events, commitments, sessions: sport.sessions, moves, prefs: prefs.planning, sportDays: sport.profile.availability.days, recovery: sport.recovery, now,
+  }), [quests, events, commitments, sport, moves, prefs.planning, now])
+
+  const dashboard = useMemo<Dashboard | null>(() => (demo ? null : buildDashboard({ plan, checks: sport.checks, missedCount: missed.length, sportTarget: sport.profile.availability.strengthPerWeek })), [demo, plan, sport.checks, sport.profile.availability.strengthPerWeek, missed.length])
+
   const progress = useMemo<Progress>(() => {
     if (demo) return { ...demo, isDemo: true }
     const p = computeProgression(events)
-    const pending = quests.filter((q) => !q.archived && questStatus(q, cycleProgress(q, events, now), now) !== 'done')
-    const due = pending
-      .filter((q) => q.dueDate)
-      .map((q) => (new Date(q.dueDate + 'T23:59:59').getTime() - now.getTime()) / 3_600_000)
-    const dailyOpen = pending.some((q) => isRecurring(q.type))
-    const layout = arrangeHome({
-      now,
-      pendingQuests: pending.length,
-      nearestDeadlineHours: due.length ? Math.min(...due) : dailyOpen ? 24 : null,
-      sportPlannedToday: false,
-      recovery: 100,
-    }).filter((w) => w.id !== 'sport')
-    return { ...p, isDemo: false, layout }
-  }, [demo, events, quests, now])
+    return { ...p, isDemo: false, layout: dashboard ? arrangeGlobalHome(dashboard.home) : [] }
+  }, [demo, events, dashboard])
 
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = String(settings.reducedMotion)
@@ -107,22 +124,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => { clearTimeout(verifyLater); backupScheduler.stop() }
   }, [])
 
-  const missed = useMemo(() => findMissed(quests, events, analyses, now), [quests, events, analyses, now])
-
-  const sport = useMemo<SportState>(() => {
-    const prof = sportRaw.profile ?? defaultProfile('')
-    const today = dayKey(now)
-    const recovery = evaluateRecovery({ checks: sportRaw.checks, sessions: sportRaw.sessions, now, today, custom: sportRaw.custom })
-    const measured = measuredLevel(sportRaw.sessions, sportRaw.decisions.filter((d) => d.applied && d.action === 'increase').length, now)
-    return { ...sportRaw, profile: prof, recovery, cycle: cycleInfo(prof.cycleStartWeek, now), measured, operational: operationalLevel(prof.experience, measured), today }
-  }, [sportRaw, now])
+  useNotificationRunner({ enabled: !demo && ready, prefs, quests, events, sessions: sport.sessions, checks: sport.checks, recovery: sport.recovery, commitments, progress })
 
   const value = useMemo<AppState>(
     () => ({
-      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, now,
+      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, now,
       toggleDemoQuest: (id) => void repos.demo.toggleQuest(id),
     }),
-    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, now],
+    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, now],
   )
 
   if (!ready) return <div style={{ minHeight: '100vh' }} aria-busy="true" />

@@ -37,10 +37,10 @@ export function RpgPage() {
               <Card>
                 <SectionTitle title="Niveaux" aside={demo.isDemo ? <DemoTag /> : undefined} />
                 <div style={{ display: 'grid', gap: 16 }}>
-                  {[{ n: 'LIFE', p: demo.life, t: 'gold' as const }, { n: 'SPORT', p: demo.sportLevel, t: 'info' as const }].map(({ n, p, t }) => (
+                  {[{ n: 'LIFE', p: demo.life, t: 'gold' as const, r: demo.lifeRank }, { n: 'SPORT', p: demo.sportLevel, t: 'info' as const, r: demo.sportRank }].map(({ n, p, t, r }) => (
                     <div key={n}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <b style={{ fontFamily: 'var(--font-title)', letterSpacing: '0.12em' }}>{n}</b><span>Niveau {p.level}</span>
+                        <b style={{ fontFamily: 'var(--font-title)', letterSpacing: '0.12em' }}>{n}</b><span>Niveau {p.level}{r ? ` · rang ${r.rank} ${r.title}` : ''}</span>
                       </div>
                       <ProgressBar value={p.progress} tone={t} label={`Progression ${n}`} />
                       <p className="num" style={{ fontSize: 12, color: 'var(--c-text-dim)', marginTop: 5 }}>{formatNumber(p.xpIntoLevel)} / {formatNumber(p.xpForNext)} XP</p>

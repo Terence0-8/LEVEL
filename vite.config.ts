@@ -26,7 +26,7 @@ export default defineConfig({
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2,woff}'] },
+      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2,woff}'], importScripts: ['sw-notify.js'] },
     }),
   ],
   test: { environment: 'node', include: ['src/**/*.test.ts'] },

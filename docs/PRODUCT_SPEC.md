@@ -7,7 +7,7 @@ Application personnelle de progression combinant **LIFE** (organisation, objecti
 Sombre, mystérieuse, élégante ; interface quotidienne sobre, événements RPG spectaculaires (or lumineux). Palette : fond `#0B0D11`, panneaux `#12141A`, cartes `#1E2128`, surfaces `#2A2F37`, or mat `#C9B17A`, or lumineux `#F5D889`, texte `#E8E1D3`, succès `#4CAF7A`, alerte `#E55B5B`, info `#6CA8FF`. Titres : Cinzel ; interface : Inter. Logo : monogramme « L » avec chevron d'ascension.
 
 ## Navigation
-Accueil · LIFE · SPORT · RPG · Historique ; Profil & réglages en accès secondaire. Mobile : barre inférieure ; desktop (≥ 900 px) : menu latéral. L'accueil est **adaptatif** : Level ordonne les widgets selon échéances, moment de la journée et récupération ; l'utilisateur ne les réorganise pas.
+Accueil · LIFE · SPORT · Planning · RPG · Bilans · Historique ; Profil & réglages en accès secondaire. Mobile : barre inférieure ; desktop (≥ 900 px) : menu latéral. L'accueil est **adaptatif** : Level ordonne les widgets selon échéances, moment de la journée et récupération ; l'utilisateur ne les réorganise pas.
 
 ## Périmètre (v0.5)
 | Domaine | État |
@@ -176,3 +176,17 @@ Le module SPORT est considéré comme **livré en V1** ; les autres paramètres 
 
 ### Précision finale V1 : pompes
 Toutes les variantes de pompes sont exclues des programmes classiques ; elles restent dans la bibliothèque mais ne servent qu'aux circuits HIIT full-body autorisés. **Conséquence assumée** : sans matériel ni mobilier, aucun exercice ordinaire ne cible les **pectoraux** ni les **triceps** (les seules options sans matériel de ces deux groupes sont des pompes) ; avec le profil « Sans matériel », ces deux groupes ne sont donc travaillés que dans le circuit HIIT autorisé. Domicile et Salle les couvrent (développés, écartés, élastiques, dips, extensions).
+
+## Orchestration globale (v0.6)
+| Fonction | État |
+|---|---|
+| Accueil global adaptatif (progression, niveaux/rangs par domaine, priorités, séance, récupération, échéances, semaine, alertes) | ✅ |
+| Planning central LIFE + SPORT + engagements, conflits, propositions confirmées | ✅ |
+| Priorités transversales, report des tâches secondaires, simplification, reports répétés signalés | ✅ |
+| Notifications locales configurables (tranquillité, catégories, fréquence, rappels fixes) | ✅ appli ouverte / ⚠️ pas de remise application fermée (limite PWA, repli en boîte de réception) |
+| Bilans jour/semaine/mois + export PDF (distinct des sauvegardes) | ✅ |
+| Contrôle de cohérence RPG, rangs indépendants LIFE/SPORT | ✅ |
+| Réglages centralisés | ✅ |
+| Prestige LIFE/SPORT | ❌ non développé |
+| Objectifs de long terme (module dédié) | ❌ proxy seulement |
+Règles : les pourcentages d'exécution mesurent la planification, jamais la valeur de la personne ; aucune journée n'est remplie artificiellement ; aucune échéance importante n'est modifiée sans action explicite.

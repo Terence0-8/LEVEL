@@ -198,7 +198,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
 
   // ── Statistiques
   await go('/sport/progression')
-  check('Statistiques : volume, répartition, records, régularité, bilans', (await vis(page.getByText('Volume d’entraînement'))) && (await vis(page.getByText('Répartition musculaire'))) && (await vis(page.getByText('Records personnels'))) && (await vis(page.getByText('Fréquence et régularité'))) && (await vis(page.getByText('Bilans'))))
+  check('Statistiques : volume, répartition, records, régularité, bilans', (await vis(page.getByText('Volume d’entraînement'))) && (await vis(page.getByText('Répartition musculaire'))) && (await vis(page.getByText('Records personnels'))) && (await vis(page.getByText('Fréquence et régularité'))) && (await vis(page.getByRole('heading', { name: 'Bilans' }))))
   await page.getByRole('radio', { name: 'Année' }).click(); await page.waitForTimeout(300)
   await page.getByRole('radio', { name: 'Tout' }).click(); await page.waitForTimeout(300)
   check('Périodes semaine / mois / 3 mois / année / tout', (await page.getByRole('radio', { name: /^(Semaine|Mois|3 mois|Année|Tout)$/ }).count()) === 5)

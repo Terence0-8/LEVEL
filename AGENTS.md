@@ -15,6 +15,7 @@ Level est une application personnelle de progression (LIFE · SPORT · RPG), ins
 - **Barèmes numériques uniquement dans `core/rewards.ts`**, marqués provisoires tant qu'ils ne sont pas calibrés.
 - **Sauvegardes** : toute nouvelle table Dexie doit être ajoutée à `TABLE_KEYS` (`core/backupFormat.ts`) et `DB_SCHEMA_VERSION` incrémentée (un test échoue sinon). Ne jamais afficher « récupérable » sans déchiffrement réellement testé. Aucune clé, phrase ou donnée en clair dans les journaux, URLs ou requêtes. Les rapports PDF ne remplacent jamais la sauvegarde.
 - **SPORT** : l'XP SPORT passe par `sportService.syncXp` (recalcul déterministe dans `xpEvents`) ; ne jamais écrire d'XP SPORT ailleurs. Barèmes uniquement dans `core/sport/config.ts`. 1 XP SPORT = 1 XP LIFE pour le niveau global. Séances écourtées : XP proportionnelle (pas de seuil en %). 2ᵉ séance du jour : récompensée sous conditions de récupération et anti-farming (`extraSession`). Repos : XP seulement sur recommandation pertinente de Level (`restRecommendation`), jamais sur simple déclaration. Profil « sans matériel » : ni mobilier ni équipement. Sécurité avant récompenses : aucune séance en ALERTE, aucun encouragement à dépasser une douleur, blocage levé seulement par réévaluation. Aucune augmentation de charge sans confirmation. Pompes (TOUTES variantes : classiques, inclinées, au mur, en piqué, triceps) = bibliothèque + circuits HIIT full-body uniquement, si l'utilisateur les autorise ; jamais dans un programme ordinaire. Variantes avec/sans matériel : mêmes objectifs, performances par exercice, jamais de conversion.
+- **Orchestration (v0.6)** : le planning ne modifie jamais en silence une échéance, un engagement ou une quête importante ; toute réorganisation est une proposition confirmée, revérifiée à l'écriture (`planningService`) et tracée. Ne jamais remplir artificiellement une journée (marge, ≤ 4 suggestions). Notifications : décision dans `core/notifications` (tranquillité, plafond, déduplication), jamais de promesse de remise en arrière-plan. Pourcentages des bilans = exécution du planning, jamais un jugement de valeur. Dans un callback différé, ne jamais lire `event.target` (lire avant). Réglages de modules non dupliqués dans `/profile`.
 - **Honnêteté** : ne jamais présenter un module comme fonctionnel s'il ne l'est pas (utiliser `<Notice>`).
 - **Peu de dépendances** : justifier toute nouvelle dépendance dans `docs/ARCHITECTURE.md`.
 - Ne pas contredire une exigence de `PRODUCT_SPEC.md` sans le signaler et le documenter.
@@ -28,6 +29,7 @@ Level est une application personnelle de progression (LIFE · SPORT · RPG), ins
 | `npm run typecheck` | Vérification TypeScript |
 | `node scripts/smoke.cjs <dossier> <dossier2>` | Test navigateur LIFE + sauvegardes (Playwright) sur `vite preview --port 4173` |
 | `node scripts/smoke-sport.cjs <dossier>` | Test navigateur du module SPORT |
+| `node scripts/smoke-global.cjs <dossier>` | Test navigateur orchestration (accueil, planning, notifications, bilans PDF, hors ligne) |
 
 ## Conventions
 - Alias `@/` → `src/`. TypeScript strict. Composants fonctionnels React.
