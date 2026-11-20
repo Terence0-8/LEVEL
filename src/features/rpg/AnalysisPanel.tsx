@@ -7,6 +7,7 @@ import { RELIABILITY_LABEL, WINDOW_LABEL, NATURE_LABEL, type Observation, type W
 import { REC_DECISION_LABEL, type Recommendation } from '@/core/recommendations'
 import { eventService } from '@/data/eventService'
 import { goalService, GoalError } from '@/data/goalService'
+import { pilotageService, PilotageError } from '@/data/pilotageService'
 import r from './rpg.module.css'
 
 const WINDOWS: Array<Window | 'all'> = ['all', 'day', 'week', 'month', 'long']
@@ -23,13 +24,18 @@ export function AnalysisPanel() {
 
   const accept = async (rec: Recommendation) => {
     setMsg(null)
-    if (rec.action?.type === 'life-proposal') { setConfirm(rec); return }
+    if (rec.action?.type === 'life-proposal' || rec.action?.type === 'pilotage-proposal') { setConfirm(rec); return }
     await eventService.decide(rec, 'accepted')
     if (rec.action?.type === 'open') navigate(rec.action.route)
     else setMsg('Noté : rien n’est modifié, c’était un constat à valoriser.')
   }
   const apply = async () => {
     const rec = confirm!; setConfirm(null)
+    if (rec.action?.type === 'pilotage-proposal') {
+      try { const res = await pilotageService.applyProposal(rec.action.proposal); await eventService.decide(rec, 'accepted'); setMsg(res.applied) }
+      catch (e) { setMsg(e instanceof PilotageError ? e.message : 'Action impossible : la situation a changé.') }
+      return
+    }
     if (rec.action?.type !== 'life-proposal') return
     try { const res = await goalService.applyLifeProposal(rec.action.proposal); await eventService.decide(rec, 'accepted'); setMsg(res.applied) }
     catch (e) { setMsg(e instanceof GoalError ? e.message : 'Action impossible : la situation a changé.') }
@@ -101,6 +107,7 @@ function ObsCard({ o }: { o: Observation }) {
         <span className={`${r.tagChip} ${r[o.nature]}`}>{NATURE_LABEL[o.nature]}</span>
         <span className={r.tagChip}>{WINDOW_LABEL[o.window]}</span>
         <Badge tone={o.reliability === 'high' ? 'success' : o.reliability === 'medium' ? 'info' : 'neutral'}>{RELIABILITY_LABEL[o.reliability]}</Badge>
+        {o.certainty ? <span className={r.tagChip}>{o.certainty === 'certain' ? 'Certain' : o.certainty === 'probable' ? 'Probable' : 'Estimation'}</span> : null}
       </div>
       <h3>{o.title}</h3>
       <p className={r.muted}>{o.detail}</p>

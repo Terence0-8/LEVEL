@@ -8,6 +8,7 @@ import type { XpEvent } from '@/core/ledger'
 import type { RecoveryState } from '@/core/sport/recovery'
 import type { RecoveryCheck, SportSession } from '@/core/sport/session'
 import type { Recommendation } from '@/core/recommendations'
+import { dueReviews, type StrategyState } from '@/core/pilotage'
 import type { RpgEvent } from '@/core/rpgEvents'
 import { notificationService } from '@/data/notificationService'
 
@@ -23,6 +24,7 @@ interface Args {
   progress: ProgressSummary
   rpgEvents: RpgEvent[]
   recommendation: Recommendation | null
+  strategy: StrategyState
 }
 
 /**
@@ -37,9 +39,10 @@ export function useNotificationRunner(args: Args) {
     const run = () => {
       const a = ref.current
       if (!a.enabled) return
+      const now = new Date()
       const ctx: NotifContext = {
-        now: new Date(), prefs: a.prefs.notifications, quests: a.quests, events: a.events, sessions: a.sessions, checks: a.checks,
-        recovery: a.recovery, commitments: a.commitments, levels: levelsOf(a.progress), seen: a.prefs.seen, rpgEvents: a.rpgEvents, recommendation: a.recommendation,
+        now, prefs: a.prefs.notifications, quests: a.quests, events: a.events, sessions: a.sessions, checks: a.checks,
+        recovery: a.recovery, commitments: a.commitments, levels: levelsOf(a.progress), seen: a.prefs.seen, rpgEvents: a.rpgEvents, recommendation: a.recommendation, reviewsDue: dueReviews(now, a.strategy, a.prefs.pilotage),
       }
       void notificationService.tick(ctx).catch(() => undefined)
     }

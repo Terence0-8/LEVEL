@@ -11,6 +11,7 @@ import type { RecoveryCheck } from './sport/session'
 import { muscleSplit } from './sport/stats'
 import { MUSCLE_LABEL, type MuscleGroup } from './sport/types'
 import { isFinished, setMetric } from './sport/xp'
+import { strategicObservations, type StrategyCtx } from './strategy'
 
 /**
  * Moteur d'analyse LOCAL : règles et statistiques simples, jamais un chatbot. Il produit des OBSERVATIONS explicables (constat, éléments
@@ -45,6 +46,8 @@ export interface Observation {
   /** Signature de la situation : change quand la situation change de façon significative */
   signature: string
   route?: string
+  /** Certitude : fait vérifiable, incompatibilité probable ou simple estimation (analyses de capacité et de stratégie) */
+  certainty?: 'certain' | 'probable' | 'estimate'
 }
 
 export interface InsightCtx {
@@ -53,6 +56,8 @@ export interface InsightCtx {
   categories: Category[]
   sportTarget: number
   findings: Finding[]
+  /** Pilotage (facultatif) : ajoute les observations de cohérence stratégique */
+  strategy?: StrategyCtx
 }
 
 /** Minimums d'échantillons (provisoires) : en dessous, la règle se tait. */
@@ -237,7 +242,7 @@ function crossObs(c: InsightCtx): Observation[] {
   const plan = buildPlan(c.plan, today, to)
   const conflicts = detectConflicts(c.plan, plan, today, to)
   const overloaded = new Set(conflicts.filter((x) => x.type === 'overload').map((x) => x.date))
-  if (overloaded.size >= 2) out.push({ id: 'cross-overload', domain: 'MIXED', window: 'week', nature: 'fact', tone: 'attention', title: 'Plusieurs journées surchargées cette semaine', detail: 'La charge prévue dépasse la capacité sur plusieurs jours : c’est une question d’organisation, pas de discipline.', evidence: [...overloaded].sort().map((d) => `${d} : au-delà de la capacité`), reliability: 'high', samples: overloaded.size, signature: `overload:${[...overloaded].sort().join(',')}`, route: '/planning' })
+  if (overloaded.size >= 2) out.push({ id: 'cross-overload', domain: 'MIXED', window: 'week', nature: 'fact', tone: 'attention', certainty: 'certain', title: 'Plusieurs journées surchargées cette semaine', detail: 'La charge prévue dépasse la capacité sur plusieurs jours : c’est une question d’organisation, pas de discipline.', evidence: [...overloaded].sort().map((d) => `${d} : au-delà de la capacité`), reliability: 'high', samples: overloaded.size, signature: `overload:${[...overloaded].sort().join(',')}`, route: '/planning' })
   // Échéances rapprochées (quêtes, projets, objectifs, engagements) sur 5 jours
   const dueDates: string[] = []
   for (const q of c.plan.quests) if (!q.archived && q.dueDate && q.type !== 'daily' && q.type !== 'weekly') dueDates.push(q.dueDate)
@@ -245,11 +250,11 @@ function crossObs(c: InsightCtx): Observation[] {
   for (const g of c.plan.life?.goals ?? []) if ((g.status === 'active' || g.status === 'todo') && g.dueDate) dueDates.push(g.dueDate)
   for (const m of commitments) dueDates.push(m.date)
   const win = dueDates.filter((d) => d >= today && daysBetweenKeys(today, d) < INSIGHT_CONFIG.clusterDays).sort()
-  if (win.length >= INSIGHT_CONFIG.clusterCount) out.push({ id: 'cross-deadline-cluster', domain: 'MIXED', window: 'week', nature: 'fact', tone: 'attention', title: 'Échéances très rapprochées', detail: `${win.length} échéances ou engagements dans les ${INSIGHT_CONFIG.clusterDays} prochains jours.`, evidence: win.map((d) => `échéance le ${d}`), reliability: 'high', samples: win.length, signature: `cluster:${win.join(',')}`, route: '/planning' })
+  if (win.length >= INSIGHT_CONFIG.clusterCount) out.push({ id: 'cross-deadline-cluster', domain: 'MIXED', window: 'week', nature: 'fact', tone: 'attention', certainty: 'certain', title: 'Échéances très rapprochées', detail: `${win.length} échéances ou engagements dans les ${INSIGHT_CONFIG.clusterDays} prochains jours.`, evidence: win.map((d) => `échéance le ${d}`), reliability: 'high', samples: win.length, signature: `cluster:${win.join(',')}`, route: '/planning' })
   // Charge prévue vs capacité utilisable (7 jours)
   const usable = Array.from({ length: 7 }, (_, i) => usableOn(prefs, dayKey(addDays(now, i)))).reduce((n, v) => n + v, 0)
   const load = plan.items.reduce((n, i) => n + i.minutes, 0)
-  if (usable > 0 && load > usable * 0.9) out.push({ id: 'cross-capacity', domain: 'MIXED', window: 'week', nature: 'estimate', tone: 'attention', title: 'Engagements proches de la capacité', detail: 'La charge prévue sur 7 jours approche, voire dépasse, la capacité recommandée (marge comprise).', evidence: [`${Math.round(load)} min prévues pour ${usable} min recommandées`], reliability: 'medium', samples: plan.items.length, signature: `cap:${Math.round((load / usable) * 10)}`, route: '/planning' })
+  if (usable > 0 && load > usable * 0.9) out.push({ id: 'cross-capacity', domain: 'MIXED', window: 'week', nature: 'estimate', tone: 'attention', certainty: 'estimate', title: 'Engagements proches de la capacité', detail: 'La charge prévue sur 7 jours approche, voire dépasse, la capacité recommandée (marge comprise).', evidence: [`${Math.round(load)} min prévues pour ${usable} min recommandées`], reliability: 'medium', samples: plan.items.length, signature: `cap:${Math.round((load / usable) * 10)}`, route: '/planning' })
   const active = (c.plan.life?.projects ?? []).filter((p) => p.status === 'active')
   if (active.length > INSIGHT_CONFIG.maxActiveProjects) out.push({ id: 'cross-projects', domain: 'LIFE', window: 'month', nature: 'fact', tone: 'neutral', title: `${active.length} projets en cours en même temps`, detail: 'Beaucoup de projets ouverts dispersent l’attention. En mettre un en pause ne l’abandonne pas.', evidence: active.slice(0, 5).map((p) => p.title), reliability: 'high', samples: active.length, signature: `projects:${active.length}`, route: '/life/projets' })
   // Baisse durable de réalisation (14 derniers jours vs 28 jours précédents)
@@ -264,7 +269,7 @@ function crossObs(c: InsightCtx): Observation[] {
 
 /** Toutes les observations actuelles, de la plus utile à la moins utile ; aucune tendance sans échantillon suffisant. */
 export function analyse(c: InsightCtx, recovery: RecoveryState): Observation[] {
-  const all = [...regularity(c), ...lifeObs(c), ...sportObs(c, recovery), ...crossObs(c)]
+  const all = [...regularity(c), ...lifeObs(c), ...sportObs(c, recovery), ...crossObs(c), ...(c.strategy ? strategicObservations(c.strategy) : [])]
   const weight = { attention: 0, positive: 1, neutral: 2 } as const
   const relw = { high: 0, medium: 1, low: 2 } as const
   return all.sort((a, b) => weight[a.tone] - weight[b.tone] || relw[a.reliability] - relw[b.reliability] || a.id.localeCompare(b.id))

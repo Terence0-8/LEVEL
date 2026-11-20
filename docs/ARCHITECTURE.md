@@ -188,3 +188,18 @@ Principes : aucun moteur concurrent ; le journal d'XP n'est jamais écrit ; les 
 | Charge en hausse | ≥ 130 % de la moyenne des 3 semaines précédentes, ≥ 2 séances |
 | Report d'une recommandation | 7 jours |
 | Notifications | important : groupées ; majeur : une par une ; information : jamais |
+
+## PILOTAGE V1 : vision, stratégie, trajectoire (v1.0)
+| Couche | Fichiers | Rôle |
+|---|---|---|
+| `core` | `pilotage.ts` | Types, libellés, calendrier (trimestres), résolveurs de références LIFE, avancement calculé, relations vues depuis LIFE, faits de revue, rappels `dueReviews` |
+| `core` | `strategy.ts` | Règles stratégiques pures (`strategicObservations`, `strategicProposals`), appelées par `insights.analyse` / `recommendations.buildRecommendations` (extension, pas de second moteur) |
+| `data` | `pilotageService.ts` | Commandes atomiques (une transaction Dexie + entrée `strategyLog`), limite souple, revues/cycles/années, `applyProposal` revérifié |
+| `features` | `pilotage/*` | Tableau de bord, Vision, Orientations, Priorités, Cycles, Revues, Historique ; `LinksSection` dans les fiches LIFE |
+
+- **Données** : Dexie v9, 7 tables (`visions`, `orientations`, `priorities`, `annualPlans`, `cycles`, `strategyReviews`, `strategyLog`), toutes dans `TABLE_KEYS` ; `DB_SCHEMA_VERSION = 9`, `APP_VERSION = 1.0.0`. Les données dérivées (avancement, cohérence, prochaine revue) ne sont jamais persistées ; une revue conserve seulement ses faits (instantané).
+- **Références** : les éléments LIFE sont référencés par identifiant ; un identifiant périmé est ignoré par les résolveurs. Détacher ne supprime rien.
+- **Mémoire** : `strategyLog` append-only, écrite dans la même transaction que le changement.
+- **Notifications** : `NotifContext.reviewsDue` (catégorie « bilans »), calculé à chaque tick avec l'heure courante.
+- **Dépendances** : aucune nouvelle dépendance.
+

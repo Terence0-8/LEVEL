@@ -96,6 +96,17 @@ export function ProfilePage() {
       </Card>
 
       <Card>
+        <SectionTitle title="Pilotage" />
+        <p className={c.sub}>Vision, orientations et priorités sont facultatives. Ces réglages ne servent qu’à cadrer les repères de Pilotage et ses rappels de revue.</p>
+        <Field label="Priorités fondamentales conseillées" htmlFor="pil-max" hint="Limite souple : vous pouvez la dépasser après confirmation, Level vous le signale simplement.">
+          <NumberField id="pil-max" value={prefs.pilotage.maxFundamental} min={1} max={8} step={1} onCommit={(v) => upd((p) => ({ ...p, pilotage: { ...p.pilotage, maxFundamental: v } }))} />
+        </Field>
+        <Toggle label="Rappel de revue trimestrielle" hint="Une proposition douce en fin de trimestre, jamais obligatoire." checked={prefs.pilotage.reminders.quarterly} onChange={(v) => upd((p) => ({ ...p, pilotage: { ...p.pilotage, reminders: { ...p.pilotage.reminders, quarterly: v } } }))} />
+        <Toggle label="Rappel de revue annuelle" hint="En décembre et début janvier." checked={prefs.pilotage.reminders.annual} onChange={(v) => upd((p) => ({ ...p, pilotage: { ...p.pilotage, reminders: { ...p.pilotage.reminders, annual: v } } }))} />
+        <Toggle label="Rappel de revue mensuelle" hint="Désactivé par défaut." checked={prefs.pilotage.reminders.monthly} onChange={(v) => upd((p) => ({ ...p, pilotage: { ...p.pilotage, reminders: { ...p.pilotage.reminders, monthly: v } } }))} />
+      </Card>
+
+      <Card>
         <SectionTitle title="Notifications" aside={unread ? <Badge tone="gold">{unread} non lue{unread > 1 ? 's' : ''}</Badge> : undefined} />
         <div className={`${c.cap} ${cap.system ? c.ok : ''}`} role="note">{cap.summary}</div>
         <div className={c.row} style={{ marginBottom: 12 }}>

@@ -6,8 +6,8 @@
 .page { animation: enter 0.38s var(--ease) both; }
 @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(6, 1fr); height: calc(var(--nav-h) + var(--safe-b)); padding-bottom: var(--safe-b); background: rgba(18,20,26,0.94); backdrop-filter: blur(14px); border-top: 1px solid var(--c-line); }
-.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10.5px; letter-spacing: 0.06em; color: var(--c-text-dim); position: relative; transition: color 0.2s; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(7, 1fr); height: calc(var(--nav-h) + var(--safe-b)); padding-bottom: var(--safe-b); background: rgba(18,20,26,0.94); backdrop-filter: blur(14px); border-top: 1px solid var(--c-line); }
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; letter-spacing: 0.03em; min-width: 0; color: var(--c-text-dim); position: relative; transition: color 0.2s; }
 .tab.active { color: var(--c-gold-bright); }
 .tab.active::before { content: ''; position: absolute; top: 0; width: 28px; height: 2px; border-radius: 2px; background: var(--c-gold-bright); box-shadow: var(--glow-gold); }
 

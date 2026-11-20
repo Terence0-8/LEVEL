@@ -9,6 +9,7 @@ import { deletionImpact, formatValue, GOAL_STATUS_LABEL, GOAL_STATUSES, IMPORTAN
 import { cycleProgress } from '@/core/questState'
 import type { Priority } from '@/core/quest'
 import { goalService } from '@/data/goalService'
+import { GoalPilotage } from '@/features/pilotage/LinksSection'
 import { PRIORITY_OPTIONS, formatDue } from './labels'
 import { Box, catName, pct, useLifeMaps, useRunner } from './lifeShared'
 import s from './life.module.css'
@@ -135,6 +136,7 @@ function GoalDetail({ id, onClose, onEdit }: { id: string | null; onClose: () =>
             <ul className={s.checkList}>{inds.map((i) => { const st = indicatorState(i, readings); return <li key={i.id} className={s.checkRow}><span className={s.body}>{i.name}<small>{st.current !== null ? formatValue(i.kind, i.unit, st.current) : 'pas de mesure'}{i.target !== null ? ` / cible ${formatValue(i.kind, i.unit, i.target)}` : ''}</small></span></li> })}</ul>
           </section>
         ) : null}
+        <GoalPilotage goalId={g.id} />
         <p className={s.note}>Valider un objectif ne rapporte pas d’XP : seules les quêtes rattachées récompensent.</p>
         {error ? <p className={errorClass} role="alert">{error}</p> : null}
         <div className={s.formActions} style={{ position: 'static' }}>

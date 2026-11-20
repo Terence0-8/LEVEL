@@ -232,3 +232,13 @@ Premier pas (1ʳᵉ quête) · Première séance · Niveau 5 LIFE / SPORT · Un 
 | Sauvegardes chiffrées et migration | ✅ |
 | Chatbot, IA distante, déduction de causes psychologiques | ❌ hors périmètre (volontaire) |
 Règles : la sécurité SPORT prime sur toute recommandation ; une pause n'est jamais un échec ; aucune conclusion à partir d'une seule action ; aucune modification sans accord.
+
+## PILOTAGE V1 (v1.0)
+- **Principe** : Pilotage relie une vision à long terme aux priorités, objectifs, projets et actions concrètes de LIFE sans les dupliquer. Tout y est facultatif ; Level fonctionne sans.
+- **Vision** : texte libre, jamais mesurable, versions conservées. **Orientations** : statuts À définir/Active/En pause/En réévaluation/Accomplie/Abandonnée ; liens plusieurs-à-plusieurs avec objectifs, projets et indicateurs LIFE.
+- **Priorités** : fondamentale/importante/secondaire ; limite SOUPLE de priorités fondamentales actives (défaut 3, réglable) : dépassement possible après confirmation.
+- **Plan annuel et cycles trimestriels** : sélection d'éléments existants ; revue de cycle (faits mesurés + décisions de l'utilisateur) ; clôture et préparation du suivant atomiques.
+- **Intelligence** : mêmes moteurs d'analyse et de recommandation que le RPG (constat, justification, proposition, bénéfice, fiabilité) ; certitude certain/probable/estimation ; aucune conclusion psychologique ; seules applications possibles : rétrograder ou mettre en pause une priorité, après confirmation.
+- **Revues** facultatives (mensuelle désactivée par défaut), rappels neutres via les notifications. **Mémoire stratégique** append-only.
+- **Garanties** : aucune écriture dans `xpEvents`, aucune modification silencieuse d'échéance, de planning ou d'objectif ; détacher/archiver conserve objectifs, projets, quêtes et XP.
+

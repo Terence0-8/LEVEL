@@ -2,6 +2,7 @@ import { dayKey, addDays } from './dates'
 import type { LifeProposal } from './goals'
 import type { Observation, Reliability } from './insights'
 import type { RecoveryState } from './sport/recovery'
+import type { PilotageProposal } from './strategy'
 
 /**
  * Recommandations CONTEXTUALISÉES et EXPLICABLES, calculées à partir des observations (et des propositions LIFE existantes).
@@ -17,6 +18,8 @@ export const REC_DECISION_LABEL: Record<RecDecision, string> = { accepted: 'Acce
 export type RecAction =
   | { type: 'open'; route: string; label: string }
   | { type: 'life-proposal'; proposal: LifeProposal }
+  /** Modification d'une priorité stratégique : appliquée seulement après confirmation explicite */
+  | { type: 'pilotage-proposal'; proposal: PilotageProposal }
 
 export interface Recommendation {
   /** Identifiant stable de la règle (+ objet) */
@@ -47,6 +50,8 @@ export interface RecCtx {
   lifeProposals: LifeProposal[]
   recovery: RecoveryState
   now: Date
+  /** Propositions stratégiques appliquables (Pilotage) */
+  pilotageProposals?: PilotageProposal[]
   /** Il existe des données SPORT (séances) : sinon aucune recommandation sportive */
   hasSport: boolean
 }
@@ -111,6 +116,23 @@ export function buildRecommendations(c: RecCtx): Recommendation[] {
   const stable = OBS(o, 'regularity-stable')
   if (stable) out.push({ id: 'rec:value-regularity', domain: 'RPG', title: 'Valoriser votre régularité', finding: stable.title, evidence: stable.evidence, recommendation: 'Rien à changer : continuez à ce rythme. Cette constance pèse davantage que les pics d’activité, même si le niveau monte lentement.', benefit: 'Garder un rythme durable, sans surenchère.', confidence: stable.reliability, action: null, signature: stable.signature, priority: 20 })
 
+  // ── Pilotage : cohérence stratégique (mêmes règles d'explicabilité ; seules les rétrogradations de priorité sont appliquables, après confirmation) ──
+  const demote = (priorityId: string) => c.pilotageProposals?.find((p) => p.kind === 'demote-priority' && p.priorityId === priorityId)
+  const open = (route: string, label: string): RecAction => ({ type: 'open', route, label })
+  for (const ob of o.filter((x) => x.id.startsWith('strat-'))) {
+    const base = { domain: ob.domain, finding: ob.title, evidence: ob.evidence, confidence: ob.reliability, signature: ob.signature }
+    const key = ob.id.split(':')[0]
+    const ref = ob.id.split(':')[1]
+    if (key === 'strat-fundamental-limit') { const p = c.pilotageProposals?.find((x) => x.id.endsWith(':limit')); out.push({ ...base, id: 'rec:strat-limit', title: 'Concentrer les efforts sur moins de priorités', recommendation: p ? p.title : 'Passer une ou plusieurs priorités fondamentales en « importantes » pour concentrer les efforts.', benefit: 'Moins de priorités simultanées : plus de chances d’en terminer vraiment quelques-unes.', action: p ? { type: 'pilotage-proposal', proposal: p } : open('/pilotage/priorites', 'Ouvrir les priorités'), priority: 72 }) }
+    else if (key === 'strat-priority-idle' || key === 'strat-priority-notime') { const p = demote(ref); out.push({ ...base, id: `rec:${ob.id}`, title: 'Réexaminer une priorité devenue secondaire', recommendation: p ? p.title : 'Confirmer que cette priorité reste fondamentale, lui consacrer un créneau, ou la repositionner.', benefit: 'Un classement fidèle à la réalité clarifie où vont votre temps et votre énergie.', action: p ? { type: 'pilotage-proposal', proposal: p } : open(key === 'strat-priority-notime' ? '/planning' : '/pilotage/priorites', key === 'strat-priority-notime' ? 'Ouvrir le planning' : 'Ouvrir les priorités'), priority: 62 }) }
+    else if (key === 'strat-priority-unlinked') out.push({ ...base, id: `rec:${ob.id}`, title: 'Rattacher un objectif concret à une priorité', recommendation: 'Associer à cette priorité un objectif LIFE existant, ou en créer un, pour qu’elle se traduise en actions.', benefit: 'Une priorité mesurable se pilote ; une priorité abstraite reste une intention.', action: open('/pilotage/priorites', 'Ouvrir les priorités'), priority: 48 })
+    else if (key === 'strat-orientation-empty') out.push({ ...base, id: `rec:${ob.id}`, title: 'Transformer une orientation en objectif concret', recommendation: 'Créer un premier objectif ou projet LIFE pour cette orientation, ou la laisser comme simple direction.', benefit: 'Une orientation reliée à un objectif devient visible dans vos progrès.', action: open('/pilotage/orientations', 'Ouvrir les orientations'), priority: 46 })
+    else if (key === 'strat-goal-orphan') out.push({ ...base, id: `rec:${ob.id}`, title: 'Revoir un objectif sans orientation active', recommendation: 'Rattacher cet objectif à une orientation active, le conserver tel quel, ou le mettre en pause.', benefit: 'Garder une trajectoire lisible sans perdre un objectif qui compte encore.', action: open('/life/objectifs', 'Ouvrir les objectifs'), priority: 40 })
+    else if (key === 'strat-project-drift' || key === 'strat-projects-unlinked') out.push({ ...base, id: `rec:${ob.id}`, title: 'Revoir un projet qui s’éloigne de sa finalité', recommendation: 'Rattacher le projet à un objectif ou une orientation, le terminer, ou le mettre en pause s’il ne sert plus la trajectoire.', benefit: 'Concentrer l’énergie sur ce qui contribue à vos priorités.', action: open('/life/projets', 'Ouvrir les projets'), priority: 42 })
+    else if (key === 'strat-goal-timeline') out.push({ ...base, id: `rec:${ob.id}`, title: 'Revoir le calendrier d’un objectif', recommendation: 'Décaler l’échéance, réduire le périmètre ou mettre l’objectif en pause : à vous de choisir, rien n’est modifié sans votre accord.', benefit: 'Un calendrier réaliste se tient mieux qu’un calendrier subi.', action: open('/life/objectifs', 'Ouvrir les objectifs'), priority: 58 })
+    else if (key === 'strat-cycle-incoherent' || key === 'strat-cycle-empty') out.push({ ...base, id: `rec:${ob.id}`, title: 'Revoir le cycle du trimestre', recommendation: key === 'strat-cycle-empty' ? 'Sélectionner les priorités, objectifs et projets de ce trimestre.' : 'Ajuster les priorités retenues pour ce trimestre, ou le clore et en ouvrir un nouveau.', benefit: 'Un cycle cohérent concentre le trimestre sur l’essentiel.', action: open('/pilotage/cycles', 'Ouvrir les cycles'), priority: 52 })
+    else if (key === 'strat-orientation-regular' || key === 'strat-progress-invisible') out.push({ ...base, id: `rec:${ob.id}`, title: 'Valoriser une orientation qui avance', recommendation: 'Rien à changer : cette constance est le signal à retenir, même si le chiffre bouge lentement.', benefit: 'Garder un rythme durable.', action: null, priority: 18 })
+  }
   return out.sort((a, b) => b.priority - a.priority || CONF_ORDER[b.confidence] - CONF_ORDER[a.confidence] || a.id.localeCompare(b.id))
 }
 

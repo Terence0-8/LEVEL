@@ -180,7 +180,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   check('Après confirmation : échéance décalée (+14 j) et tracée', lateAfter.dueDate === ahead(14) && (await idbAll('planningMoves')).some((m) => m.kind === 'project' && m.byLevel))
   await go('/')
   const alertsText = await page.locator('main').innerText()
-  check('Accueil global toujours opérationnel avec les échéances de projets', /Échéances importantes|Quêtes prioritaires/.test(alertsText))
+  check('Accueil global toujours opérationnel avec les échéances de projets', /échéances importantes|quêtes prioritaires/i.test(alertsText))
 
   // ── 8. Bilans ───────────────────────────────────────────────────────────────────────────────────
   await go('/bilans'); await page.getByRole('radio', { name: 'Semaine' }).click(); await page.waitForTimeout(600)

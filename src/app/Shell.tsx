@@ -11,6 +11,7 @@ import s from './Shell.module.css'
 
 export const NAV: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/', label: 'Accueil', icon: 'home' },
+  { to: '/pilotage', label: 'Pilotage', icon: 'compass' },
   { to: '/life', label: 'LIFE', icon: 'life' },
   { to: '/sport', label: 'SPORT', icon: 'sport' },
   { to: '/planning', label: 'Planning', icon: 'calendar' },

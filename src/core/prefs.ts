@@ -36,10 +36,14 @@ export interface PlanningPrefs {
 
 export interface SeenLevels { global: number; life: number; sport: number; rankGlobal: string; rankLife: string; rankSport: string }
 
+import { DEFAULT_PILOTAGE_PREFS, PILOTAGE_CONFIG, type PilotagePrefs } from './pilotage'
+
 export interface AppPrefs {
   planning: PlanningPrefs
   notifications: NotificationPrefs
   rpg: { celebrations: boolean; /** Titre affiché (identifiant `ach:…` ou `rw:…`) */ title: string | null; /** Effet de montée de niveau (identifiant de récompense) */ effect: string | null; /** Cadre de rang (identifiant de récompense) */ frame: string | null }
+  /** Pilotage stratégique : limite souple de priorités fondamentales, rappels de revue (facultatifs) */
+  pilotage: PilotagePrefs
   /** Derniers niveaux/rangs signalés (détecte les montées de niveau à notifier) */
   seen: SeenLevels | null
 }
@@ -52,6 +56,7 @@ export const DEFAULT_PREFS: AppPrefs = {
     reminders: [],
   },
   rpg: { celebrations: true, title: null, effect: null, frame: null },
+  pilotage: DEFAULT_PILOTAGE_PREFS,
   seen: null,
 }
 
@@ -85,6 +90,10 @@ export function mergePrefs(raw: unknown): AppPrefs {
       title: typeof r.rpg?.title === 'string' ? r.rpg.title.slice(0, 80) : null,
       effect: typeof r.rpg?.effect === 'string' ? r.rpg.effect.slice(0, 40) : null,
       frame: typeof r.rpg?.frame === 'string' ? r.rpg.frame.slice(0, 40) : null,
+    },
+    pilotage: {
+      maxFundamental: num(r.pilotage?.maxFundamental, PILOTAGE_CONFIG.maxFundamentalRange[0], PILOTAGE_CONFIG.maxFundamentalRange[1], d.pilotage.maxFundamental),
+      reminders: { monthly: typeof r.pilotage?.reminders?.monthly === 'boolean' ? r.pilotage.reminders.monthly : d.pilotage.reminders.monthly, quarterly: typeof r.pilotage?.reminders?.quarterly === 'boolean' ? r.pilotage.reminders.quarterly : d.pilotage.reminders.quarterly, annual: typeof r.pilotage?.reminders?.annual === 'boolean' ? r.pilotage.reminders.annual : d.pilotage.reminders.annual },
     },
     seen: r.seen && typeof r.seen === 'object' && Number.isFinite(r.seen.global) ? (r.seen as SeenLevels) : null,
   }

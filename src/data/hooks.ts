@@ -35,7 +35,14 @@ export function usePersistedState() {
   const achievements = useLiveQuery(() => db.achievements.orderBy('unlockedAt').toArray(), [])
   const rpgEvents = useLiveQuery(() => db.rpgEvents.orderBy('at').reverse().toArray(), [])
   const recStates = useLiveQuery(() => db.recommendationStates.toArray(), [])
-  const ready = [rpgEvents, recStates, prestiges, rewards, achievements, goals, projects, indicators, readings, commitments, moves, notifLog, prefsRow, profile, settings, doneRows, quests, categories, events, analyses, revisions, sportProfile, prefs, customEx, sportSessions, checks, exStates, decisions, measures].every((x) => x !== undefined)
+  const visions = useLiveQuery(() => db.visions.toArray(), [])
+  const orientations = useLiveQuery(() => db.orientations.orderBy('order').toArray(), [])
+  const priorities = useLiveQuery(() => db.priorities.toArray(), [])
+  const plans = useLiveQuery(() => db.annualPlans.orderBy('year').toArray(), [])
+  const cycles = useLiveQuery(() => db.cycles.toArray(), [])
+  const reviews = useLiveQuery(() => db.strategyReviews.orderBy('at').toArray(), [])
+  const stratLog = useLiveQuery(() => db.strategyLog.orderBy('at').toArray(), [])
+  const ready = [visions, orientations, priorities, plans, cycles, reviews, stratLog, rpgEvents, recStates, prestiges, rewards, achievements, goals, projects, indicators, readings, commitments, moves, notifLog, prefsRow, profile, settings, doneRows, quests, categories, events, analyses, revisions, sportProfile, prefs, customEx, sportSessions, checks, exStates, decisions, measures].every((x) => x !== undefined)
   return {
     ready,
     profile: profile ?? null,
@@ -52,6 +59,7 @@ export function usePersistedState() {
     readings: readings ?? [],
     rpgEvents: rpgEvents ?? [],
     recStates: recStates ?? [],
+    strategyRaw: { visions: visions ?? [], orientations: orientations ?? [], priorities: priorities ?? [], plans: plans ?? [], cycles: cycles ?? [], reviews: reviews ?? [], log: stratLog ?? [] },
     prestiges: prestiges ?? [],
     rewards: rewards ?? [],
     achievements: achievements ?? [],

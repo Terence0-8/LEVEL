@@ -10,6 +10,7 @@ import { deletionImpact, PROJECT_STATUS_LABEL, PROJECT_STATUSES, projectLastActi
 import { isRecurring, type Priority, type Quest } from '@/core/quest'
 import { cycleProgress } from '@/core/questState'
 import { goalService } from '@/data/goalService'
+import { ProjectPilotage } from '@/features/pilotage/LinksSection'
 import { questService } from '@/data/questService'
 import { QuestFormSheet } from './QuestForm'
 import { PRIORITY_LABEL, PRIORITY_OPTIONS, formatDue } from './labels'
@@ -128,6 +129,8 @@ function ProjectDetail({ id, onClose, onEdit }: { id: string | null; onClose: ()
         {p.description ? <p style={{ color: 'var(--c-text-dim)', overflowWrap: 'anywhere' }}>{p.description}</p> : null}
         <Field label="Statut"><Segmented<ProjectStatus> label="Statut du projet" value={p.status} options={PROJECT_STATUSES.map((v) => ({ value: v, label: PROJECT_STATUS_LABEL[v] }))} onChange={(v) => void run(() => goalService.setProjectStatus(p.id, v))} /></Field>
         {findings.map((f) => <div key={f.id} className={`${s.finding} ${f.severity === 'warn' ? s.warn : ''}`}><div><b>{f.title}</b><small>{f.detail}</small></div></div>)}
+
+        <ProjectPilotage projectId={p.id} />
 
         <section>
           <h3>Étapes</h3>

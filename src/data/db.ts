@@ -15,6 +15,7 @@ import type { RewardRow } from '@/core/prestigeRewards'
 import type { AchievementRow } from '@/core/achievements'
 import type { RpgEvent } from '@/core/rpgEvents'
 import type { RecState } from '@/core/recommendations'
+import type { AnnualPlan, Cycle, Orientation, Priority, StrategyLogEntry, StrategyReview, Vision } from '@/core/pilotage'
 
 /**
  * Base locale de Level (IndexedDB). Le schéma est versionné : toute évolution
@@ -84,6 +85,15 @@ export class LevelDB extends Dexie {
   rpgEvents!: Table<RpgEvent, string>
   /** Décisions sur les recommandations (historique minimal : les recommandations elles-mêmes sont recalculées) */
   recommendationStates!: Table<RecState, string>
+  // ── PILOTAGE V1 (v9) : couche stratégique ; références LIFE par identifiant, jamais de copie ──
+  visions!: Table<Vision, string>
+  orientations!: Table<Orientation, string>
+  priorities!: Table<Priority, string>
+  annualPlans!: Table<AnnualPlan, string>
+  cycles!: Table<Cycle, string>
+  strategyReviews!: Table<StrategyReview, string>
+  /** Mémoire stratégique : append-only, jamais modifiée ni supprimée */
+  strategyLog!: Table<StrategyLogEntry, string>
 
   constructor(name = 'level') {
     super(name)
@@ -243,6 +253,44 @@ export class LevelDB extends Dexie {
       achievements: 'id, unlockedAt',
       rpgEvents: 'id, at, category, importance',
       recommendationStates: 'id',
+    })
+    // v9 : PILOTAGE V1 — vision, orientations, priorités, plans annuels, cycles, revues, mémoire stratégique (tables ajoutées, données existantes inchangées).
+    this.version(9).stores({
+      profile: 'id',
+      settings: 'key',
+      demoQuestState: 'questId',
+      categories: 'id, order',
+      quests: 'id, archived, createdAt',
+      xpEvents: 'id, awardKey, questId, at, domain',
+      analyses: 'id, questId, createdAt',
+      revisions: 'id, questId, at',
+      sportProfile: 'id',
+      exercisePrefs: 'exerciseId',
+      customExercises: 'id',
+      sportSessions: 'id, date, status, kind',
+      recoveryChecks: 'id, day, at',
+      exerciseStates: 'exerciseId',
+      progressionLog: 'id, exerciseId, at',
+      bodyMeasures: 'id, date',
+      commitments: 'id, date',
+      planningMoves: 'id, refId, at',
+      notificationLog: 'id, key, at',
+      goals: 'id, status, categoryId',
+      projects: 'id, status, goalId',
+      indicators: 'id, categoryId',
+      indicatorReadings: 'id, indicatorId, at',
+      prestiges: 'id, domain, number',
+      rpgRewards: 'id, acquiredAt',
+      achievements: 'id, unlockedAt',
+      rpgEvents: 'id, at, category, importance',
+      recommendationStates: 'id',
+      visions: 'id, status',
+      orientations: 'id, status, order',
+      priorities: 'id, level, status',
+      annualPlans: 'id, year',
+      cycles: 'id, year, quarter',
+      strategyReviews: 'id, kind, period, at',
+      strategyLog: 'id, at, kind, refId',
     })
   }
 }

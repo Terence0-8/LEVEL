@@ -8,6 +8,7 @@ import { RpgPage } from '@/features/rpg/RpgPage'
 import { PrestigeConfirmPage } from '@/features/rpg/PrestigePanel'
 import { HistoryPage } from '@/features/history/HistoryPage'
 import { ProfilePage } from '@/features/profile/ProfilePage'
+import { PilotagePage } from '@/features/pilotage/PilotagePage'
 import { PlanningPage } from '@/features/planning/PlanningPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { BackupPage } from '@/features/backup/BackupPage'
@@ -29,6 +30,8 @@ export function App() {
             <Route path="rpg" element={<RpgPage />} />
             <Route path="rpg/prestige/:domain" element={<PrestigeConfirmPage />} />
             <Route path="rpg/:section" element={<RpgPage />} />
+            <Route path="pilotage" element={<PilotagePage />} />
+            <Route path="pilotage/:section" element={<PilotagePage />} />
             <Route path="planning" element={<PlanningPage />} />
             <Route path="bilans" element={<ReportsPage />} />
             <Route path="history" element={<HistoryPage />} />

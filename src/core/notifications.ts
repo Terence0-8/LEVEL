@@ -60,6 +60,8 @@ export interface NotifContext {
   rpgEvents?: RpgEvent[]
   /** Recommandation prioritaire (déjà filtrée par les décisions passées) */
   recommendation?: Recommendation | null
+  /** Revues stratégiques à proposer (Pilotage) : facultatives, ton neutre ; catégorie « bilans » */
+  reviewsDue?: Array<{ key: string; title: string; body: string; route: string }>
 }
 
 const hhmm = (now: Date) => now.getHours() * 60 + now.getMinutes()
@@ -134,6 +136,7 @@ export function candidates(c: NotifContext): Candidate[] {
   if (t >= at(20, 30)) out.push({ key: `review:daily:${day}`, category: 'reviews', title: 'Votre bilan du jour est prêt', body: 'Accomplissements, XP gagnée et priorités de demain.', route: '/bilans', priority: 30 })
   if (now.getDay() === 0 && t >= at(18)) out.push({ key: `review:weekly:${weekKey(now)}`, category: 'reviews', title: 'Votre bilan de la semaine est prêt', body: 'Régularité, progression et recommandations.', route: '/bilans', priority: 35 })
   if (now.getDate() === lastDayOfMonth(now) && t >= at(18)) out.push({ key: `review:monthly:${day.slice(0, 7)}`, category: 'reviews', title: 'Votre bilan du mois est prêt', body: 'Tendances, records et recommandations à moyen terme.', route: '/bilans', priority: 36 })
+  for (const r of c.reviewsDue ?? []) out.push({ key: r.key, category: 'reviews', title: r.title, body: r.body, route: r.route, priority: 28 })
   return out
 }
 

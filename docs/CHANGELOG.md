@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.0.0 — PILOTAGE V1 : vision, stratégie et trajectoire personnelle
+
+**Livré**
+- **Couche stratégique au-dessus de LIFE** : Vision → Orientations → Priorités → Objectifs → Projets → Quêtes. Pilotage ne crée AUCUN second système d'objectifs, de projets, de tâches, d'indicateurs ou de planning : il **référence par identifiant** les objectifs, projets et indicateurs LIFE (références périmées ignorées), et l'avancement est **toujours calculé** depuis LIFE (`goalProgress`/`projectProgress`), jamais stocké.
+- **Vision** (`/pilotage/vision`) : texte libre (titre, description, situation souhaitée, ambitions, aspirations, à préserver, à changer, trois horizons facultatifs), jamais un objectif mesurable. Chaque révision conserve la version précédente (avant/après dans la mémoire stratégique) ; une nouvelle vision archive l'ancienne.
+- **Orientations** : importance, horizon, situation actuelle/souhaitée, statuts (À définir, Active, En pause, En réévaluation, Accomplie, Abandonnée), tri, archivage, liens LIFE plusieurs-à-plusieurs. Détacher ou archiver ne supprime jamais un objectif, un projet, une quête ni de l'XP.
+- **Priorités** (fondamentale, importante, secondaire) : horizon, échéance, contraintes, temporaire, objectifs rattachés. **Limite souple** de priorités fondamentales actives (3 par défaut, réglable 1–8 dans Profil) : le dépassement demande une confirmation explicite (`over_limit`), jamais un blocage.
+- **Plan annuel** (quoi, pourquoi, actions concrètes, résultats attendus, contraintes) et **cycles trimestriels** : un cycle SÉLECTIONNE des éléments existants (priorités, objectifs, projets), ce n'est pas une liste de tâches. **Revue de cycle** : faits mesurés depuis LIFE (objectifs atteints, projets avancés, indicateurs, changements, priorités actives ou sans activité), réponses libres, décisions de l'utilisateur ; clôture du cycle et préparation facultative du suivant, ou du plan de l'année suivante, dans UNE transaction.
+- **Capacité** : section « Charge et capacité » qui reprend les constats du planning et de l'analyse (jamais de capacité inventée), qualifiés **certain / probable / estimation** ; la récupération sportive est une contrainte prioritaire ; aucune modification automatique du planning.
+- **Intelligence stratégique intégrée au moteur existant** (`core/strategy.ts` appelé par `insights.analyse` et `recommendations.buildRecommendations`, pas de second moteur) : 15 règles (orientation sans objectif, priorité sans objectif, sans activité depuis 28 jours, sans temps consacré, limite dépassée, objectif orphelin, projet à la dérive, calendrier irréaliste, cycle vide ou incohérent à mi-parcours, orientation régulière, progrès peu visibles, changements de cap fréquents, vision non relue). Échantillon minimal exigé, aucune cause psychologique, **un changement de priorité n'est jamais un manque de discipline**. Seules modifications applicables : rétrograder ou mettre en pause une priorité, après confirmation et revérification à l'écriture.
+- **Revues périodiques** facultatives (mensuelle désactivée par défaut, trimestrielle, annuelle, libre) ; rappels via le moteur de notifications existant (catégorie « bilans », ton neutre, plafond et tranquillité respectés).
+- **Mémoire stratégique** `strategyLog` (append-only, chronologique, filtrable) : visions, orientations, priorités, plans, cycles, revues, décisions libres ; écrite dans la même transaction que chaque changement.
+- **Interface** : espace « Pilotage » dans la navigation (7 onglets mobiles), tableau de bord (vision, carte de trajectoire, KPI, cycle du trimestre, cohérence, prochaine revue), Vision, Orientations, Priorités, Cycles, Revues, Historique ; section « Pilotage » en lecture seule dans les fiches objectif et projet LIFE ; réglages dans Profil ; certitude affichée dans l'analyse RPG.
+- **Données** : Dexie v9 (`visions`, `orientations`, `priorities`, `annualPlans`, `cycles`, `strategyReviews`, `strategyLog`), tables ajoutées à `TABLE_KEYS`, sauvegardes chiffrées et restauration complètes ; sauvegardes antérieures (≤ v8) restaurables (tables absentes créées vides, test).
+
+**Tests** : 452 tests unitaires et d'intégration (47 nouveaux : calendrier, relations, limite, rappels, faits de revue, règles stratégiques, intégration aux moteurs, service, atomicité, sauvegarde) ; `smoke-pilotage` 57/57 ; non-régression `smoke` 71/71, `smoke-sport` 55/55, `smoke-global` 62/62, `smoke-life2` 56/56, `smoke-rpg` 43/43, `smoke-intel` 54/54. Le contrôle d'accueil de `smoke-life2` est désormais insensible à la casse (échec préexistant : texte rendu en capitales).
+
+**Limites**
+- Seuils provisoires (`STRATEGY_CONFIG`, `PILOTAGE_CONFIG`) : à calibrer à l'usage.
+- Pas de graphe interactif des relations (carte de trajectoire en liste hiérarchique) ; pas d'export PDF dédié des revues stratégiques (les bilans PDF existants restent séparés des sauvegardes).
+- Le rappel de revue part du moteur de notifications : aucune remise en arrière-plan n'est promise (repli dans l'application).
+- Un objectif supprimé dans LIFE laisse un identifiant orphelin dans les orientations, ignoré à l'affichage.
+
 ## 0.9.0 — RPG V1.2 : événements, immersion et intelligence locale
 
 **Livré**
