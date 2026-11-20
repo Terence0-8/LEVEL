@@ -4,9 +4,11 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 
+// Hébergement dans un sous-dossier (GitHub Pages) : VITE_BASE=/LEVEL/ ; en local : racine
+const base = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.VITE_BASE ?? '/'
+
 export default defineConfig({
-  // Hébergement dans un sous-dossier (GitHub Pages) : VITE_BASE=/LEVEL/ ; en local : racine
-  base: process.env.VITE_BASE ?? '/',
+  base,
   resolve: { alias: { '@': new URL('./src', import.meta.url).pathname } },
   plugins: [
     react(),
