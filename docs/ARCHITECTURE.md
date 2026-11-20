@@ -203,3 +203,11 @@ Principes : aucun moteur concurrent ; le journal d'XP n'est jamais écrit ; les 
 - **Notifications** : `NotifContext.reviewsDue` (catégorie « bilans »), calculé à chaque tick avec l'heure courante.
 - **Dépendances** : aucune nouvelle dépendance.
 
+## Stabilisation (v1.0.1)
+- **Suppression LIFE → Pilotage** : `goalService` inclut les tables stratégiques dans sa transaction et appelle `detachFromStrategy` (`pilotageService`) ; `core/pilotage.ts` fournit `stripRefs` et `orphanRefs` (fonctions pures). Les identifiants orphelins éventuels (anciennes données, sauvegardes) sont ignorés par les résolveurs et nettoyables via `pruneOrphans`.
+- **Performance** : `core/ledger.openAwards` est mémoïsé par identité de tableau (`WeakMap`). Contrat : les tableaux d'événements sont **immuables** (jamais modifiés en place) ; la longueur sert de garde. Toute nouvelle analyse doit s'appuyer sur ce contrat plutôt que de reconstruire des index par appel.
+- **PWA** : `registerType: 'prompt'` ; `app/updateSignal.ts` relie le service worker à `app/UpdateBanner.tsx` ; le service worker n'active la nouvelle version que sur message `SKIP_WAITING` (bouton « Mettre à jour »).
+- **Démarrage** : `app/StorageGuard.tsx` ouvre IndexedDB avant l'application et explique l'échec au lieu d'un écran vide.
+- **Sauvegardes** : `BackupError('storage_full')` si le quota est dépassé ; la création échoue avant toute rétention (aucune sauvegarde existante supprimée).
+- **Tests** : `data/stabilization.test.ts`, `core/performance.test.ts`, `scripts/smoke-stabilisation.cjs`, `scripts/smoke-update.cjs`. Aucune dépendance ajoutée.
+

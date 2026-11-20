@@ -9,7 +9,7 @@ import { deletionImpact, formatValue, GOAL_STATUS_LABEL, GOAL_STATUSES, IMPORTAN
 import { cycleProgress } from '@/core/questState'
 import type { Priority } from '@/core/quest'
 import { goalService } from '@/data/goalService'
-import { GoalPilotage } from '@/features/pilotage/LinksSection'
+import { GoalPilotage, StrategyDeleteNote } from '@/features/pilotage/LinksSection'
 import { PRIORITY_OPTIONS, formatDue } from './labels'
 import { Box, catName, pct, useLifeMaps, useRunner } from './lifeShared'
 import s from './life.module.css'
@@ -148,6 +148,7 @@ function GoalDetail({ id, onClose, onEdit }: { id: string | null; onClose: () =>
         <p><strong>{g.title}</strong> sera supprimé.</p>
         <p>{impact.projects} projet{impact.projects > 1 ? 's' : ''} ({impact.steps} étape{impact.steps > 1 ? 's' : ''}) et {impact.openQuests + impact.doneQuests} quête{impact.openQuests + impact.doneQuests > 1 ? 's' : ''} lié{impact.openQuests + impact.doneQuests > 1 ? 's' : ''} sont <strong>conservés</strong> : ils deviennent indépendants.</p>
         <p>Les quêtes déjà réalisées ({impact.doneQuests}) et toute l’XP gagnée restent intactes.</p>
+        <StrategyDeleteNote goalId={g.id} />
       </ConfirmDialog>
     </Sheet>
   )

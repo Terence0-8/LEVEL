@@ -242,3 +242,9 @@ Règles : la sécurité SPORT prime sur toute recommandation ; une pause n'est j
 - **Revues** facultatives (mensuelle désactivée par défaut), rappels neutres via les notifications. **Mémoire stratégique** append-only.
 - **Garanties** : aucune écriture dans `xpEvents`, aucune modification silencieuse d'échéance, de planning ou d'objectif ; détacher/archiver conserve objectifs, projets, quêtes et XP.
 
+## Fiabilité et stabilisation (v1.0.1)
+- **Suppression LIFE et Pilotage** : supprimer un objectif, un projet ou un indicateur retire ses liens stratégiques (tracé) ; rien d'autre n'est supprimé (orientations, priorités, cycles, plans, revues conservés). Les orphelins existants se nettoient sur demande.
+- **Mises à jour de l'application** : proposées, jamais imposées ; les données locales ne sont jamais touchées par une mise à jour.
+- **Stockage local** : les sauvegardes locales ne protègent pas contre la perte de l'appareil ni l'effacement des données du navigateur ; une copie externe d'un fichier chiffré est nécessaire (voir `docs/STABILIZATION_REPORT.md`, §6–7). Level l'indique dans l'application et ne présente jamais une sauvegarde locale comme une protection contre la perte physique.
+- **Stockage indisponible ou saturé** : message explicite, aucune donnée existante supprimée.
+

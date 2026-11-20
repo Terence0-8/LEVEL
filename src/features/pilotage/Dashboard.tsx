@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { Badge, Card, EmptyState, Notice, SectionTitle } from '@/design/components'
 import { useAppState } from '@/app/AppState'
-import { activeFundamental, CYCLE_STATUS_LABEL, cycleId, nextReviewHint, orientationProgress, PRIORITY_LEVEL_LABEL, priorityProgress, quarterLabel, quarterOf } from '@/core/pilotage'
-import { Bar, pct } from './shared'
+import { activeFundamental, CYCLE_STATUS_LABEL, cycleId, nextReviewHint, orphanRefs, orientationProgress, PRIORITY_LEVEL_LABEL, priorityProgress, quarterLabel, quarterOf } from '@/core/pilotage'
+import { pilotageService } from '@/data/pilotageService'
+import { Bar, pct, useRun } from './shared'
 import s from './pilotage.module.css'
 
 /** Tableau de bord stratégique : tout est dérivé des données (rien de stocké), les liens sont ceux déclarés par l'utilisateur. */
@@ -16,6 +17,8 @@ export function Dashboard({ go }: { go: (slug: string) => void }) {
   const cycle = strategy.cycles.find((c) => c.id === cycleId(year, q)) ?? null
   const attention = intel.observations.filter((o) => o.id.startsWith('strat-') && o.tone === 'attention')
   const positives = intel.observations.filter((o) => o.id.startsWith('strat-') && o.tone === 'positive')
+  const orphans = useMemo(() => orphanRefs(strategy, lifeCtx.life).count, [strategy, lifeCtx.life])
+  const { error, run } = useRun()
   const empty = !vision && !strategy.orientations.length && !strategy.priorities.length && !strategy.cycles.length
 
   const linked = useMemo(() => {
@@ -50,6 +53,15 @@ export function Dashboard({ go }: { go: (slug: string) => void }) {
           <p className={s.visionMeta}>Relue le {new Date(vision.revisedAt).toLocaleDateString('fr-FR')} · <button className={s.mini} onClick={() => go('vision')}>Ouvrir la vision</button></p>
         </>) : (<><h2>Pas encore de vision</h2><p>Facultative : quelques lignes suffisent pour donner un cap à vos orientations.</p><p className={s.visionMeta}><button className={s.mini} onClick={() => go('vision')}>Écrire ma vision</button></p></>)}
       </section>
+
+      {orphans > 0 ? (
+        <Card variant="flat">
+          <SectionTitle title="Liens vers des éléments supprimés" aside={<Badge tone="neutral">{orphans}</Badge>} />
+          <p className={s.note}>{orphans} lien{orphans > 1 ? 's' : ''} de Pilotage pointe{orphans > 1 ? 'nt' : ''} vers un objectif, un projet ou un indicateur qui n’existe plus dans LIFE. Ils sont ignorés à l’affichage et n’affectent aucun calcul. Vous pouvez les retirer : rien d’autre n’est modifié et l’opération est notée dans l’historique.</p>
+          {error ? <p className={s.err} role="alert">{error}</p> : null}
+          <div className={s.actions} style={{ marginTop: 8 }}><button className={s.mini} onClick={() => void run(() => pilotageService.pruneOrphans())}>Retirer ces liens</button></div>
+        </Card>
+      ) : null}
 
       <div className={s.kpis}>
         <div className={s.kpi}><b>{orientations.length}</b><span>orientation{orientations.length > 1 ? 's' : ''} active{orientations.length > 1 ? 's' : ''}</span></div>

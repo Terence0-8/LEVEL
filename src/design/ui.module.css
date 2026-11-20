@@ -6,7 +6,7 @@
 .card.flat { box-shadow: none; background: var(--c-panel); }
 
 /* Title */
-.sectionTitle { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sectionTitle { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .sectionTitle h2, .sectionTitle h3 { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c-gold); }
 .sectionTitle .aside { font-size: 12px; color: var(--c-text-dim); }
 

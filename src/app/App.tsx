@@ -1,5 +1,6 @@
 import { HashRouter, Route, Routes } from 'react-router-dom'
 import { AppStateProvider } from './AppState'
+import { StorageGuard } from './StorageGuard'
 import { Shell } from './Shell'
 import { HomePage } from '@/features/home/HomePage'
 import { LifePage } from '@/features/life/LifePage'
@@ -17,6 +18,7 @@ import { SessionPlayer } from '@/features/sport/SessionPlayer'
 // HashRouter : fonctionne sur n'importe quel hébergement statique et hors ligne, sans règle de réécriture.
 export function App() {
   return (
+    <StorageGuard>
     <AppStateProvider>
       <HashRouter>
         <Routes>
@@ -42,5 +44,6 @@ export function App() {
         </Routes>
       </HashRouter>
     </AppStateProvider>
+    </StorageGuard>
   )
 }

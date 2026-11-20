@@ -328,3 +328,57 @@ export function nextReviewHint(now: Date, s: StrategyState, prefs: PilotagePrefs
   const base = `Bilan du ${quarterLabel(now.getFullYear(), q)} possible à partir du ${dayKey(addDays(fromDayKey(r.to), -10))}`
   return last ? `${base} · dernière revue : ${REVIEW_KIND_LABEL[last.kind].toLowerCase()} (${last.period})` : `${base} · aucune revue encore, c’est facultatif${prefs.reminders.quarterly ? '' : ' · rappel désactivé'}`
 }
+
+// ── Références vers des éléments LIFE supprimés ────────────────────────
+export interface GoneRefs { goal?: ReadonlySet<string>; project?: ReadonlySet<string>; indicator?: ReadonlySet<string> }
+export interface RefStripNote { kind: LogKind; refType: StrategyLogEntry['refType']; refId: string; title: string; removed: string[] }
+export interface RefStrip { orientations: Orientation[]; priorities: Priority[]; plans: AnnualPlan[]; cycles: Cycle[]; notes: RefStripNote[]; count: number }
+
+/**
+ * Retire des liens stratégiques les identifiants d'éléments LIFE qui n'existent plus. Fonction PURE : ne renvoie que les lignes modifiées
+ * (les autres ne sont pas touchées) et une note par ligne pour la mémoire stratégique. Rien d'autre n'est modifié ni supprimé.
+ */
+export function stripRefs(s: StrategyState, gone: GoneRefs): RefStrip {
+  const out: RefStrip = { orientations: [], priorities: [], plans: [], cycles: [], notes: [], count: 0 }
+  const keep = (ids: string[], g?: ReadonlySet<string>) => (g && g.size ? ids.filter((i) => !g.has(i)) : ids)
+  for (const o of s.orientations) {
+    const goalIds = keep(o.goalIds, gone.goal), projectIds = keep(o.projectIds, gone.project), indicatorIds = keep(o.indicatorIds, gone.indicator)
+    const removed = [...o.goalIds.filter((x) => !goalIds.includes(x)), ...o.projectIds.filter((x) => !projectIds.includes(x)), ...o.indicatorIds.filter((x) => !indicatorIds.includes(x))]
+    if (!removed.length) continue
+    out.orientations.push({ ...o, goalIds, projectIds, indicatorIds }); out.count += removed.length
+    out.notes.push({ kind: 'orientation', refType: 'orientation', refId: o.id, title: o.name, removed })
+  }
+  for (const p of s.priorities) {
+    const goalIds = keep(p.goalIds, gone.goal); const removed = p.goalIds.filter((x) => !goalIds.includes(x))
+    if (!removed.length) continue
+    out.priorities.push({ ...p, goalIds }); out.count += removed.length
+    out.notes.push({ kind: 'priority', refType: 'priority', refId: p.id, title: p.title, removed })
+  }
+  for (const p of s.plans) {
+    const goalIds = keep(p.goalIds, gone.goal), projectIds = keep(p.projectIds, gone.project)
+    const removed = [...p.goalIds.filter((x) => !goalIds.includes(x)), ...p.projectIds.filter((x) => !projectIds.includes(x))]
+    if (!removed.length) continue
+    out.plans.push({ ...p, goalIds, projectIds }); out.count += removed.length
+    out.notes.push({ kind: 'plan', refType: 'plan', refId: p.id, title: `Plan ${p.year}`, removed })
+  }
+  for (const c of s.cycles) {
+    const goalIds = keep(c.goalIds, gone.goal), projectIds = keep(c.projectIds, gone.project), indicatorIds = keep(c.indicatorIds, gone.indicator)
+    const removed = [...c.goalIds.filter((x) => !goalIds.includes(x)), ...c.projectIds.filter((x) => !projectIds.includes(x)), ...c.indicatorIds.filter((x) => !indicatorIds.includes(x))]
+    if (!removed.length) continue
+    out.cycles.push({ ...c, goalIds, projectIds, indicatorIds }); out.count += removed.length
+    out.notes.push({ kind: 'cycle', refType: 'cycle', refId: c.id, title: `T${c.quarter} ${c.year}`, removed })
+  }
+  return out
+}
+
+/** Identifiants référencés par la stratégie mais absents de LIFE (références orphelines : cas d'un objectif, projet ou indicateur supprimé). */
+export function orphanRefs(s: StrategyState, life: LifeData): GoneRefs & { count: number } {
+  const have = { goal: new Set(life.goals.map((g) => g.id)), project: new Set(life.projects.map((p) => p.id)), indicator: new Set(life.indicators.map((i) => i.id)) }
+  const gone = { goal: new Set<string>(), project: new Set<string>(), indicator: new Set<string>() }
+  const scan = (kind: keyof typeof gone, ids: string[]) => ids.forEach((i) => { if (!have[kind].has(i)) gone[kind].add(i) })
+  for (const o of s.orientations) { scan('goal', o.goalIds); scan('project', o.projectIds); scan('indicator', o.indicatorIds) }
+  for (const p of s.priorities) scan('goal', p.goalIds)
+  for (const p of s.plans) { scan('goal', p.goalIds); scan('project', p.projectIds) }
+  for (const c of s.cycles) { scan('goal', c.goalIds); scan('project', c.projectIds); scan('indicator', c.indicatorIds) }
+  return { ...gone, count: stripRefs(s, gone).count }
+}

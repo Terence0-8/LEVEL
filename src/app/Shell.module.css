@@ -52,3 +52,9 @@
 @media (min-width: 900px) { .eventToast { top: 24px; left: calc(50% + var(--side-w, 240px) / 2); } }
 :global(html[data-reduced-motion='true']) .eventToast { animation: none; }
 @media (prefers-reduced-motion: reduce) { .eventToast { animation: none; } }
+
+/* Mise à jour de l'application : bandeau discret, jamais bloquant */
+.update { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; padding: 10px 14px; border-radius: var(--r-md); border: 1px solid var(--c-line-strong); background: rgba(201,177,122,0.07); font-size: 13px; color: var(--c-text-dim); }
+.update b { display: block; color: var(--c-gold); font-weight: 600; }
+.updateActions { display: flex; gap: 8px; }
+.updateActions button { min-height: 40px; padding: 6px 14px; border-radius: 99px; border: 1px solid var(--c-line-strong); background: var(--c-card); color: var(--c-text); font-size: 13px; }

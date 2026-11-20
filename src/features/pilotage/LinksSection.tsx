@@ -39,3 +39,13 @@ export function ProjectPilotage({ projectId }: { projectId: string }) {
     </section>
   )
 }
+
+/** Avertissement à afficher dans la confirmation de suppression d'un objectif ou d'un projet LIFE : les liens stratégiques seront retirés (rien d'autre). */
+export function StrategyDeleteNote({ goalId, projectId }: { goalId?: string; projectId?: string }) {
+  const { strategy } = useAppState()
+  const n = goalId
+    ? (() => { const l = strategyLinksOfGoal(goalId, strategy); return l.orientations.length + l.priorities.length + l.cycles.length + l.plans.length })()
+    : projectId ? (() => { const l = strategyLinksOfProject(projectId, strategy); return l.orientations.length + l.cycles.length + l.plans.length })() : 0
+  if (!n) return null
+  return <p>Cet élément est relié à Pilotage ({n} lien{n > 1 ? 's' : ''} : orientations, priorités, cycles ou plan). Ces liens seront retirés ; les orientations, priorités, cycles et plans eux-mêmes sont conservés, et le retrait est noté dans l’historique stratégique.</p>
+}

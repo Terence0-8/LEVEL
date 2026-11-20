@@ -15,7 +15,7 @@ import { readTables, writeTables } from './snapshot'
 
 export type BackupErrorCode =
   | 'wrong_secret' | 'invalid_secret' | 'corrupt' | 'incompatible' | 'invalid_file' | 'not_found'
-  | 'no_protection' | 'weak_passphrase' | 'already_configured' | 'not_configured' | 'verification_failed' | 'restore_failed'
+  | 'no_protection' | 'weak_passphrase' | 'already_configured' | 'not_configured' | 'verification_failed' | 'restore_failed' | 'storage_full'
 
 export class BackupError extends Error {
   constructor(public code: BackupErrorCode, message: string) {
@@ -210,10 +210,17 @@ export function createBackupService(main: LevelDB, store: BackupDB, opts: Servic
       id, createdAt, reason, schemaVersion: DB_SCHEMA_VERSION, formatVersion: BACKUP_FORMAT_VERSION, appVersion: APP_VERSION,
       size: Math.floor((sealed.ciphertext.length * 3) / 4), contentHash, keyWraps: bundle.protection?.keyWraps ?? null, verification: null,
     }
-    await store.transaction('rw', [store.backups, store.blobs], async () => {
-      await store.backups.add(meta)
-      await store.blobs.add({ id, iv: sealed.iv, ciphertext: sealed.ciphertext })
-    })
+    try {
+      await store.transaction('rw', [store.backups, store.blobs], async () => {
+        await store.backups.add(meta)
+        await store.blobs.add({ id, iv: sealed.iv, ciphertext: sealed.ciphertext })
+      })
+    } catch (e) {
+      // Stockage du navigateur plein ou indisponible : la transaction est annulée, les sauvegardes existantes ne sont JAMAIS touchées (la rétention n'a pas lieu).
+      const name = (e as { name?: string })?.name
+      if (name === 'QuotaExceededError' || (e as { inner?: { name?: string } })?.inner?.name === 'QuotaExceededError') throw new BackupError('storage_full', 'Le stockage du navigateur est plein : aucune nouvelle sauvegarde n’a été créée et vos sauvegardes existantes sont intactes. Exportez un fichier chiffré vers un autre support, puis libérez de l’espace.')
+      throw e
+    }
     await verifyStoredUnsafe(id, null) // relecture + déchiffrement réels
     await applyRetentionUnsafe()
     return (await store.backups.get(id)) ?? null

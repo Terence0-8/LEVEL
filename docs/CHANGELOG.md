@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.0.1 — Stabilisation : audit global, fiabilité et validation
+
+Détail complet, gravités et limites : `docs/STABILIZATION_REPORT.md`.
+
+**Corrigé**
+- **P1 — Pilotage : références orphelines.** Supprimer un objectif, un projet ou un indicateur LIFE retire désormais ses liens stratégiques dans la même transaction (tracé dans `strategyLog`, action `refs-detached`) ; orientations, priorités, cycles et plans sont conservés. Détection (`orphanRefs`) et nettoyage explicite (`pilotageService.pruneOrphans`) des orphelins existants, carte d'information sur le tableau de bord, avertissement dans les confirmations de suppression.
+- **P1 — Performance.** `openAwards` est mémoïsé par tableau de gains : `insights.analyse` passe de 4,7 s à ~0,2 s sur trois ans de données (complexité quadratique supprimée). Règles et valeurs inchangées.
+- **P1 — Mise à jour de l'application.** Service worker en mode « prompt » : la mise à jour est proposée (bandeau), jamais imposée pendant une saisie ; données conservées.
+- **P2** — Quota de stockage saturé pendant une sauvegarde : message explicite (`storage_full`), aucune sauvegarde existante supprimée. Stockage local indisponible au démarrage : message explicite (`StorageGuard`). Bilans : débordement à 320 px. Contrôle d'accueil de `smoke-life2` insensible à la casse.
+
+**Ajouté (tests et outils)**
+- `src/data/stabilization.test.ts` : orphelins, parcours LIFE→RPG, SPORT→RPG avec correction rétroactive, LIFE→PILOTAGE, concurrence et interruption, sauvegarde globale des 35 tables (appareil neuf, base existante, écriture interrompue, quota), migration Dexie depuis chaque version v1–v8.
+- `src/core/performance.test.ts` : trois ans de données, seuils larges contre les régressions de complexité.
+- `scripts/smoke-stabilisation.cjs` (routes × 3 largeurs, routes invalides, clavier, navigation à sept onglets, gros historique, PWA hors ligne, PDF, stockage indisponible) et `scripts/smoke-update.cjs` (mise à jour du service worker avec saisie et données).
+- Version 1.0.1 (`APP_VERSION` des sauvegardes) ; schéma Dexie inchangé (v9), format de sauvegarde inchangé.
+
+**Limites** : voir `docs/STABILIZATION_REPORT.md` (stockage local ≠ protection contre la perte de l'appareil ; pas d'ESLint ; installation sur appareil réel non vérifiée).
+
 ## 1.0.0 — PILOTAGE V1 : vision, stratégie et trajectoire personnelle
 
 **Livré**

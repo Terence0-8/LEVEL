@@ -10,7 +10,7 @@ import { deletionImpact, PROJECT_STATUS_LABEL, PROJECT_STATUSES, projectLastActi
 import { isRecurring, type Priority, type Quest } from '@/core/quest'
 import { cycleProgress } from '@/core/questState'
 import { goalService } from '@/data/goalService'
-import { ProjectPilotage } from '@/features/pilotage/LinksSection'
+import { ProjectPilotage, StrategyDeleteNote } from '@/features/pilotage/LinksSection'
 import { questService } from '@/data/questService'
 import { QuestFormSheet } from './QuestForm'
 import { PRIORITY_LABEL, PRIORITY_OPTIONS, formatDue } from './labels'
@@ -197,6 +197,7 @@ function ProjectDetail({ id, onClose, onEdit }: { id: string | null; onClose: ()
       <ConfirmDialog open={confirmDelete} title="Supprimer ce projet ?" confirmLabel="Supprimer le projet" danger onCancel={() => setConfirmDelete(false)} onConfirm={() => { setConfirmDelete(false); void run(() => goalService.deleteProject(p.id)).then(onClose) }}>
         <p><strong>{p.title}</strong> et ses {impact.steps} étape{impact.steps > 1 ? 's' : ''} seront supprimés.</p>
         <p>Les {impact.openQuests + impact.doneQuests} quête{impact.openQuests + impact.doneQuests > 1 ? 's' : ''} rattachée{impact.openQuests + impact.doneQuests > 1 ? 's' : ''} sont <strong>conservée{impact.openQuests + impact.doneQuests > 1 ? 's' : ''}</strong> et deviennent indépendantes. Les quêtes déjà réalisées ({impact.doneQuests}) et l’XP gagnée restent intactes.</p>
+        <StrategyDeleteNote projectId={p.id} />
       </ConfirmDialog>
       <StepEditSheet project={p} step={editStep} onClose={() => setEditStep(null)} />
       <QuestFormSheet open={newQuest !== null} onClose={() => setNewQuest(null)} preset={{ projectId: p.id, stepId: newQuest?.stepId ?? null }} />

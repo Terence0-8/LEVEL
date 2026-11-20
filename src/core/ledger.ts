@@ -67,12 +67,18 @@ export function normalizeEvent(e: Partial<XpEvent> & Pick<XpEvent, 'id' | 'at'>)
 }
 
 /** Gains non annulés, par clé. */
-export function openAwards(events: XpEvent[]): Map<string, XpEvent> {
+export function openAwards(events: XpEvent[]): ReadonlyMap<string, XpEvent> {
+  // Calculé une seule fois par tableau de gains : les analyses (bilans, séries, manques) l'appellent des milliers de fois (quête × jour).
+  // Les tableaux sont traités comme immuables (jamais modifiés en place) ; la longueur sert de garde-fou si l'un d'eux est complété.
+  const hit = openCache.get(events)
+  if (hit && hit.length === events.length) return hit.map
   const reversed = new Set(events.filter((e) => e.kind === 'reversal' && e.correctsEventId).map((e) => e.correctsEventId!))
   const out = new Map<string, XpEvent>()
   for (const e of events) if (e.kind === 'award' && !reversed.has(e.id)) out.set(e.awardKey, e)
+  openCache.set(events, { length: events.length, map: out })
   return out
 }
+const openCache = new WeakMap<XpEvent[], { length: number; map: Map<string, XpEvent> }>()
 
 export const isAwardOpen = (events: XpEvent[], key: string) => openAwards(events).has(key)
 

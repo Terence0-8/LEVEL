@@ -7,6 +7,7 @@ import { REWARD_BY_ID } from '@/core/prestigeRewards'
 import { narrateEvent } from '@/core/narration'
 import type { RpgEvent } from '@/core/rpgEvents'
 import { BackupBanner } from '@/features/backup/BackupBanner'
+import { UpdateBanner } from './UpdateBanner'
 import s from './Shell.module.css'
 
 export const NAV: Array<{ to: string; label: string; icon: IconName }> = [
@@ -107,6 +108,7 @@ export function Shell() {
           <NavLink to="/profile" className={s.avatarBtn} aria-label="Profil et réglages"><Icon name="user" size={20} /></NavLink>
         </header>
         <main className={s.main}>
+          <UpdateBanner />
           <BackupBanner />
           <div key={loc.pathname} className={s.page}><Outlet /></div>
         </main>

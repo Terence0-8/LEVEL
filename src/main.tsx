@@ -7,7 +7,10 @@ import '@/design/global.css'
 import { registerSW } from 'virtual:pwa-register'
 import { App } from '@/app/App'
 
-registerSW({ immediate: true })
+import { updateSignal } from '@/app/updateSignal'
+
+// Mode « prompt » : une nouvelle version attend que l'utilisateur la valide (voir UpdateBanner)
+const updateSW = registerSW({ immediate: true, onNeedRefresh: () => updateSignal.markReady(() => void updateSW(true)) })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

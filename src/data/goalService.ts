@@ -4,6 +4,8 @@ import type { Priority } from '@/core/quest'
 import { isRecurring } from '@/core/quest'
 import { db, type LevelDB } from './db'
 import type { ServiceDeps } from './questService'
+import { detachFromStrategy } from './pilotageService'
+import type { GoneRefs } from '@/core/pilotage'
 
 /**
  * Commandes objectifs / projets / étapes / indicateurs. RÈGLE D'OR : ce service n'écrit JAMAIS dans `xpEvents`.
@@ -32,7 +34,9 @@ export interface QuestLink { goalId?: string | null; projectId?: string | null; 
 export function createGoalService(database: LevelDB = db, deps: ServiceDeps = defaultDeps) {
   const { now, id } = deps
   const stamp = () => now().toISOString()
-  const tx = <T>(fn: () => Promise<T>) => database.transaction('rw', [database.goals, database.projects, database.indicators, database.indicatorReadings, database.quests, database.categories, database.planningMoves], fn)
+  /** Supprimer un élément LIFE retire aussi les liens de Pilotage qui le référencent (même transaction, tracé dans la mémoire stratégique). */
+  const detachStrategy = (gone: GoneRefs) => detachFromStrategy(database, gone, { stamp, id }, 'Élément LIFE supprimé : lien stratégique retiré')
+  const tx = <T>(fn: () => Promise<T>) => database.transaction('rw', [database.goals, database.projects, database.indicators, database.indicatorReadings, database.quests, database.categories, database.planningMoves, database.orientations, database.priorities, database.annualPlans, database.cycles, database.strategyLog], fn)
 
   const title = (t: string, max = 80) => { const v = t.trim(); if (!v || v.length > max) throw bad(`Donnez un titre de 1 à ${max} caractères.`); return v }
   const date = (d: string | null | undefined, label: string) => { if (d && !isDayKey(d)) throw bad(`${label} invalide.`); return d || null }
@@ -118,6 +122,7 @@ export function createGoalService(database: LevelDB = db, deps: ServiceDeps = de
       await detachQuests((q) => q.goalId === gid, { goalId: null })
       for (const o of await database.goals.toArray()) if (o.conflictsWith.includes(gid)) await database.goals.put({ ...o, conflictsWith: o.conflictsWith.filter((x) => x !== gid) })
       await database.goals.delete(gid)
+      await detachStrategy({ goal: new Set([gid]) })
     }),
 
     // ── Projets ──
@@ -129,6 +134,7 @@ export function createGoalService(database: LevelDB = db, deps: ServiceDeps = de
       await projectOf(pid)
       await detachQuests((q) => q.projectId === pid, { projectId: null, stepId: null })
       await database.projects.delete(pid)
+      await detachStrategy({ project: new Set([pid]) })
     }),
 
     // ── Étapes et sous-tâches ──
@@ -191,6 +197,7 @@ export function createGoalService(database: LevelDB = db, deps: ServiceDeps = de
       await database.indicatorReadings.where('indicatorId').equals(iid).delete()
       for (const g of await database.goals.toArray()) if (g.indicatorIds.includes(iid)) await database.goals.put({ ...g, indicatorIds: g.indicatorIds.filter((x) => x !== iid) })
       await database.indicators.delete(iid)
+      await detachStrategy({ indicator: new Set([iid]) })
     }),
     addReading: (iid: string, input: { value: number; at?: string; note?: string }) => tx(async () => {
       if (!(await database.indicators.get(iid))) throw new GoalError('not_found', 'Indicateur introuvable.')

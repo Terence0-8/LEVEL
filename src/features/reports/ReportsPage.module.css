@@ -1,8 +1,8 @@
-.wrap { display: grid; gap: 16px; }
+.wrap { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
 .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
-.nav { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; }
-.nav .label { flex: 1; text-align: center; font-family: var(--font-title); letter-spacing: 0.05em; text-transform: capitalize; }
-.doc { display: grid; gap: 14px; }
+.nav { display: flex; align-items: center; gap: 8px; flex: 1 1 100%; min-width: 0; }
+.nav .label { flex: 1; min-width: 0; overflow-wrap: anywhere; text-align: center; font-family: var(--font-title); letter-spacing: 0.05em; text-transform: capitalize; }
+.doc { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
 .doc h2 { font-size: 16px; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .stat { padding: 10px 12px; border-radius: var(--r-md); background: var(--c-panel); border: 1px solid var(--c-line); }

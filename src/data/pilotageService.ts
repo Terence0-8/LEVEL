@@ -2,7 +2,7 @@ import { dayKey, isDayKey } from '@/core/dates'
 import { analyseLife } from '@/core/goals'
 import { normalizeEvent } from '@/core/ledger'
 import {
-  activeFundamental, cycleId, IMPORTANCE_LABEL, monthRange, nextQuarter, ORIENTATION_STATUS_LABEL, periodFacts, planId, PRIORITY_LEVEL_LABEL, PRIORITY_STATUS_LABEL, quarterOf, quarterRange, REVIEW_KIND_LABEL, yearRange,
+  activeFundamental, cycleId, orphanRefs, stripRefs, type GoneRefs, IMPORTANCE_LABEL, monthRange, nextQuarter, ORIENTATION_STATUS_LABEL, periodFacts, planId, PRIORITY_LEVEL_LABEL, PRIORITY_STATUS_LABEL, quarterOf, quarterRange, REVIEW_KIND_LABEL, yearRange,
   type AnnualPlan, type Cycle, type Horizon, type Orientation, type OrientationStatus, type PeriodFacts, type Priority, type PriorityLevel, type PriorityStatus, type Quarter, type ReviewKind, type StrategyLogEntry, type StrategyReview, type StrategyState, type Vision,
 } from '@/core/pilotage'
 import type { PilotageProposal } from '@/core/strategy'
@@ -31,6 +31,21 @@ export interface PriorityInput { title: string; description?: string; orientatio
 export interface PlanInput { aims?: string; why?: string; actions?: string; orientationIds?: string[]; priorityIds?: string[]; expectedResults?: string[]; goalIds?: string[]; projectIds?: string[]; constraints?: string }
 export interface CycleInput { orientationIds?: string[]; priorityIds?: string[]; goalIds?: string[]; projectIds?: string[]; expectedResults?: string[]; indicatorIds?: string[] }
 export interface ReviewInput { kind: ReviewKind; period?: string; answers?: Record<string, string>; decisions?: string }
+
+/**
+ * Retire des liens stratégiques les éléments LIFE qui n'existent plus, et le consigne dans la mémoire stratégique.
+ * À appeler DANS une transaction qui couvre les tables stratégiques (suppression LIFE : même transaction, tout ou rien).
+ * N'écrit jamais dans LIFE ni dans le journal d'XP.
+ */
+export async function detachFromStrategy(database: LevelDB, gone: GoneRefs, deps: { stamp: () => string; id: () => string }, note: string): Promise<number> {
+  const state: StrategyState = { visions: [], orientations: await database.orientations.toArray(), priorities: await database.priorities.toArray(), plans: await database.annualPlans.toArray(), cycles: await database.cycles.toArray(), reviews: [], log: [] }
+  const strip = stripRefs(state, gone)
+  if (!strip.count) return 0
+  await database.orientations.bulkPut(strip.orientations); await database.priorities.bulkPut(strip.priorities)
+  await database.annualPlans.bulkPut(strip.plans); await database.cycles.bulkPut(strip.cycles)
+  for (const n of strip.notes) await database.strategyLog.add({ id: deps.id(), at: deps.stamp(), kind: n.kind, action: 'refs-detached', refType: n.refType, refId: n.refId, title: n.title, summary: `« ${n.title} » : ${n.removed.length} lien${n.removed.length > 1 ? 's' : ''} vers LIFE retiré${n.removed.length > 1 ? 's' : ''}`, before: { removed: n.removed }, note })
+  return strip.count
+}
 
 export function createPilotageService(database: LevelDB = db, deps: ServiceDeps = defaultDeps) {
   const { now, id } = deps
@@ -309,6 +324,16 @@ export function createPilotageService(database: LevelDB = db, deps: ServiceDeps 
       await database.priorities.put({ ...cur, status: 'paused', statusAt: stamp(), updatedAt: stamp() })
       await log({ kind: 'priority', action: 'priority-status', refType: 'priority', refId: cur.id, title: cur.title, summary: `« ${cur.title} » : Active → En pause`, before: { status: 'active' }, after: { status: 'paused' }, note: 'Sur proposition de Level, confirmée par l’utilisateur' })
       return { applied: `« ${cur.title} » est mise en pause.` }
+    }),
+
+    /** Nettoie les références vers des éléments LIFE supprimés (cas antérieur à la détection, ou sauvegarde restaurée). Explicite, tracé, atomique. */
+    pruneOrphans: () => tx(async () => {
+      const [goals, projects, indicators] = await Promise.all([database.goals.toArray(), database.projects.toArray(), database.indicators.toArray()])
+      const state: StrategyState = { visions: [], orientations: await database.orientations.toArray(), priorities: await database.priorities.toArray(), plans: await database.annualPlans.toArray(), cycles: await database.cycles.toArray(), reviews: [], log: [] }
+      const o = orphanRefs(state, { goals, projects, indicators, readings: [] })
+      if (!o.count) return { removed: 0 }
+      const removed = await detachFromStrategy(database, o, { stamp, id }, 'Éléments LIFE supprimés : liens nettoyés à votre demande')
+      return { removed }
     }),
 
     /** Note de décision libre (mémoire stratégique). */
