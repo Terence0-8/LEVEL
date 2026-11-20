@@ -2,6 +2,7 @@ import { addDays, dayKey, daysBetweenKeys } from './dates'
 import type { XpEvent } from './ledger'
 import { simplifiedValues } from './missed'
 import type { PlanningPrefs } from './prefs'
+import type { LifeData } from './goals'
 import type { Quest } from './quest'
 import { cycleProgress } from './questState'
 import type { RecoveryState } from './sport/recovery'
@@ -28,7 +29,7 @@ export interface Commitment {
 
 export interface PlanMove {
   id: string
-  kind: 'quest'
+  kind: 'quest' | 'project'
   refId: string
   title: string
   from: string | null
@@ -38,7 +39,7 @@ export interface PlanMove {
   byLevel: boolean
 }
 
-export type ItemKind = 'quest' | 'sport' | 'commitment'
+export type ItemKind = 'quest' | 'sport' | 'commitment' | 'milestone'
 
 export interface PlanItem {
   id: string
@@ -72,6 +73,8 @@ export interface PlanContext {
   sportDays: number[]
   recovery: RecoveryState
   now: Date
+  /** Objectifs et projets (facultatif) : leurs échéances apparaissent au planning, sans durée ni effet sur la capacité */
+  life?: LifeData
 }
 
 export const weekdayIndex = (d: Date) => (d.getDay() + 6) % 7
@@ -122,6 +125,23 @@ export function buildPlan(ctx: PlanContext, from: string, to: string): Plan {
   for (const c of ctx.commitments) {
     if (c.date < from || c.date > to) continue
     items.push({ id: `c:${c.id}`, kind: 'commitment', refId: c.id, title: c.title, date: c.date, start: c.start, minutes: c.minutes, important: c.important, fixed: true, domain: 'OTHER' })
+  }
+  // Échéances LIFE (étapes de projets, projets, objectifs) : repères sans durée, jamais déplacés par Level
+  if (ctx.life) {
+    const mark = (id: string, refId: string, title: string, date: string | null, important: boolean) => {
+      if (!date) return
+      const overdue = date < today
+      const d = overdue ? today : date
+      if (d < from || d > to) return
+      items.push({ id, kind: 'milestone', refId, title, date: d, start: null, minutes: 0, important, fixed: true, domain: 'LIFE', overdue, dueDate: date })
+    }
+    for (const p of ctx.life.projects) {
+      if (p.status !== 'prepare' && p.status !== 'active') continue
+      const high = p.priority === 'high'
+      mark(`mp:${p.id}`, p.id, `Échéance du projet : ${p.title}`, p.dueDate, high)
+      for (const s of p.steps) if (!s.done) mark(`ms:${s.id}`, p.id, `Étape : ${s.title}`, s.dueDate, high)
+    }
+    for (const g of ctx.life.goals) if (g.status === 'active' || g.status === 'todo') mark(`mg:${g.id}`, g.id, `Échéance de l'objectif : ${g.title}`, g.dueDate, g.importance === 3 || g.priority === 'high')
   }
   return { items: items.sort((a, b) => a.date.localeCompare(b.date) || (a.start ?? '99').localeCompare(b.start ?? '99')), backlog }
 }

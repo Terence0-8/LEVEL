@@ -37,7 +37,7 @@ async function ctx(): Promise<PlanContext> {
 
 describe('base v5', () => {
   it('expose les trois nouvelles tables et la version 5', () => {
-    expect(main.verno).toBe(5)
+    expect(main.verno).toBeGreaterThanOrEqual(5)
     for (const t of ['commitments', 'planningMoves', 'notificationLog']) expect(main.tables.map((x) => x.name)).toContain(t)
   })
 })

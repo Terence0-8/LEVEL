@@ -7,6 +7,8 @@ import { computeQuestReward } from '@/core/rewards'
 import { openAwards } from '@/core/ledger'
 import { findSimilarQuest, type Difficulty, type Priority, type Quest, type QuestType } from '@/core/quest'
 import { QuestError, questService, type QuestInput } from '@/data/questService'
+import { goalService, type QuestLink } from '@/data/goalService'
+import { isOpenGoal, isOpenProject } from '@/core/goals'
 import { DIFFICULTY_OPTIONS, EFFORT_OPTIONS, PRIORITY_OPTIONS, TYPE_HINT, TYPE_OPTIONS } from './labels'
 import s from './life.module.css'
 
@@ -18,16 +20,20 @@ const ERRORS: Record<string, string> = {
 }
 
 /** Création et modification d'une quête (feuille modale). Remonte à zéro à chaque ouverture. */
-export function QuestFormSheet({ open, quest, onClose }: { open: boolean; quest?: Quest; onClose: () => void }) {
+export function QuestFormSheet({ open, quest, onClose, preset }: { open: boolean; quest?: Quest; onClose: () => void; preset?: QuestLink }) {
   return (
     <Sheet open={open} onClose={onClose} title={quest ? 'Modifier la quête' : 'Nouvelle quête'}>
-      {open ? <QuestForm quest={quest} onDone={onClose} /> : null}
+      {open ? <QuestForm quest={quest} preset={preset} onDone={onClose} /> : null}
     </Sheet>
   )
 }
 
-function QuestForm({ quest, onDone }: { quest?: Quest; onDone: () => void }) {
-  const { categories, quests, events } = useAppState()
+function QuestForm({ quest, preset, onDone }: { quest?: Quest; preset?: QuestLink; onDone: () => void }) {
+  const { categories, quests, events, goals, projects } = useAppState()
+  const initial: QuestLink = { goalId: quest?.goalId ?? preset?.goalId ?? null, projectId: quest?.projectId ?? preset?.projectId ?? null, stepId: quest?.stepId ?? preset?.stepId ?? null }
+  const [projectId, setProjectId] = useState(initial.projectId ?? '')
+  const [stepId, setStepId] = useState(initial.stepId ?? '')
+  const [goalId, setGoalId] = useState(initial.goalId ?? '')
   const active = categories.filter((c) => !c.archived || c.id === quest?.categoryId)
   const [type, setType] = useState<QuestType>(quest?.type ?? 'personal')
   const [title, setTitle] = useState(quest?.title ?? '')
@@ -54,11 +60,12 @@ function QuestForm({ quest, onDone }: { quest?: Quest; onDone: () => void }) {
     setError(null)
     const input: QuestInput = { type, title, description, categoryId, priority, difficulty, effortMinutes: effortNum, dueDate: dueDate || null, steps }
     try {
-      if (quest) await questService.updateQuest(quest.id, input)
-      else await questService.createQuest(input)
+      const saved = quest ? await questService.updateQuest(quest.id, input) : await questService.createQuest(input)
+      const link: QuestLink = type === 'daily' || type === 'weekly' ? { goalId: goalId || null } : { projectId: projectId || null, stepId: projectId ? stepId || null : null, goalId: projectId ? null : goalId || null }
+      if (link.goalId || link.projectId || initial.goalId || initial.projectId) await goalService.linkQuest(saved.id, link)
       onDone()
     } catch (err) {
-      setError(err instanceof QuestError ? (ERRORS[err.code] ?? 'Enregistrement impossible.') : 'Enregistrement impossible.')
+      setError(err instanceof QuestError ? (ERRORS[err.code] ?? 'Enregistrement impossible.') : err instanceof Error && err.message ? err.message : 'Enregistrement impossible.')
       setBusy(false)
     }
   }
@@ -102,6 +109,29 @@ function QuestForm({ quest, onDone }: { quest?: Quest; onDone: () => void }) {
         </div>
         {hasEdits && quest ? <p style={{ fontSize: 12, color: 'var(--c-text-faint)' }}>Retirer une étape déjà validée annule l'XP qu'elle avait rapportée.</p> : null}
       </Field>
+      {goals.some(isOpenGoal) || projects.some(isOpenProject) || projectId || goalId ? (
+        <Field label="Rattacher à (facultatif)" hint="Une quête rattachée reste une vraie quête : elle rapporte son XP quand vous la validez, et fait avancer le projet ou l'objectif.">
+          <div className={s.stepsEdit}>
+            {type !== 'daily' && type !== 'weekly' ? (
+              <select className={inputClass} aria-label="Projet" value={projectId} onChange={(e) => { setProjectId(e.target.value); setStepId('') }}>
+                <option value="">Aucun projet</option>
+                {projects.filter((p) => isOpenProject(p) || p.status === 'paused' || p.id === projectId).map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+              </select>
+            ) : null}
+            {projectId ? (
+              <select className={inputClass} aria-label="Étape du projet" value={stepId} onChange={(e) => setStepId(e.target.value)}>
+                <option value="">Sans étape précise</option>
+                {(projects.find((p) => p.id === projectId)?.steps ?? []).filter((x) => !x.done || x.id === stepId).map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+              </select>
+            ) : (
+              <select className={inputClass} aria-label="Objectif" value={goalId} onChange={(e) => setGoalId(e.target.value)}>
+                <option value="">Aucun objectif direct</option>
+                {goals.filter((g) => isOpenGoal(g) || g.status === 'paused' || g.id === goalId).map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
+              </select>
+            )}
+          </div>
+        </Field>
+      ) : null}
       <div className={s.reward} aria-live="polite">
         <span>Récompense</span><b className="num">+{reward} XP</b>
         <small>Calculée selon la difficulté et l'effort (barème provisoire).</small>

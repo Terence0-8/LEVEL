@@ -38,6 +38,10 @@ export interface Quest {
   archived: boolean
   /** Jour prévu au planning central (« YYYY-MM-DD »), distinct de l'échéance ; null/absent = non placée */
   plannedFor?: string | null
+  /** Rattachements (facultatifs) : une quête reste une vraie quête LIFE, validée par le moteur XP existant */
+  goalId?: string | null
+  projectId?: string | null
+  stepId?: string | null
   createdAt: number
   updatedAt: number
 }

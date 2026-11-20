@@ -190,3 +190,16 @@ Toutes les variantes de pompes sont exclues des programmes classiques ; elles re
 | Prestige LIFE/SPORT | ❌ non développé |
 | Objectifs de long terme (module dédié) | ❌ proxy seulement |
 Règles : les pourcentages d'exécution mesurent la planification, jamais la valeur de la personne ; aucune journée n'est remplie artificiellement ; aucune échéance importante n'est modifiée sans action explicite.
+
+## LIFE V1.1 : objectifs, projets, indicateurs (v0.7)
+| Fonction | État |
+|---|---|
+| Objectifs (statuts, critères, étapes intermédiaires, importance, tensions) | ✅ |
+| Projets, étapes réorganisables, sous-tâches, quêtes rattachées, historique | ✅ |
+| Hiérarchie Objectif → Projets → Étapes → Quêtes (souple) | ✅ |
+| Indicateurs avec historique, cible, fréquence, graphique | ✅ |
+| Intégration planning, accueil, bilans, PDF | ✅ |
+| Sauvegardes chiffrées et hors ligne | ✅ |
+| Récompenses RPG spécifiques objectifs/projets | ❌ non définies (aucune XP automatique) |
+| Habitudes avancées, comptabilité détaillée | ❌ hors périmètre |
+Règles : seules les quêtes rapportent de l'XP ; valider étape, projet ou objectif n'en rapporte jamais ; une étape n'est terminée que par validation explicite ; Level propose, l'utilisateur confirme toute modification d'échéance.

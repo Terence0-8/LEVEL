@@ -8,6 +8,7 @@ import type { Settings } from '@/data/repositories'
 import { computeProgression, type ProgressSummary } from '@/core/progression'
 import { arrangeGlobalHome, type WidgetPlacement } from '@/core/homeLayout'
 import { buildDashboard, type Dashboard } from '@/core/dashboard'
+import { analyseLife, lifeProposals, type Finding, type Goal, type Indicator, type LifeProposal, type Project, type Reading } from '@/core/goals'
 import type { AppPrefs } from '@/core/prefs'
 import type { Commitment, PlanContext, PlanMove } from '@/core/planning'
 import type { NotificationLogEntry } from '@/core/notifications'
@@ -66,6 +67,14 @@ interface AppState {
   plan: PlanContext
   /** Tableau de bord global (null en mode démonstration) */
   dashboard: Dashboard | null
+  /** Objectifs, projets, indicateurs et mesures (LIFE V1.1) */
+  goals: Goal[]
+  projects: Project[]
+  indicators: Indicator[]
+  readings: Reading[]
+  /** Constats et adaptations proposées (jamais appliquées sans confirmation) */
+  lifeFindings: Finding[]
+  lifeProposals: LifeProposal[]
   now: Date
   toggleDemoQuest: (id: string) => void
 }
@@ -83,7 +92,7 @@ function useNow() {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs } = usePersistedState()
+  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs, goals, projects, indicators, readings } = usePersistedState()
   const now = useNow()
 
   const demo = useMemo(() => (settings.showDemoData ? buildDemoView(doneQuests) : null), [settings.showDemoData, doneQuests])
@@ -100,9 +109,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const plan = useMemo<PlanContext>(() => ({
     quests, events, commitments, sessions: sport.sessions, moves, prefs: prefs.planning, sportDays: sport.profile.availability.days, recovery: sport.recovery, now,
-  }), [quests, events, commitments, sport, moves, prefs.planning, now])
+    life: { goals, projects, indicators, readings },
+  }), [quests, events, commitments, sport, moves, prefs.planning, now, goals, projects, indicators, readings])
 
-  const dashboard = useMemo<Dashboard | null>(() => (demo ? null : buildDashboard({ plan, checks: sport.checks, missedCount: missed.length, sportTarget: sport.profile.availability.strengthPerWeek })), [demo, plan, sport.checks, sport.profile.availability.strengthPerWeek, missed.length])
+  const analysis = useMemo(() => {
+    const input = { goals, projects, indicators, readings, quests, events, now, prefs: prefs.planning }
+    const findings = analyseLife(input)
+    return { findings, proposals: lifeProposals(findings, input) }
+  }, [goals, projects, indicators, readings, quests, events, now, prefs.planning])
+
+  const dashboard = useMemo<Dashboard | null>(() => (demo ? null : buildDashboard({ plan, checks: sport.checks, missedCount: missed.length, sportTarget: sport.profile.availability.strengthPerWeek, findings: analysis.findings })), [demo, plan, sport.checks, sport.profile.availability.strengthPerWeek, missed.length, analysis.findings])
 
   const progress = useMemo<Progress>(() => {
     if (demo) return { ...demo, isDemo: true }
@@ -128,10 +144,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppState>(
     () => ({
-      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, now,
+      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, lifeFindings: analysis.findings, lifeProposals: analysis.proposals, now,
       toggleDemoQuest: (id) => void repos.demo.toggleQuest(id),
     }),
-    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, now],
+    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, analysis, now],
   )
 
   if (!ready) return <div style={{ minHeight: '100vh' }} aria-busy="true" />

@@ -9,6 +9,7 @@ import type { BodyMeasure, ExerciseState, ProgressionDecision, RecoveryCheck, Sp
 import type { Exercise } from '@/core/sport/types'
 import type { Commitment, PlanMove } from '@/core/planning'
 import type { NotificationLogEntry } from '@/core/notifications'
+import type { Goal, Indicator, Project, Reading } from '@/core/goals'
 
 /**
  * Base locale de Level (IndexedDB). Le schéma est versionné : toute évolution
@@ -60,6 +61,12 @@ export class LevelDB extends Dexie {
   planningMoves!: Table<PlanMove, string>
   /** Historique des notifications émises (déduplication, plafond, boîte de réception) */
   notificationLog!: Table<NotificationLogEntry, string>
+  // ── Objectifs, projets, indicateurs (v6) ──
+  goals!: Table<Goal, string>
+  projects!: Table<Project, string>
+  indicators!: Table<Indicator, string>
+  /** Historique des mesures : conservé tel quel (jamais d'XP) */
+  indicatorReadings!: Table<Reading, string>
 
   constructor(name = 'level') {
     super(name)
@@ -128,6 +135,33 @@ export class LevelDB extends Dexie {
       commitments: 'id, date',
       planningMoves: 'id, refId, at',
       notificationLog: 'id, key, at',
+    })
+    // v6 : LIFE V1.1 — objectifs, projets (étapes et sous-tâches intégrées), indicateurs et mesures. Les quêtes gagnent des champs
+    // facultatifs (goalId, projectId, stepId) sans migration.
+    this.version(6).stores({
+      profile: 'id',
+      settings: 'key',
+      demoQuestState: 'questId',
+      categories: 'id, order',
+      quests: 'id, archived, createdAt',
+      xpEvents: 'id, awardKey, questId, at, domain',
+      analyses: 'id, questId, createdAt',
+      revisions: 'id, questId, at',
+      sportProfile: 'id',
+      exercisePrefs: 'exerciseId',
+      customExercises: 'id',
+      sportSessions: 'id, date, status, kind',
+      recoveryChecks: 'id, day, at',
+      exerciseStates: 'exerciseId',
+      progressionLog: 'id, exerciseId, at',
+      bodyMeasures: 'id, date',
+      commitments: 'id, date',
+      planningMoves: 'id, refId, at',
+      notificationLog: 'id, key, at',
+      goals: 'id, status, categoryId',
+      projects: 'id, status, goalId',
+      indicators: 'id, categoryId',
+      indicatorReadings: 'id, indicatorId, at',
     })
   }
 }

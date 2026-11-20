@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.7.0 — Étape 6 : LIFE V1.1 — objectifs, projets et indicateurs
+
+**Opérationnel**
+- **Objectifs** (`/life/objectifs`) : titre, description, catégorie, échéance, priorité, importance, statut (À définir, En cours, En pause, Atteint, Abandonné), critères de réussite et étapes intermédiaires validés explicitement, indicateurs associés, tensions déclarées avec d'autres objectifs. Filtres statut/catégorie, détail, modification libre, suppression expliquée.
+- **Projets** (`/life/projets`) : statuts À préparer / En cours / En pause / Terminé / Abandonné, objectif parent facultatif, dates, étapes réorganisables avec échéance et blocage, sous-tâches, quêtes rattachées, historique. Structure simple par défaut (un projet peut n'avoir aucune étape).
+- **Hiérarchie** Objectif → Projets → Étapes → Quêtes, souple : projet indépendant, quête indépendante, quête rattachée directement à un objectif. Rattachement depuis le projet ou le formulaire de quête (`Quest.goalId/projectId/stepId`).
+- **Avancement** calculé sur le réellement accompli (`core/goals.ts`) : une étape n'est jamais « terminée » sans validation explicite (plafond 90 % sinon).
+- **Indicateurs** (`/life/indicateurs`) : nombre, montant, durée, pourcentage, unité libre ; cible, fréquence de saisie, historique de mesures corrigeable, graphique d'évolution, progression vers la cible. Aucune XP.
+- **XP** : aucune écriture dans le journal par les étapes, projets, objectifs ou indicateurs (testé). Les quêtes rattachées restent de vraies quêtes récompensées par le moteur existant.
+- **Planning** : échéances d'étapes, de projets et d'objectifs comme repères sans durée ; objectifs de long terme toujours visibles ; constats (projet en retard, étape bloquée/en retard, échéance proche, projet inactif 21 j, objectif qui progresse peu, objectifs incompatibles avec les disponibilités, objectifs en tension, trop d'objectifs actifs). Adaptations proposées (décaler une échéance, mettre en pause) appliquées seulement après confirmation, revérifiées et tracées.
+- **Bilans** : progression des objectifs, avancement des projets, étapes accomplies, projets bloqués, indicateurs en évolution, écarts prévu/réalisé (semaine et mois ; étapes validées dans le bilan du jour), export PDF inclus.
+- **Accueil** : échéances de projets/objectifs et alerte LIFE prioritaire.
+- **Données** : Dexie v6 (`goals`, `projects`, `indicators`, `indicatorReadings`), sauvegardes chiffrées et restauration sans perte (testées), hors ligne.
+- **Suppression** : conséquences expliquées ; projets et quêtes conservés (détachés), quêtes réalisées et XP jamais touchées.
+
+**Limites assumées / à développer**
+- Pas de récompense RPG spécifique pour objectifs/projets (à définir ultérieurement ; aucune récompense automatique).
+- Pas de système d'habitudes avancé ni de comptabilité détaillée.
+- Les tensions entre objectifs sont déclarées par l'utilisateur ; Level ne les devine pas. L'incompatibilité avec les disponibilités est une estimation (effort restant vs 50 % du temps libre).
+- « Modifier l'échéance » et « mettre en pause » sont applicables ; simplifier/réorganiser les étapes ou revoir un objectif ouvrent l'écran concerné (décision manuelle).
+
+**Correctif** : fermer une feuille imbriquée refermait aussi la feuille parente (propagation de l'événement `close`).
+
 ## 0.6.0 — Étape 5 : moteur transversal et orchestration globale
 
 **Opérationnel**

@@ -1,10 +1,15 @@
 import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAppState } from '@/app/AppState'
 import { Card, EmptyState, Notice, PageHeader, SectionTitle } from '@/design/components'
 import sheet from '@/design/sheet.module.css'
 import { isRecurring, type Quest, type QuestType } from '@/core/quest'
 import { BilanPanel } from './BilanPanel'
 import { CategoriesPanel } from './CategoriesPanel'
+import { GoalsPanel } from './GoalsPanel'
+import { IndicatorsPanel } from './IndicatorsPanel'
+import { OverviewPanel } from './OverviewPanel'
+import { ProjectsPanel } from './ProjectsPanel'
 import { QuestCard } from './QuestCard'
 import { QuestFormSheet } from './QuestForm'
 import { RewardsPanel } from './RewardsPanel'
@@ -12,28 +17,41 @@ import { TYPE_LABEL } from './labels'
 import { useQuestViews } from './useQuestViews'
 import s from './life.module.css'
 
-type Tab = 'quests' | 'rewards' | 'review' | 'categories'
+type Tab = 'overview' | 'quests' | 'goals' | 'projects' | 'indicators' | 'rewards' | 'review' | 'categories'
+/** Adresse de chaque section : /life (défaut), /life/objectifs, /life/projets… */
+const SLUG: Record<Tab, string> = { overview: 'apercu', quests: 'quetes', goals: 'objectifs', projects: 'projets', indicators: 'indicateurs', rewards: 'gains', review: 'bilan', categories: 'categories' }
+const LABEL: Record<Tab, string> = { overview: 'Ensemble', quests: 'Quêtes', goals: 'Objectifs', projects: 'Projets', indicators: 'Indicateurs', rewards: 'Gains', review: 'Bilan', categories: 'Catégories' }
 type TypeFilter = 'all' | QuestType
 
 export function LifePage() {
-  const { progress, missed } = useAppState()
-  const [tab, setTab] = useState<Tab>('quests')
+  const { progress, missed, goals, projects, indicators } = useAppState()
+  const { section } = useParams()
+  const navigate = useNavigate()
+  const hasLife = goals.length + projects.length + indicators.length > 0
+  const fromUrl = (Object.keys(SLUG) as Tab[]).find((k) => SLUG[k] === section)
+  // Par défaut : la vue d'ensemble dès qu'il existe un objectif, un projet ou un indicateur ; sinon les quêtes
+  const tab: Tab = fromUrl ?? (hasLife ? 'overview' : 'quests')
+  const setTab = (t: Tab) => navigate(`/life/${SLUG[t]}`)
   const [form, setForm] = useState<{ quest?: Quest } | null>(null)
 
   return (
     <div className={s.stack}>
-      <PageHeader title="LIFE" subtitle={`Niveau ${progress.life.level} · quêtes, gains, bilan et catégories.`}
+      <PageHeader title="LIFE" subtitle={`Niveau ${progress.life.level} · quêtes, objectifs, projets et indicateurs.`}
         right={<button className={`${sheet.btnPrimary} ${s.newDesktop}`} onClick={() => setForm({})}>+ Nouvelle quête</button>} />
-      <Notice title="Module en cours de construction">quêtes, journal d’XP, bilan des manques et catégories sont opérationnels. Habitudes avancées, budgets et objectifs arriveront dans une prochaine étape.</Notice>
+      <Notice title="Piloter sans compliquer">quêtes, objectifs, projets et indicateurs sont opérationnels. Seules les quêtes rapportent de l’XP ; objectifs, projets et indicateurs servent à s’organiser et à mesurer. Habitudes avancées et budgets détaillés arriveront plus tard.</Notice>
 
       <div className={s.tabs} role="tablist" aria-label="Sections LIFE">
-        {([['quests', 'Quêtes'], ['rewards', 'Gains'], ['review', 'Bilan'], ['categories', 'Catégories']] as const).map(([id, label]) => (
+        {(Object.keys(LABEL) as Tab[]).map((id) => [id, LABEL[id]] as const).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
             {label}{id === 'review' && missed.length > 0 ? <span className={s.tabBadge} aria-label={`${missed.length} à analyser`}>{missed.length}</span> : null}
           </button>
         ))}
       </div>
 
+      {tab === 'overview' ? <OverviewPanel go={(slug) => navigate(`/life/${slug}`)} /> : null}
+      {tab === 'goals' ? <GoalsPanel /> : null}
+      {tab === 'projects' ? <ProjectsPanel /> : null}
+      {tab === 'indicators' ? <IndicatorsPanel /> : null}
       {tab === 'quests' ? <QuestsTab onEdit={(q) => setForm({ quest: q })} onNew={() => setForm({})} /> : null}
       {tab === 'rewards' ? <RewardsPanel /> : null}
       {tab === 'review' ? <BilanPanel /> : null}

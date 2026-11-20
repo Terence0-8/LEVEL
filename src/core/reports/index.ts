@@ -16,6 +16,8 @@ import { muscleSplit, periodReview, personalRecords, regularity, volume } from '
 import { MUSCLE_LABEL, type MuscleGroup } from '../sport/types'
 import { isFinished } from '../sport/xp'
 import type { AttributeId } from '../types'
+import { analyseLife, goalProgress, GOAL_STATUS_LABEL, formatValue, isOpenGoal, isOpenProject, projectProgress, readingsOf, type LifeData } from '../goals'
+import type { PlanningPrefs } from '../prefs'
 
 /**
  * Bilans quotidien, hebdomadaire et mensuel. Pur : tout est recalculé depuis le journal XP, les quêtes et les séances.
@@ -68,6 +70,8 @@ export interface ReportInput {
   /** État de récupération courant (pertinent pour le bilan du jour s'il porte sur aujourd'hui) */
   recovery: RecoveryState | null
   sportTarget: number
+  /** Objectifs, projets et indicateurs (facultatif) : ajoute leurs sections aux bilans */
+  life?: LifeData & { prefs: PlanningPrefs }
   /** Nom d'affichage facultatif (jamais envoyé nulle part) */
   name?: string
 }
@@ -186,6 +190,50 @@ function tomorrowPriorities(i: ReportInput, tomorrow: string): string[] {
   const dailies = i.quests.filter((q) => !q.archived && q.type === 'daily').length
   if (dailies) out.push(`${dailies} quête${dailies > 1 ? 's' : ''} du jour à reprendre`)
   return out.slice(0, 5)
+}
+
+/** Sections objectifs / projets / indicateurs. Aucune XP : ces éléments mesurent, ils ne récompensent pas. */
+function lifeSections(i: ReportInput, from: string, to: string, kind: ReportKind): { sections: ReportSection[]; advice: string[] } {
+  const L = i.life!
+  const today = dayKey(i.now)
+  const sections: ReportSection[] = []
+  const stepsDone: Array<{ title: string; project: string }> = []
+  for (const p of L.projects) for (const s of p.steps) if (s.done && s.doneAt && inP(dayOf(s.doneAt), from, to)) stepsDone.push({ title: s.title, project: p.title })
+  const analysis = analyseLife({ ...L, quests: i.quests, events: i.events, now: i.now })
+  if (kind === 'day') {
+    if (stepsDone.length) sections.push({ id: 'steps', title: 'Étapes de projets validées', lines: stepsDone.map((s) => `${s.title} (${s.project})`) })
+    return { sections, advice: [] }
+  }
+  const goals = L.goals.filter((g) => isOpenGoal(g) || g.status === 'paused' || (g.status === 'achieved' && g.statusAt && inP(dayOf(g.statusAt), from, to)))
+  sections.push({
+    id: 'goals', title: 'Progression des objectifs',
+    table: goals.length ? { head: ['Objectif', 'Statut', 'Avancement'], rows: goals.slice(0, 8).map((g) => [g.title, GOAL_STATUS_LABEL[g.status], `${Math.round(goalProgress(g, L, i.quests, i.events, i.now).value * 100)} %`]) } : undefined,
+    empty: 'Aucun objectif suivi pour l’instant.',
+  })
+  const projects = L.projects.filter((p) => isOpenProject(p) || p.status === 'paused')
+  const blocked = projects.flatMap((p) => p.steps.filter((s) => !s.done && s.blocked).map((s) => `${p.title} — ${s.title} : ${s.blocked}`))
+  sections.push({
+    id: 'projects', title: 'Avancement des projets',
+    table: projects.length ? { head: ['Projet', 'Étapes', 'Avancement'], rows: projects.slice(0, 8).map((p) => { const pr = projectProgress(p, i.quests, i.events, i.now); return [p.title, `${pr.doneSteps} / ${pr.totalSteps}`, `${Math.round(pr.value * 100)} %`] }) } : undefined,
+    lines: [...(stepsDone.length ? [`${stepsDone.length} étape${stepsDone.length > 1 ? 's' : ''} accomplie${stepsDone.length > 1 ? 's' : ''} : ${stepsDone.slice(0, 4).map((s) => s.title).join(', ')}`] : []), ...blocked.map((b) => `Bloquée : ${b}`)],
+    empty: 'Aucun projet en cours.',
+  })
+  const indRows: string[][] = []
+  for (const ind of L.indicators.filter((x) => !x.archived)) {
+    const inRange = readingsOf(L.readings, ind.id).filter((r) => inP(r.at, from, to))
+    if (!inRange.length) continue
+    const a = inRange[0], b = inRange[inRange.length - 1]
+    indRows.push([ind.name, inRange.length > 1 ? `${formatValue(ind.kind, ind.unit, a.value)} → ${formatValue(ind.kind, ind.unit, b.value)}` : formatValue(ind.kind, ind.unit, b.value), inRange.length > 1 ? sign(Math.round((b.value - a.value) * 100) / 100) : '—'])
+  }
+  sections.push({ id: 'indicators', title: 'Indicateurs en évolution', table: indRows.length ? { head: ['Indicateur', 'Mesures', 'Évolution'], rows: indRows.slice(0, 8) } : undefined, empty: 'Aucune mesure saisie sur la période.' })
+  // Écarts entre prévu et réalisé
+  const gap: string[] = []
+  for (const p of L.projects.filter((x) => x.status !== 'abandoned')) for (const s of p.steps) if (s.dueDate && inP(s.dueDate, from, to) && s.dueDate <= today) gap.push(`${s.done ? 'Prévue et faite' : 'Prévue, non faite'} : ${s.title} (${p.title}, ${s.dueDate})`)
+  for (const p of L.projects) if (p.dueDate && inP(p.dueDate, from, to) && p.dueDate <= today) gap.push(`Projet « ${p.title} » prévu le ${p.dueDate} : ${p.status === 'done' ? 'terminé' : 'pas encore terminé'}`)
+  for (const g of L.goals) if (g.dueDate && inP(g.dueDate, from, to) && g.dueDate <= today) gap.push(`Objectif « ${g.title} » prévu le ${g.dueDate} : ${g.status === 'achieved' ? 'atteint' : 'pas encore atteint'}`)
+  sections.push({ id: 'gap', title: 'Prévu et réalisé', lines: gap, empty: 'Aucune échéance de la période à comparer.' })
+  const advice = analysis.filter((f) => f.severity === 'warn').slice(0, 3).map((f) => `${f.title}. Une adaptation est proposée dans le planning, à confirmer par vous.`)
+  return { sections, advice }
 }
 
 export function buildReport(i: ReportInput): ReportDoc {
@@ -345,6 +393,13 @@ export function buildReport(i: ReportInput): ReportDoc {
     sections.push({ id: 'reco', title: 'Recommandations à moyen terme', lines: reco })
   }
 
+  if (i.life && (i.life.goals.length || i.life.projects.length || i.life.indicators.length)) {
+    const ls = lifeSections(i, from, to, i.kind)
+    const at = sections.findIndex((s) => s.id === 'difficulties' || s.id === 'trends')
+    sections.splice(at >= 0 ? at : sections.length, 0, ...ls.sections)
+    const reco = sections.find((s) => s.id === 'reco')
+    if (reco && ls.advice.length) reco.lines = [...ls.advice, ...(reco.lines ?? [])]
+  }
   return {
     kind: i.kind, title: REPORT_LABEL[i.kind], subtitle: rangeLabel, from, to, generatedAt: i.now.toISOString(),
     sections, note: PLANNING_NOTE,

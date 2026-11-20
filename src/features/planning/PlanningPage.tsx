@@ -9,22 +9,24 @@ import sheet from '@/design/sheet.module.css'
 import { addDays, dayKey, fromDayKey, mondayOf } from '@/core/dates'
 import { buildPlan, capacityOn, dayLoad, detectConflicts, planDay, proposeReorganisations, usableOn, type Commitment, type PlanItem, type Proposal } from '@/core/planning'
 import { planningService, PlanningError } from '@/data/planningService'
+import { goalService, GoalError } from '@/data/goalService'
+import { goalProgress, type LifeProposal } from '@/core/goals'
 import s from './PlanningPage.module.css'
 
 const DAY_NAMES = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 const label = (key: string) => { const d = fromDayKey(key); return `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}` }
 const dur = (m: number) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : `${m} min`)
-const msg = (e: unknown) => (e instanceof PlanningError ? e.message : 'Action impossible pour le moment.')
+const msg = (e: unknown) => (e instanceof PlanningError || e instanceof GoalError ? e.message : 'Action impossible pour le moment.')
 
 interface Target { item: PlanItem }
 
 export function PlanningPage() {
-  const { plan, commitments, now, prefs, quests } = useAppState()
+  const { plan, commitments, now, prefs, quests, goals, projects, events, lifeProposals } = useAppState()
   const [anchor, setAnchor] = useState(() => mondayOf(now))
   const [status, setStatus] = useState<{ text: string; err?: boolean } | null>(null)
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
-  const [confirm, setConfirm] = useState<Proposal | null>(null)
+  const [confirm, setConfirm] = useState<Proposal | LifeProposal | null>(null)
   const [move, setMove] = useState<Target | null>(null)
   const [moveDate, setMoveDate] = useState('')
   const [editing, setEditing] = useState<Commitment | 'new' | null>(null)
@@ -41,7 +43,10 @@ export function PlanningPage() {
     return { p, conflicts, proposals, plans: days.map((d) => planDay(plan, p, d)) }
   }, [plan, from, to, days])
   const backlog = data.p.backlog
-  const proposals = data.proposals.filter((x) => !dismissed.has(x.id))
+  const proposals: Array<Proposal | LifeProposal> = [...data.proposals, ...lifeProposals].filter((x) => !dismissed.has(x.id))
+  const longTerm = goals.filter((g) => g.status === 'active' && (!g.dueDate || g.dueDate > dayKey(addDays(now, 60))))
+  const isLife = (p: Proposal | LifeProposal): p is LifeProposal => ['pause-project', 'shift-project-deadline', 'review-project', 'review-goal'].includes(p.kind)
+  const apply = (p: Proposal | LifeProposal) => (isLife(p) ? goalService.applyLifeProposal(p) : planningService.applyProposal(p))
 
   async function run(fn: () => Promise<{ applied?: string } | unknown>, ok: string) {
     try { const r = (await fn()) as { applied?: string } | undefined; setStatus({ text: r?.applied ?? ok }) } catch (e) { setStatus({ text: msg(e), err: true }) }
@@ -86,6 +91,8 @@ export function PlanningPage() {
                 <div className={s.actions}>
                   {p.kind === 'review-repeated'
                     ? <Link to="/life" className={smallBtn}>Ouvrir la quête</Link>
+                    : p.kind === 'review-project' || p.kind === 'review-goal'
+                    ? <Link to={p.kind === 'review-goal' ? '/life/objectifs' : '/life/projets'} className={smallBtn}>Ouvrir</Link>
                     : <button className={sheet.btnPrimary} onClick={() => setConfirm(p)}>Appliquer</button>}
                   <button className={smallBtn} onClick={() => setDismissed(new Set([...dismissed, p.id]))}>Ignorer</button>
                 </div>
@@ -112,12 +119,13 @@ export function PlanningPage() {
               <ul className={s.items}>
                 {dp.items.map((it) => (
                   <li key={it.id} className={`${s.item} ${it.kind === 'sport' ? s.sport : it.kind === 'commitment' ? s.commitment : ''}`}>
-                    <span className={s.ico}><Icon name={it.kind === 'sport' ? 'sport' : it.kind === 'commitment' ? 'calendar' : it.recurring ? 'clock' : 'target'} size={16} /></span>
+                    <span className={s.ico}><Icon name={it.kind === 'milestone' ? 'target' : it.kind === 'sport' ? 'sport' : it.kind === 'commitment' ? 'calendar' : it.recurring ? 'clock' : 'target'} size={16} /></span>
                     <span className={s.t}><span>{it.title}</span><small>{it.start ? `${it.start} · ` : ''}{dur(it.minutes)}{it.overdue ? ' · en retard' : ''}{it.recurring ? ' · quotidienne' : ''}</small></span>
                     {it.important ? <Badge tone="gold">Important</Badge> : null}
                     {it.kind === 'quest' && !it.recurring && !isPast ? <button className={smallBtn} onClick={() => openMove(it)}>Déplacer</button> : null}
                     {it.kind === 'commitment' ? <button className={smallBtn} onClick={() => setEditing(commitments.find((c) => c.id === it.refId) ?? null)}>Modifier</button> : null}
                     {it.kind === 'sport' ? <Link to="/sport" className={smallBtn}>Ouvrir</Link> : null}
+                    {it.kind === 'milestone' ? <Link to={it.id.startsWith('mg:') ? '/life/objectifs' : '/life/projets'} className={smallBtn}>Ouvrir</Link> : null}
                   </li>
                 ))}
               </ul>
@@ -140,6 +148,20 @@ export function PlanningPage() {
         })}
       </div>
 
+      {longTerm.length ? (
+        <Card>
+          <SectionTitle title="Objectifs de long terme" aside={<Link to="/life/objectifs" style={{ color: 'var(--c-gold)' }}>Objectifs</Link>} />
+          <p className={s.empty} style={{ marginBottom: 8 }}>Toujours visibles, même quand rien ne presse aujourd’hui.</p>
+          <ul className={s.items}>
+            {longTerm.map((g) => (
+              <li key={g.id} className={s.item}>
+                <span className={s.ico}><Icon name="target" size={16} /></span>
+                <span className={s.t}><span>{g.title}</span><small>{g.dueDate ? `échéance ${g.dueDate}` : 'sans échéance'} · {Math.round(goalProgress(g, { projects }, quests, events, now).value * 100)} %</small></span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
       <Card>
         <SectionTitle title="Quêtes sans jour prévu" aside={`${backlog.length}`} />
         {backlog.length === 0 ? <p className={s.empty}>Tout est placé ou sans urgence. Rien à décider ici.</p> : (
@@ -157,7 +179,7 @@ export function PlanningPage() {
       <p style={{ fontSize: 12, color: 'var(--c-text-faint)' }}>Capacité réglée dans <Link to="/profile#planning" style={{ color: 'var(--c-gold)' }}>Profil & réglages</Link> : {dur(prefs.planning.dailyCapacityMin)} par jour, {prefs.planning.marginPct} % de marge conservée.</p>
       {data.plans.length === 0 ? <EmptyState title="Rien à afficher" /> : null}
 
-      <ConfirmDialog open={!!confirm} title={confirm?.title ?? ''} confirmLabel="Appliquer" onCancel={() => setConfirm(null)} onConfirm={() => { const p = confirm!; setConfirm(null); void run(() => planningService.applyProposal(p), 'Fait.') }}>
+      <ConfirmDialog open={!!confirm} title={confirm?.title ?? ''} confirmLabel="Appliquer" onCancel={() => setConfirm(null)} onConfirm={() => { const p = confirm!; setConfirm(null); void run(() => apply(p), 'Fait.') }}>
         <p>{confirm?.detail}</p>
         <p>Ce changement sera consigné dans l’historique de réorganisation.</p>
       </ConfirmDialog>

@@ -14,7 +14,7 @@ export function Sheet({ open, onClose, title, children, footer }: { open: boolea
     if (!open && d.open) d.close()
   }, [open])
   return (
-    <dialog ref={ref} className={s.dialog} aria-label={title} onClose={onClose} onClick={(e) => e.target === ref.current && onClose()}>
+    <dialog ref={ref} className={s.dialog} aria-label={title} onClose={(e) => { e.stopPropagation(); onClose() }} onClick={(e) => e.target === ref.current && onClose()}>
       {open ? (
         <div className={s.panel}>
           <div className={s.grip} aria-hidden="true" />

@@ -21,6 +21,7 @@ export function App() {
           <Route element={<Shell />}>
             <Route index element={<HomePage />} />
             <Route path="life" element={<LifePage />} />
+            <Route path="life/:section" element={<LifePage />} />
             <Route path="sport" element={<SportPage />} />
             <Route path="sport/seance/:id" element={<SessionPlayer />} />
             <Route path="sport/:section" element={<SportPage />} />

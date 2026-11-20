@@ -26,7 +26,11 @@ export function usePersistedState() {
   const moves = useLiveQuery(() => db.planningMoves.orderBy('at').toArray(), [])
   const notifLog = useLiveQuery(() => db.notificationLog.orderBy('at').reverse().toArray(), [])
   const prefsRow = useLiveQuery(() => db.settings.get('appPrefs').then((r) => r ?? null), [])
-  const ready = [commitments, moves, notifLog, prefsRow, profile, settings, doneRows, quests, categories, events, analyses, revisions, sportProfile, prefs, customEx, sportSessions, checks, exStates, decisions, measures].every((x) => x !== undefined)
+  const goals = useLiveQuery(() => db.goals.toArray(), [])
+  const projects = useLiveQuery(() => db.projects.toArray(), [])
+  const indicators = useLiveQuery(() => db.indicators.toArray(), [])
+  const readings = useLiveQuery(() => db.indicatorReadings.orderBy('at').toArray(), [])
+  const ready = [goals, projects, indicators, readings, commitments, moves, notifLog, prefsRow, profile, settings, doneRows, quests, categories, events, analyses, revisions, sportProfile, prefs, customEx, sportSessions, checks, exStates, decisions, measures].every((x) => x !== undefined)
   return {
     ready,
     profile: profile ?? null,
@@ -37,6 +41,10 @@ export function usePersistedState() {
     events: (events ?? []).map(normalizeEvent),
     analyses: analyses ?? [],
     revisions: revisions ?? [],
+    goals: goals ?? [],
+    projects: projects ?? [],
+    indicators: indicators ?? [],
+    readings: readings ?? [],
     commitments: commitments ?? [],
     moves: moves ?? [],
     notifLog: notifLog ?? [],

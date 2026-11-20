@@ -126,3 +126,15 @@ Base IndexedDB `level`, schéma **v4** : `profile`, `settings`, `demoQuestState`
 | RPG | Rangs par domaine, audit | `core/progression.ts`, `core/rpgConsistency.ts` |
 
 Principes : aucune règle LIFE/SPORT réécrite (le planning lit quêtes, séances et récupération ; la réorganisation SPORT est déléguée à `sportService.applyWeekPlan`, la simplification à `questService.updateQuest`). Toute proposition est confirmée par l'utilisateur, revérifiée à l'écriture et tracée. Les notifications ne se réveillent pas application fermée (limite PWA) : le service décrit honnêtement la capacité (`describeCapability`). Le PDF n'embarque aucune donnée de restauration.
+
+## Objectifs, projets, indicateurs (v0.7)
+| Brique | Rôle | Emplacement |
+|---|---|---|
+| Modèle et règles | Types, avancement, indicateurs, constats, propositions, impact de suppression (pur) | `core/goals.ts` |
+| Commandes | Objectifs, projets (étapes/sous-tâches), rattachement de quêtes, indicateurs, propositions confirmées | `data/goalService.ts` |
+| Tables | `goals`, `projects` (étapes et sous-tâches intégrées), `indicators`, `indicatorReadings` ; quêtes : champs facultatifs `goalId/projectId/stepId` | `data/db.ts` v6, `core/backupFormat.ts` |
+| Planning | Repères `milestone` (sans durée) via `PlanContext.life` | `core/planning.ts` |
+| Bilans / accueil | Sections et alertes LIFE | `core/reports`, `core/dashboard.ts` |
+| Interface | Ensemble, Objectifs, Projets, Indicateurs ; routes `/life/:section` | `features/life/*` |
+
+Principes : aucun système parallèle (les quêtes, le journal XP, les catégories, le planning et les bilans sont réutilisés) ; `goalService` n'écrit jamais dans `xpEvents` ; un projet est écrit en une transaction fonctionnelle (pas d'écrasement) ; la suppression détache sans jamais supprimer de quête ni d'XP.

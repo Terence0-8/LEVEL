@@ -1,5 +1,6 @@
 import { addDays, dayKey, daysBetweenKeys, fromDayKey, mondayOf } from './dates'
 import type { GlobalHomeContext } from './homeLayout'
+import type { Finding } from './goals'
 import { cycleProgress } from './questState'
 import { buildPlan, dayLoad, detectConflicts, proposeReorganisations, scoreQuests, usableOn, postponements, REPEATED_POSTPONEMENT_THRESHOLD, type PlanContext, type Proposal, type Score } from './planning'
 import type { Quest } from './quest'
@@ -18,10 +19,12 @@ export interface DashboardInput {
   /** Éléments non réalisés et pas encore analysés (nombre) */
   missedCount: number
   sportTarget: number
+  /** Constats LIFE (projets en retard, étapes bloquées…) déjà calculés */
+  findings?: Finding[]
 }
 
 export interface DashboardAlert { id: string; tone: 'warn' | 'info' | 'good'; title: string; detail: string; route: string }
-export interface DashboardDeadline { id: string; kind: 'quest' | 'commitment'; title: string; date: string; daysLeft: number; important: boolean; route: string }
+export interface DashboardDeadline { id: string; kind: 'quest' | 'commitment' | 'project' | 'goal'; title: string; date: string; daysLeft: number; important: boolean; route: string }
 export interface DashboardPriority { quest: Quest; score: Score; remainingMin: number }
 
 export interface Dashboard {
@@ -78,6 +81,19 @@ export function buildDashboard(i: DashboardInput): Dashboard {
   }
   deadlines.sort((a, b) => a.daysLeft - b.daysLeft || Number(b.important) - Number(a.important))
 
+  // Objectifs et projets : échéances et constats les plus importants
+  if (ctx.life) {
+    for (const p of ctx.life.projects) if ((p.status === 'prepare' || p.status === 'active') && p.dueDate) {
+      const d = daysBetweenKeys(today, p.dueDate)
+      if (d <= 14) deadlines.push({ id: `p:${p.id}`, kind: 'project', title: p.title, date: p.dueDate, daysLeft: d, important: p.priority === 'high', route: '/life/projets' })
+    }
+    for (const g of ctx.life.goals) if ((g.status === 'active' || g.status === 'todo') && g.dueDate) {
+      const d = daysBetweenKeys(today, g.dueDate)
+      if (d <= 14) deadlines.push({ id: `g:${g.id}`, kind: 'goal', title: g.title, date: g.dueDate, daysLeft: d, important: g.importance === 3 || g.priority === 'high', route: '/life/objectifs' })
+    }
+    deadlines.sort((a, b) => a.daysLeft - b.daysLeft || Number(b.important) - Number(a.important))
+  }
+
   // Semaine
   const mon = mondayOf(now)
   const from = dayKey(mon), to = dayKey(addDays(mon, 6))
@@ -112,6 +128,8 @@ export function buildDashboard(i: DashboardInput): Dashboard {
   if (proposals.some((p) => p.kind === 'move-quest' || p.kind === 'simplify-quest' || p.kind === 'unschedule-quest')) alerts.push({ id: 'proposals', tone: 'info', title: 'Réorganisation possible', detail: `${proposals.length} proposition${proposals.length > 1 ? 's' : ''} pour alléger la semaine, à confirmer vous-même.`, route: '/planning' })
   const repeated = ctx.quests.filter((q) => !q.archived && postponements(ctx.moves, q.id, now) >= REPEATED_POSTPONEMENT_THRESHOLD)
   if (repeated[0]) alerts.push({ id: `rep-${repeated[0].id}`, tone: 'info', title: 'Un report revient souvent', detail: `« ${repeated[0].title} » : la simplifier ou la découper aiderait.`, route: '/life' })
+  const lf = (i.findings ?? []).filter((f) => f.severity === 'warn')[0]
+  if (lf) alerts.push({ id: `life-${lf.id}`, tone: 'warn', title: lf.title, detail: lf.detail, route: lf.refType === 'goal' ? '/life/objectifs' : lf.refType === 'indicator' ? '/life/indicateurs' : '/life/projets' })
   if (i.missedCount > 0) alerts.push({ id: 'missed', tone: 'info', title: `${i.missedCount} élément${i.missedCount > 1 ? 's' : ''} à analyser`, detail: 'Comprendre pourquoi aide à ajuster, sans aucune pénalité d’XP.', route: '/life' })
   const hasCheckToday = i.checks.some((c) => c.day === today)
   if (nextSession?.when === 'today' && !hasCheckToday && rec.level === 'NORMAL') alerts.push({ id: 'check', tone: 'info', title: 'Questionnaire de récupération', detail: 'Environ 30 secondes pour adapter la séance du jour.', route: '/sport/recuperation' })
