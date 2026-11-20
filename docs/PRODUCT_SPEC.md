@@ -203,3 +203,18 @@ Règles : les pourcentages d'exécution mesurent la planification, jamais la val
 | Récompenses RPG spécifiques objectifs/projets | ❌ non définies (aucune XP automatique) |
 | Habitudes avancées, comptabilité détaillée | ❌ hors périmètre |
 Règles : seules les quêtes rapportent de l'XP ; valider étape, projet ou objectif n'en rapporte jamais ; une étape n'est terminée que par validation explicite ; Level propose, l'utilisateur confirme toute modification d'échéance.
+
+## RPG V1.1 (v0.8)
+| Fonction | État |
+|---|---|
+| Rangs E, D, C, B, A, S, SS, SSS (global et domaines) | ✅ |
+| Prestige LIFE / SPORT indépendant, facultatif, confirmé, atomique, répétable | ✅ |
+| Cycles : +20 % d'XP par prestige, journal et attributs conservés | ✅ |
+| Récompenses de prestige (bonus d'XP dégressifs, titres, personnalisation, défis) | ✅ |
+| Succès, titres, historique des prestiges, espace RPG, accueil, profil, bilans | ✅ |
+| Sauvegardes chiffrées et migration depuis les versions antérieures | ✅ |
+| Calibrage définitif des seuils et du catalogue | ⏳ à l'usage |
+Règles : le niveau global ne fait jamais l'objet d'un prestige ; un prestige ne modifie ni le journal d'XP, ni l'autre domaine, ni la difficulté des quêtes, séances ou objectifs ; les bonus ne s'appliquent qu'aux gains futurs.
+
+### Conditions des succès (provisoires)
+Premier pas (1ʳᵉ quête) · Première séance · Niveau 5 LIFE / SPORT · Un cap franchi (rang D) · Élite (rang A) · Niveau global 10 · Renaissance (1ᵉʳ prestige) · Cycles et sagesse (3 prestiges) · Deux voies (prestige LIFE + SPORT) · Rythme tenu (4 semaines à ≥ 3 jours actifs) · Constance (12 semaines) · Un mois / Une année d'ancienneté · 25 / 100 séances · 10 km · Sagesse du repos · Ambition atteinte · Trois ambitions · Projet mené à terme · Mesurer pour comprendre (10 mesures).

@@ -37,7 +37,10 @@ describe('rank', () => {
     expect(rankForLevel(9).rank).toBe('E')
     expect(rankForLevel(10).rank).toBe('D')
     expect(rankForLevel(80).rank).toBe('S')
-    expect(rankForLevel(80).next).toBeNull()
+    expect(rankForLevel(80).next?.rank).toBe('SS')
+    expect(rankForLevel(90).rank).toBe('SS')
+    expect(rankForLevel(96).rank).toBe('SSS')
+    expect(rankForLevel(100).next).toBeNull()
   })
 })
 

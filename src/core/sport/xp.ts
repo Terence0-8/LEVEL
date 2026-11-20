@@ -57,7 +57,11 @@ export function setMetric(l: SetLog, ex: Exercise | undefined): number | null {
   return l.loadKg * (1 + l.reps / 30)
 }
 
-interface Opts { sessions: SportSession[]; checks: RecoveryCheck[]; decisions: ProgressionDecision[]; profile: SportProfile; custom?: Exercise[] }
+interface Opts {
+  sessions: SportSession[]; checks: RecoveryCheck[]; decisions: ProgressionDecision[]; profile: SportProfile; custom?: Exercise[]
+  /** Bonus d'XP SPORT (points de %) en vigueur un jour donné (« YYYY-MM-DD ») : appliqué selon la date de la séance, donc jamais rétroactif */
+  xpBonus?: (day: string) => number
+}
 
 /** Toutes les récompenses SPORT que le journal doit contenir, pour l'historique actuel. */
 export function desiredSportAwards(o: Opts, explain?: Map<string, string>): DesiredAward[] {
@@ -171,7 +175,8 @@ export function desiredSportAwards(o: Opts, explain?: Map<string, string>): Desi
     progPerWeek.set(wk, (progPerWeek.get(wk) ?? 0) + 1)
     out.push({ key: `sport:progress:${d.id}`, at: d.at, amount: X.progressionConfirmed, attribute: 'maitrise', sourceId: d.id, cycleKey: wk, label: `Progression confirmée : ${exOf(d.exerciseId)?.name ?? d.exerciseId}`, reason: d.reason })
   }
-  return out
+  const bonus = o.xpBonus
+  return bonus ? out.map((d) => { const pct = bonus(d.at.slice(0, 10) === d.at ? d.at : dayKey(new Date(d.at))); return pct > 0 ? { ...d, amount: Math.round(d.amount * (1 + pct / 100)), reason: `${d.reason} · bonus d’XP permanent +${pct} %` } : d }) : out
 }
 
 /** Pourquoi une séance terminée n'a pas rapporté d'XP (null si elle en a rapporté). */

@@ -13,6 +13,11 @@ import type { AppPrefs } from '@/core/prefs'
 import type { Commitment, PlanContext, PlanMove } from '@/core/planning'
 import type { NotificationLogEntry } from '@/core/notifications'
 import { useNotificationRunner } from './useNotificationRunner'
+import { availableTitles, ACHIEVEMENT_BY_ID, type AchievementRow } from '@/core/achievements'
+import type { CycleState, PrestigeRecord } from '@/core/prestige'
+import { REWARD_BY_ID, totalBonusPct, type RewardRow } from '@/core/prestigeRewards'
+import { rpgService } from '@/data/rpgService'
+import type { Domain } from '@/core/types'
 import type { Category, Quest } from '@/core/quest'
 import type { XpEvent } from '@/core/ledger'
 import { cycleInfo, type CycleInfo } from '@/core/sport/cycle'
@@ -27,6 +32,18 @@ import type { QuestRevision } from '@/core/revision'
 
 /** Progression affichée : réelle (journal d'XP) ou de démonstration (mocks), jamais mélangées. */
 export type Progress = ProgressSummary & { isDemo: boolean; layout: WidgetPlacement[] }
+
+/** Vue RPG dérivée (jamais stockée) : cycles de prestige, bonus, titres et distinctions récentes. */
+export interface RpgView {
+  cycles: Record<Domain, CycleState>
+  ownedIds: Set<string>
+  titles: ReturnType<typeof availableTitles>
+  equippedTitle: string | null
+  /** Bonus d'XP permanent total (points de %) par domaine */
+  bonus: Record<Domain, number>
+  prestigeReady: Domain[]
+  recent: Array<{ kind: 'achievement' | 'reward'; id: string; name: string; at: string }>
+}
 
 export interface SportState {
   profile: SportProfile
@@ -75,6 +92,10 @@ interface AppState {
   /** Constats et adaptations proposées (jamais appliquées sans confirmation) */
   lifeFindings: Finding[]
   lifeProposals: LifeProposal[]
+  prestiges: PrestigeRecord[]
+  rewards: RewardRow[]
+  achievements: AchievementRow[]
+  rpg: RpgView
   now: Date
   toggleDemoQuest: (id: string) => void
 }
@@ -92,7 +113,7 @@ function useNow() {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs, goals, projects, indicators, readings } = usePersistedState()
+  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs, goals, projects, indicators, readings, prestiges, rewards, achievements } = usePersistedState()
   const now = useNow()
 
   const demo = useMemo(() => (settings.showDemoData ? buildDemoView(doneQuests) : null), [settings.showDemoData, doneQuests])
@@ -118,13 +139,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return { findings, proposals: lifeProposals(findings, input) }
   }, [goals, projects, indicators, readings, quests, events, now, prefs.planning])
 
-  const dashboard = useMemo<Dashboard | null>(() => (demo ? null : buildDashboard({ plan, checks: sport.checks, missedCount: missed.length, sportTarget: sport.profile.availability.strengthPerWeek, findings: analysis.findings })), [demo, plan, sport.checks, sport.profile.availability.strengthPerWeek, missed.length, analysis.findings])
+  const rpg = useMemo<RpgView>(() => {
+    const cycles = computeProgression(events, prestiges).cycles!
+    const titles = availableTitles(achievements, rewards)
+    const recent = [
+      ...achievements.map((a) => ({ kind: 'achievement' as const, id: a.id, name: ACHIEVEMENT_BY_ID[a.id]?.title ?? a.id, at: a.unlockedAt })),
+      ...rewards.map((r) => ({ kind: 'reward' as const, id: r.id, name: REWARD_BY_ID[r.id]?.name ?? r.id, at: r.acquiredAt })),
+    ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6)
+    return {
+      cycles, ownedIds: new Set(rewards.map((r) => r.id)), titles, equippedTitle: prefs.rpg.title && titles.some((x) => x.id === prefs.rpg.title) ? prefs.rpg.title : null,
+      bonus: { LIFE: totalBonusPct('LIFE', rewards), SPORT: totalBonusPct('SPORT', rewards) }, prestigeReady: (['LIFE', 'SPORT'] as const).filter((d) => cycles[d].eligible), recent,
+    }
+  }, [events, prestiges, achievements, rewards, prefs.rpg.title])
+
+  const dashboard = useMemo<Dashboard | null>(() => (demo ? null : buildDashboard({ plan, checks: sport.checks, missedCount: missed.length, sportTarget: sport.profile.availability.strengthPerWeek, findings: analysis.findings, prestigeReady: rpg.prestigeReady, recentUnlocks: rpg.recent.filter((r) => now.getTime() - new Date(r.at).getTime() < 14 * 86_400_000).length })), [demo, plan, sport.checks, sport.profile.availability.strengthPerWeek, missed.length, analysis.findings, rpg])
 
   const progress = useMemo<Progress>(() => {
     if (demo) return { ...demo, isDemo: true }
-    const p = computeProgression(events)
+    const p = computeProgression(events, prestiges)
     return { ...p, isDemo: false, layout: dashboard ? arrangeGlobalHome(dashboard.home) : [] }
-  }, [demo, events, dashboard])
+  }, [demo, events, prestiges, dashboard])
 
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = String(settings.reducedMotion)
@@ -140,14 +174,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => { clearTimeout(verifyLater); backupScheduler.stop() }
   }, [])
 
-  useNotificationRunner({ enabled: !demo && ready, prefs, quests, events, sessions: sport.sessions, checks: sport.checks, recovery: sport.recovery, commitments, progress })
+  useEffect(() => {
+    // Succès : évalués quand les données changent (jamais en démonstration) ; écriture hors requête live, sans doublon possible.
+    if (demo || !ready) return
+    const h = setTimeout(() => void rpgService.syncAchievements().catch(() => undefined), 1200)
+    return () => clearTimeout(h)
+  }, [demo, ready, events, sport.sessions, sport.checks, goals, projects, indicators, readings, prestiges])
+
+  useNotificationRunner({ enabled: !demo && ready, prefs, quests, events, sessions: sport.sessions, checks: sport.checks, recovery: sport.recovery, commitments, progress, prestigeReady: rpg.prestigeReady.map((d) => ({ domain: d, number: rpg.cycles[d].nextNumber })), recentUnlocks: rpg.recent.filter((x) => x.kind === 'achievement' && ACHIEVEMENT_BY_ID[x.id]?.rarity !== 'common').map((x) => ({ id: x.id, title: x.name, at: x.at })) })
 
   const value = useMemo<AppState>(
     () => ({
-      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, lifeFindings: analysis.findings, lifeProposals: analysis.proposals, now,
+      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, lifeFindings: analysis.findings, lifeProposals: analysis.proposals, prestiges, rewards, achievements, rpg, now,
       toggleDemoQuest: (id) => void repos.demo.toggleQuest(id),
     }),
-    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, analysis, now],
+    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, analysis, prestiges, rewards, achievements, rpg, now],
   )
 
   if (!ready) return <div style={{ minHeight: '100vh' }} aria-busy="true" />

@@ -31,3 +31,13 @@
 /* Séance guidée : interface épurée plein écran, sans navigation (hors fenêtres larges où le menu reste utile) */
 .immersive .top, .immersive .tabs { display: none; }
 .immersive .main { padding-bottom: 28px; }
+
+/* Distinctions : changement de rang plus marqué ; effets de montée de niveau débloqués par le prestige (ponctuels) */
+.toastRank { border-width: 2px; padding: 18px 30px; box-shadow: 0 0 42px rgba(245,216,137,0.38), var(--shadow-raised); }
+.toastRank b { font-size: 26px; }
+.fxHalo::before { content: ''; position: absolute; inset: -22px; border-radius: 50%; border: 1px solid rgba(245,216,137,0.5); animation: halo 1.8s var(--ease) both; pointer-events: none; }
+.fxEmbers::after { content: ''; position: absolute; left: 12%; right: 12%; bottom: -6px; height: 28px; background: radial-gradient(circle at 20% 80%, rgba(245,216,137,0.8) 0 2px, transparent 3px), radial-gradient(circle at 50% 60%, rgba(245,216,137,0.7) 0 2px, transparent 3px), radial-gradient(circle at 80% 90%, rgba(201,177,122,0.8) 0 2px, transparent 3px); animation: embers 2.2s var(--ease) both; pointer-events: none; }
+@keyframes halo { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(1.35); opacity: 0; } }
+@keyframes embers { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(-34px); opacity: 0; } }
+:global(html[data-reduced-motion='true']) .fxHalo::before, :global(html[data-reduced-motion='true']) .fxEmbers::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .fxHalo::before, .fxEmbers::after { display: none; } }

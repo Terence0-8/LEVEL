@@ -5,6 +5,7 @@ import { HomePage } from '@/features/home/HomePage'
 import { LifePage } from '@/features/life/LifePage'
 import { SportPage } from '@/features/sport/SportPage'
 import { RpgPage } from '@/features/rpg/RpgPage'
+import { PrestigeConfirmPage } from '@/features/rpg/PrestigePanel'
 import { HistoryPage } from '@/features/history/HistoryPage'
 import { ProfilePage } from '@/features/profile/ProfilePage'
 import { PlanningPage } from '@/features/planning/PlanningPage'
@@ -26,6 +27,8 @@ export function App() {
             <Route path="sport/seance/:id" element={<SessionPlayer />} />
             <Route path="sport/:section" element={<SportPage />} />
             <Route path="rpg" element={<RpgPage />} />
+            <Route path="rpg/prestige/:domain" element={<PrestigeConfirmPage />} />
+            <Route path="rpg/:section" element={<RpgPage />} />
             <Route path="planning" element={<PlanningPage />} />
             <Route path="bilans" element={<ReportsPage />} />
             <Route path="history" element={<HistoryPage />} />

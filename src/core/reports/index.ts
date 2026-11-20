@@ -10,6 +10,9 @@ import type { Category, Quest } from '../quest'
 import { cycleKeyFor, isRecurring } from '../quest'
 import { isCycleCompleted } from '../questState'
 import { levelFromXp } from '../xp'
+import { cycleStates, type PrestigeRecord } from '../prestige'
+import { ACHIEVEMENT_BY_ID, type AchievementRow } from '../achievements'
+import { REWARD_BY_ID, type RewardRow } from '../prestigeRewards'
 import type { RecoveryState } from '../sport/recovery'
 import type { RecoveryCheck, SportSession } from '../sport/session'
 import { muscleSplit, periodReview, personalRecords, regularity, volume } from '../sport/stats'
@@ -72,6 +75,8 @@ export interface ReportInput {
   sportTarget: number
   /** Objectifs, projets et indicateurs (facultatif) : ajoute leurs sections aux bilans */
   life?: LifeData & { prefs: PlanningPrefs }
+  /** Prestiges, récompenses et succès (facultatif) : niveaux de domaine par cycle et section « Distinctions et prestiges » */
+  rpg?: { prestiges: PrestigeRecord[]; rewards: RewardRow[]; achievements: AchievementRow[] }
   /** Nom d'affichage facultatif (jamais envoyé nulle part) */
   name?: string
 }
@@ -236,6 +241,26 @@ function lifeSections(i: ReportInput, from: string, to: string, kind: ReportKind
   return { sections, advice }
 }
 
+/** Niveaux de domaine (cycle courant) à la fin d'un jour (ou la veille de ce jour si `before`). */
+function statesAt(i: ReportInput, day: string, before = false) {
+  const ok = (iso: string) => (before ? dayOf(iso) < day : dayOf(iso) <= day)
+  return cycleStates(i.events.filter((e) => ok(e.at)), (i.rpg?.prestiges ?? []).filter((p) => ok(p.at)))
+}
+
+function rpgSection(i: ReportInput, from: string, to: string): ReportSection | null {
+  if (!i.rpg) return null
+  const lines: string[] = []
+  const before = statesAt(i, from, true), after = statesAt(i, to)
+  for (const d of ['LIFE', 'SPORT'] as const) {
+    const a = before[d], b = after[d]
+    if (b.cycle === a.cycle && b.level.level > a.level.level) lines.push(`${d} : niveau ${a.level.level} → ${b.level.level}${b.rank.rank !== a.rank.rank ? ` · nouveau rang ${b.rank.rank} (${b.rank.title})` : ''}`)
+  }
+  for (const p of i.rpg.prestiges.filter((x) => inP(dayOf(x.at), from, to))) lines.push(`Prestige ${p.domain} n° ${p.number} accompli (depuis le niveau ${p.levelBefore}, rang ${p.rankBefore})${p.rewardName ? ` · récompense : ${p.rewardName}` : ''}`)
+  for (const a of i.rpg.achievements.filter((x) => inP(dayOf(x.unlockedAt), from, to))) lines.push(`Succès débloqué : ${ACHIEVEMENT_BY_ID[a.id]?.title ?? a.id}`)
+  for (const r of i.rpg.rewards.filter((x) => inP(dayOf(x.acquiredAt), from, to) && !x.prestigeId)) lines.push(`Récompense : ${REWARD_BY_ID[r.id]?.name ?? r.id}`)
+  return lines.length ? { id: 'rpg', title: 'Distinctions et prestiges', lines } : null
+}
+
 export function buildReport(i: ReportInput): ReportDoc {
   const { from, to, prevFrom, prevTo } = periodOf(i.kind, i.anchor)
   const today = dayKey(i.now)
@@ -299,8 +324,8 @@ export function buildReport(i: ReportInput): ReportDoc {
     sections.push({
       id: 'progress', title: 'Progression LIFE et SPORT',
       stats: [
-        { label: 'LIFE', value: `niveau ${levelFromXp(xpByDomain(i.events.filter((e) => dayOf(e.at) <= to)).LIFE).level}`, hint: `${sign(xp.life)} XP sur la période` },
-        { label: 'SPORT', value: `niveau ${levelFromXp(xpByDomain(i.events.filter((e) => dayOf(e.at) <= to)).SPORT).level}`, hint: `${sign(xp.sport)} XP sur la période` },
+        { label: 'LIFE', value: `niveau ${statesAt(i, to).LIFE.level.level} · rang ${statesAt(i, to).LIFE.rank.rank}`, hint: `${sign(xp.life)} XP sur la période` },
+        { label: 'SPORT', value: `niveau ${statesAt(i, to).SPORT.level.level} · rang ${statesAt(i, to).SPORT.rank.rank}`, hint: `${sign(xp.sport)} XP sur la période` },
       ],
       table: catRows.length ? { head: ['Catégorie LIFE', 'XP'], rows: catRows } : undefined,
     })
@@ -362,7 +387,9 @@ export function buildReport(i: ReportInput): ReportDoc {
     })
     const startLevel = levelFromXp(totalXp(i.events.filter((e) => dayOf(e.at) < from)))
     const endLevel = levelFromXp(totalXp(i.events.filter((e) => dayOf(e.at) <= to)))
-    sections.push({ id: 'levels', title: 'Évolution des niveaux', lines: [`Niveau global : ${startLevel.level} → ${endLevel.level}`, `LIFE : ${levelFromXp(xpByDomain(i.events.filter((e) => dayOf(e.at) < from)).LIFE).level} → ${levelFromXp(xpByDomain(i.events.filter((e) => dayOf(e.at) <= to)).LIFE).level}`, `SPORT : ${levelFromXp(xpByDomain(i.events.filter((e) => dayOf(e.at) < from)).SPORT).level} → ${levelFromXp(xpByDomain(i.events.filter((e) => dayOf(e.at) <= to)).SPORT).level}`] })
+    const sb = statesAt(i, from, true), sa = statesAt(i, to)
+    const fmt = (d: 'LIFE' | 'SPORT') => `${d} : niveau ${sb[d].level.level} → ${sa[d].level.level} · rang ${sb[d].rank.rank} → ${sa[d].rank.rank}${sa[d].cycle > 1 ? ` (cycle ${sa[d].cycle})` : ''}`
+    sections.push({ id: 'levels', title: 'Évolution des niveaux', lines: [`Niveau global : ${startLevel.level} → ${endLevel.level}`, fmt('LIFE'), fmt('SPORT')] })
     const ad = attrDelta(i.events, from, to)
     sections.push({ id: 'attributes', title: 'Évolution des attributs', table: ad.length ? { head: ['Attribut', 'XP'], rows: ad.map(([id, v]) => [ATTRIBUTE_LABELS[id], sign(v)]) } : undefined, empty: 'Aucun attribut n’a bougé ce mois-ci.' })
     const adv = i.quests.filter((q) => !q.archived && (q.type === 'personal' || q.type === 'exceptional') && q.steps.length > 0)
@@ -393,6 +420,8 @@ export function buildReport(i: ReportInput): ReportDoc {
     sections.push({ id: 'reco', title: 'Recommandations à moyen terme', lines: reco })
   }
 
+  const rs = rpgSection(i, from, to)
+  if (rs) { const at = sections.findIndex((s) => s.id === 'difficulties' || s.id === 'trends'); sections.splice(at >= 0 ? at : sections.length, 0, rs) }
   if (i.life && (i.life.goals.length || i.life.projects.length || i.life.indicators.length)) {
     const ls = lifeSections(i, from, to, i.kind)
     const at = sections.findIndex((s) => s.id === 'difficulties' || s.id === 'trends')

@@ -1,5 +1,6 @@
 import { rankForLevel } from '@/core/rank'
 import { levelFromXp } from '@/core/xp'
+import { domainLevel, domainRank } from '@/core/progressionConfig'
 import type { Activity, Quest } from '@/core/types'
 import { arrangeHome } from '@/core/homeLayout'
 import {
@@ -35,8 +36,10 @@ export function buildDemoView(doneQuests: Map<string, number>, now = new Date())
     totalXp: lifeXp + sportXp,
     global,
     rank: rankForLevel(global.level),
-    life: { xp: lifeXp, ...levelFromXp(lifeXp) },
-    sportLevel: { xp: sportXp, ...levelFromXp(sportXp) },
+    life: { xp: lifeXp, ...domainLevel(lifeXp, 1) },
+    sportLevel: { xp: sportXp, ...domainLevel(sportXp, 1) },
+    lifeRank: domainRank(domainLevel(lifeXp, 1).level),
+    sportRank: domainRank(domainLevel(sportXp, 1).level),
     attributes: DEMO_ATTRIBUTES,
     quests,
     pendingCount: pending.length,

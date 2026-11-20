@@ -10,7 +10,7 @@ import s from './ReportsPage.module.css'
 
 /** Bilans consultables dans l'application, exportables en PDF. Un PDF de bilan n'est PAS une sauvegarde. */
 export function ReportsPage() {
-  const { events, quests, categories, sport, analyses, moves, commitments, now, demo, goals, projects, indicators, readings, prefs } = useAppState()
+  const { events, quests, categories, sport, analyses, moves, commitments, now, demo, goals, projects, indicators, readings, prefs, prestiges, rewards, achievements } = useAppState()
   const [kind, setKind] = useState<ReportKind>('day')
   const [anchor, setAnchor] = useState(() => now)
   const [done, setDone] = useState<string | null>(null)
@@ -19,7 +19,8 @@ export function ReportsPage() {
     kind, anchor, now, events, quests, categories, sessions: sport.sessions, checks: sport.checks, analyses, moves, commitments,
     recovery: sport.recovery, sportTarget: sport.profile.availability.strengthPerWeek,
     life: { goals, projects, indicators, readings, prefs: prefs.planning },
-  }), [kind, anchor, now, events, quests, categories, sport, analyses, moves, commitments, goals, projects, indicators, readings, prefs.planning])
+    rpg: { prestiges, rewards, achievements },
+  }), [kind, anchor, now, events, quests, categories, sport, analyses, moves, commitments, goals, projects, indicators, readings, prefs.planning, prestiges, rewards, achievements])
 
   const exportPdf = () => {
     const blob = new Blob([renderReportPdf(report) as BlobPart], { type: 'application/pdf' })

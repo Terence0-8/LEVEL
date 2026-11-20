@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.8.0 — RPG V1.1 : progression, prestige et récompenses
+
+**Livré**
+- **Rangs E → SSS** (`core/progressionConfig.ts`, configuration centrale, valeurs provisoires). Niveau global : échelle d'origine (1–100, E1 D10 C20 B35 A55 S80) prolongée par SS 90 et SSS 96 — aucun niveau global acquis ne change. Niveaux de domaine : 36 niveaux, E 1–5 · D 6–10 · C 11–15 · B 16–20 · A 21–25 · S 26–29 · SS 30–33 · SSS 34–36.
+- **Prestige LIFE et SPORT indépendants** : proposé au dernier niveau du rang SSS (niveau 36), facultatif, jamais automatique, répétable. Un cycle est une *fenêtre* du journal d'XP (XP enregistrée après le dernier prestige) : le journal n'est jamais modifié, niveau et rang se recalculent toujours (corrections comprises). Nouveau cycle : +20 % d'XP par niveau et par prestige (×1,2 ; ×1,4 ; …), propre au domaine.
+- **Écran de confirmation dédié** (`/rpg/prestige/:domaine`) : position, numéro, conservé / réinitialisé, nouveau barème, quatre récompenses proposées, case d'accord explicite ; mise en scène ponctuelle du prestige. Opération atomique (une transaction : prestige + récompense), revérifiée côté service, impossible en double (clé `prestige:<domaine>:<n>`).
+- **Récompenses** (catalogue extensible) : bonus d'XP permanents (LIFE ou SPORT seulement, dégressifs 5 · 4 · 3,2 · 2,6 · 2 · 1,6 %, un palier à la fois), titres, personnalisation (effets de montée de niveau, cadres de rang), défis facultatifs ajoutables comme vraies quêtes. Propositions mélangées, de catégories différentes, déterministes, sans doublon ni récompense déjà obtenue ; catalogue épuisé → prestige sans récompense (rien d'inventé).
+- **Bonus d'XP non rétroactifs** : appliqués aux gains FUTURS (à partir du lendemain de l'obtention) par le moteur existant (`planCompletion`/`planCredit` pour LIFE, `desiredSportAwards` pour SPORT) ; aucun événement déjà inscrit n'est modifié.
+- **22 succès** (catalogue extensible, rareté, description, date d'obtention conservée, jamais en double) et titres ; aucun ne récompense la suractivité.
+- **Attributs** : audit LIFE → sept catégories, sept attributs, un par catégorie (nouvel attribut *Relations* pour « Social & relations », jusque-là fusionné avec Vitalité). SPORT : sept attributs inchangés. Description de ce qui fait évoluer chaque attribut.
+- **Espace RPG** (`/rpg`) : Progression, Attributs, Distinctions, Récompenses, Prestige (historique indépendant LIFE/SPORT). Accueil : prestiges, rang par domaine, distinctions récentes, alerte de prestige. Profil : résumé des distinctions. Bilans : niveaux par cycle, prestiges, succès, récompenses. Notifications : prestige disponible, succès.
+- **Données** : Dexie v7 (`prestiges`, `rpgRewards`, `achievements`), sauvegardes chiffrées complètes, restauration sans perte, hors ligne.
+
+**Migrations et compatibilité**
+- Dexie v6 → v7 : trois tables ajoutées ; la catégorie intégrée « Social & relations » passe de Vitalité à Relations *si elle l'avait encore par défaut* (seules les prochaines validations en bénéficient ; les événements passés gardent leur attribut).
+- Les sauvegardes d'un schéma antérieur (≤ v6) se restaurent : les tables absentes sont créées vides (test).
+- Changement explicite des rangs de domaine : un domaine déjà avancé peut afficher un rang différent (échelle 36 niveaux) ; XP, niveaux (même courbe `100·niveau^1,35`) et niveau global ne changent pas.
+
+**Limites**
+- Seuils, coefficients de prestige et catalogue sont provisoires (à calibrer à l'usage).
+- Les défis de prestige SPORT sont des quêtes LIFE (l'XP SPORT ne vient que des séances).
+- Les succès débloqués sont conservés même si l'événement d'origine est corrigé ensuite (distinction acquise).
+
 ## 0.7.0 — Étape 6 : LIFE V1.1 — objectifs, projets et indicateurs
 
 **Opérationnel**

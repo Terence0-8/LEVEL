@@ -5,6 +5,7 @@ import {
   creditHeadroom, dampingMultiplier, effortCreditBase, isMicroTask, nextBaseShare, partialTargetBase, REWARD_CONFIG,
 } from './rewards'
 import { isCycleCompleted, openAwardsOfCycle } from './questState'
+import { applyBonus } from './prestigeRewards'
 
 export interface AwardContext {
   quest: Quest
@@ -18,6 +19,8 @@ export interface AwardContext {
   /** Date d'accomplissement déclarée (= now pour une validation du jour) */
   doneAt: Date
   eventId: string
+  /** Bonus d'XP LIFE (points de %) en vigueur le jour d'accomplissement ; appliqué à ce gain seulement, jamais rétroactivement */
+  xpBonusPct?: number
 }
 
 const DIFF_FR = { easy: 'facile', normal: 'normale', hard: 'difficile', epic: 'épique' } as const
@@ -67,7 +70,7 @@ export function planCompletion(ctx: AwardContext, stepId: string | null): PlanRe
   const baseAmount = nextBaseShare(quest.rewardXp, awardedBase, remainingUnits)
   const micro = isMicroTask(quest.effortMinutes)
   const mult = dampingMultiplier({ effortMinutes: quest.effortMinutes, microQuestsRewardedToday: microQuestsRewardedToday(ctx) })
-  const amount = Math.round(baseAmount * mult)
+  const amount = applyBonus(Math.round(baseAmount * mult), ctx.xpBonusPct ?? 0)
   const step = stepId ? quest.steps.find((s) => s.id === stepId) : undefined
   if (stepId && !step) return { ok: false, error: 'not_found' }
   const subject = step ? `Étape « ${step.title} » validée` : 'Quête validée'
@@ -75,7 +78,8 @@ export function planCompletion(ctx: AwardContext, stepId: string | null): PlanRe
   const reason =
     `${subject} (difficulté ${DIFF_FR[quest.difficulty]}, ~${quest.effortMinutes} min)` +
     (retro ? ` · accomplissement déclaré le ${dayKey(ctx.doneAt)}` : '') +
-    (mult < 1 ? ` · réduit à ${Math.round(mult * 100)} % : micro-tâches du jour au-delà de ${REWARD_CONFIG.microFullRewardsPerDay}` : '')
+    (mult < 1 ? ` · réduit à ${Math.round(mult * 100)} % : micro-tâches du jour au-delà de ${REWARD_CONFIG.microFullRewardsPerDay}` : '') +
+    (ctx.xpBonusPct ? ` · bonus d’XP permanent +${ctx.xpBonusPct} %` : '')
   return planAward(ctx.questEvents, {
     ...base(ctx),
     id: ctx.eventId,
@@ -159,8 +163,9 @@ export function planCredit(ctx: AwardContext, input: CreditInput): PlanResult<Xp
   }
 
   const mult = creditsDeclaredToday(ctx) >= cfg.creditDeclarationsPerDay ? cfg.creditOverCapMultiplier : 1
-  const amount = Math.max(1, Math.round(baseAmount * mult))
+  const amount = Math.max(1, applyBonus(Math.round(baseAmount * mult), ctx.xpBonusPct ?? 0))
   if (mult < 1) reason += ` · réduit à ${Math.round(mult * 100)} % : plus de ${cfg.creditDeclarationsPerDay} déclarations ce jour-là`
+  if (ctx.xpBonusPct) reason += ` · bonus d’XP permanent +${ctx.xpBonusPct} %`
   if (base(ctx).retroactive) reason += ` · accomplissement déclaré le ${dayKey(ctx.doneAt)}`
 
   return planAward(ctx.questEvents, {

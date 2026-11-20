@@ -10,6 +10,7 @@ import type { Recommendation } from '@/core/sport/progression'
 import { buildRun, type RunInput } from '@/core/sport/running'
 import type { BodyMeasure, ExerciseState, ProgressionDecision, RecoveryCheck, SessionSlot, SetLog, SportSession, Variant } from '@/core/sport/session'
 import type { BodyArea, Exercise, Level3, MuscleGroup, PainLevel, SorenessLevel } from '@/core/sport/types'
+import { xpBonusPct } from '@/core/prestigeRewards'
 import { completion, desiredSportAwards, isFinished, SPORT_KEY_PREFIX } from '@/core/sport/xp'
 import { db, type LevelDB } from './db'
 import type { ServiceDeps } from './questService'
@@ -46,7 +47,7 @@ export interface SetInput {
 
 export function createSportService(database: LevelDB = db, deps: ServiceDeps = defaultDeps) {
   const { now, id } = deps
-  const stores = () => [database.sportProfile, database.exercisePrefs, database.customExercises, database.sportSessions, database.recoveryChecks, database.exerciseStates, database.progressionLog, database.bodyMeasures, database.xpEvents]
+  const stores = () => [database.sportProfile, database.exercisePrefs, database.customExercises, database.sportSessions, database.recoveryChecks, database.exerciseStates, database.progressionLog, database.bodyMeasures, database.xpEvents, database.rpgRewards]
   const tx = <T>(fn: () => Promise<T>) => database.transaction('rw', stores(), fn)
   const stamp = () => now().toISOString()
   const today = () => dayKey(now())
@@ -75,7 +76,8 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
   // ── Synchronisation de l'XP SPORT avec le journal (recalcul déterministe) ─────
   async function syncXpUnsafe() {
     const [prof, sessions, checks, decisions, custom] = await Promise.all([profile(), database.sportSessions.toArray(), database.recoveryChecks.toArray(), database.progressionLog.toArray(), database.customExercises.toArray()])
-    const desired = new Map(desiredSportAwards({ sessions, checks, decisions, profile: prof, custom }).map((d) => [d.key, d]))
+    const owned = await database.rpgRewards.toArray()
+    const desired = new Map(desiredSportAwards({ sessions, checks, decisions, profile: prof, custom, xpBonus: (day) => xpBonusPct('SPORT', owned, day) }).map((d) => [d.key, d]))
     let events = await database.xpEvents.where('awardKey').startsWith(SPORT_KEY_PREFIX).toArray()
     const at = now()
     let reversed = 0, awarded = 0

@@ -166,7 +166,7 @@ describe('RPG transversal', () => {
     expect(p.sportLevel.xp).toBe(60)
     expect(p.lifeRank!.rank).not.toBe(undefined)
     expect(p.sportLevel.level).toBeLessThan(p.life.level)
-    expect(a.notImplemented.join(' ')).toMatch(/Prestige/)
+    expect(a.notImplemented).toEqual([])
   })
   it('détecte un événement SPORT mal rattaché et un double comptage', () => {
     const bad = auditRpg([ev({ domain: 'LIFE', awardKey: 'sport:session:s1:base' })])

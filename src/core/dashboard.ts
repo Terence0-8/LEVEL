@@ -21,6 +21,10 @@ export interface DashboardInput {
   sportTarget: number
   /** Constats LIFE (projets en retard, étapes bloquées…) déjà calculés */
   findings?: Finding[]
+  /** Domaines dont le prestige est disponible (facultatif : jamais déclenché automatiquement) */
+  prestigeReady?: Array<'LIFE' | 'SPORT'>
+  /** Nombre de distinctions (succès, récompenses) obtenues récemment */
+  recentUnlocks?: number
 }
 
 export interface DashboardAlert { id: string; tone: 'warn' | 'info' | 'good'; title: string; detail: string; route: string }
@@ -128,6 +132,7 @@ export function buildDashboard(i: DashboardInput): Dashboard {
   if (proposals.some((p) => p.kind === 'move-quest' || p.kind === 'simplify-quest' || p.kind === 'unschedule-quest')) alerts.push({ id: 'proposals', tone: 'info', title: 'Réorganisation possible', detail: `${proposals.length} proposition${proposals.length > 1 ? 's' : ''} pour alléger la semaine, à confirmer vous-même.`, route: '/planning' })
   const repeated = ctx.quests.filter((q) => !q.archived && postponements(ctx.moves, q.id, now) >= REPEATED_POSTPONEMENT_THRESHOLD)
   if (repeated[0]) alerts.push({ id: `rep-${repeated[0].id}`, tone: 'info', title: 'Un report revient souvent', detail: `« ${repeated[0].title} » : la simplifier ou la découper aiderait.`, route: '/life' })
+  for (const d of i.prestigeReady ?? []) alerts.push({ id: `prestige-${d}`, tone: 'good', title: `Prestige ${d} disponible`, detail: 'Facultatif : vous pouvez continuer à progresser, ou ouvrir un nouveau cycle quand vous le souhaitez.', route: '/rpg/prestige' })
   const lf = (i.findings ?? []).filter((f) => f.severity === 'warn')[0]
   if (lf) alerts.push({ id: `life-${lf.id}`, tone: 'warn', title: lf.title, detail: lf.detail, route: lf.refType === 'goal' ? '/life/objectifs' : lf.refType === 'indicator' ? '/life/indicateurs' : '/life/projets' })
   if (i.missedCount > 0) alerts.push({ id: 'missed', tone: 'info', title: `${i.missedCount} élément${i.missedCount > 1 ? 's' : ''} à analyser`, detail: 'Comprendre pourquoi aide à ajuster, sans aucune pénalité d’XP.', route: '/life' })
@@ -144,6 +149,7 @@ export function buildDashboard(i: DashboardInput): Dashboard {
     nearestDeadlineHours: dueHours.length ? Math.min(...dueHours) : dailyOpen ? 24 : null,
     sportPlannedToday: nextSession?.when === 'today', recovery: rec.index, recoveryLevel: rec.level, hasCheckToday,
     alerts: shown.filter((a) => a.tone !== 'good' || shown.length === 1).length, criticalAlert: shown.some((a) => a.tone === 'warn'),
+    recentUnlocks: i.recentUnlocks ?? 0,
     overloadedToday: load > usable && usable > 0, deadlinesSoon: deadlines.filter((d) => d.daysLeft <= 2).length, deadlines: Math.min(5, deadlines.length),
   }
   return { priorities, morePending: Math.max(0, pending.length - priorities.length), nextSession, deadlines: deadlines.slice(0, 5), week, today: { load, usable, overloaded: home.overloadedToday }, alerts: shown, proposals, home }

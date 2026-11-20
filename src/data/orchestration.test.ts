@@ -54,7 +54,7 @@ describe('préférences générales', () => {
     expect(p.notifications.frequency).toBe('minimal')
   })
   it('sont couvertes par la table settings (donc par les sauvegardes)', async () => {
-    await createPrefsService(main).update((p) => ({ ...p, rpg: { celebrations: false } }))
+    await createPrefsService(main).update((p) => ({ ...p, rpg: { ...p.rpg, celebrations: false } }))
     expect((await main.settings.get('appPrefs'))?.value).toMatchObject({ rpg: { celebrations: false } })
   })
 })

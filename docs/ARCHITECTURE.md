@@ -138,3 +138,27 @@ Principes : aucune règle LIFE/SPORT réécrite (le planning lit quêtes, séanc
 | Interface | Ensemble, Objectifs, Projets, Indicateurs ; routes `/life/:section` | `features/life/*` |
 
 Principes : aucun système parallèle (les quêtes, le journal XP, les catégories, le planning et les bilans sont réutilisés) ; `goalService` n'écrit jamais dans `xpEvents` ; un projet est écrit en une transaction fonctionnelle (pas d'écrasement) ; la suppression détache sans jamais supprimer de quête ni d'XP.
+
+## RPG V1.1 : progression, prestige, récompenses (v0.8)
+| Brique | Rôle | Emplacement |
+|---|---|---|
+| Configuration | Rangs E→SSS, échelles global/domaine, +20 %/prestige, bonus 5 % dégressifs, 4 propositions | `core/progressionConfig.ts` (seul endroit des seuils et coefficients) |
+| Cycles et prestige | Fenêtre du journal par domaine, éligibilité, historique (pur) | `core/prestige.ts` |
+| Catalogue | Récompenses, bonus d'XP, propositions déterministes | `core/prestigeRewards.ts` |
+| Succès | Règles pures, titres | `core/achievements.ts` |
+| Intégration moteur | `AwardContext.xpBonusPct` (LIFE), `Opts.xpBonus` (SPORT) | `core/awards.ts`, `core/sport/xp.ts`, `data/questService.ts`, `data/sportService.ts` |
+| Commandes | Prestige atomique, déblocage des succès | `data/rpgService.ts` |
+| Audit | Cycles, doublons, cohérence | `core/rpgConsistency.ts` |
+| Interface | `features/rpg/*` (sections, confirmation, mise en scène en portail) | |
+
+Principes : aucun moteur XP parallèle ; le journal n'est jamais réécrit ; le niveau de domaine = `domainLevel(XP du cycle, cycle)` ; le niveau global reste `levelFromXp(XP totale)` ; un bonus s'applique au gain futur (jour d'obtention exclu) ; `rpgService` n'écrit jamais dans `xpEvents` ; tables : `prestiges` (clé `prestige:<domaine>:<n>`), `rpgRewards` (clé = identifiant du catalogue), `achievements` (clé = identifiant).
+
+### Paramètres provisoires
+| Paramètre | Valeur |
+|---|---|
+| Niveaux de domaine | 36 (≈ 193 000 XP au premier cycle, ≈ 3,5 ans à 150 XP/jour) |
+| Rangs de domaine (premier niveau) | E1 D6 C11 B16 A21 S26 SS30 SSS34 |
+| Rangs globaux | E1 D10 C20 B35 A55 S80 SS90 SSS96 (niveaux 1–100) |
+| Coût du cycle n | coût du niveau × (1 + 0,2·(n−1)) |
+| Bonus d'XP | 5 %, ×0,8 par palier, 6 paliers (≈ +18 % cumulés) |
+| Propositions par prestige | 4 maximum, une par catégorie |

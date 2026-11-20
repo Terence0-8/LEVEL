@@ -146,7 +146,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   await go('/profile')
   await page.getByRole('button', { name: 'Vérifier la cohérence du RPG' }).click(); await page.waitForTimeout(500)
   check('Cohérence RPG : tous les contrôles passent', (await vis(page.getByText('Tout est cohérent'))) && (await page.locator('li', { hasText: '✗' }).count()) === 0)
-  check('Cohérence RPG : prestige annoncé honnêtement comme « à venir »', await vis(page.getByText(/À venir : Prestige/)))
+  check('Cohérence RPG : contrôles prestiges, récompenses et succès présents', (await vis(page.getByText(/Prestiges numérotés sans trou/))) && (await vis(page.getByText(/Récompenses uniques/))))
   await shot('global-settings-rpg-mobile', false)
 
   // ── 7. Réglages : notifications, tranquillité, planning ────────────────

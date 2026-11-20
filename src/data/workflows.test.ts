@@ -43,7 +43,7 @@ describe('décisions de configuration', () => {
     expect(xpCostOfLevel(1)).toBe(100)
     expect(xpCostOfLevel(10)).toBe(2239)
     expect(MAX_LEVEL).toBe(100)
-    expect(RANK_THRESHOLDS.map((r) => `${r.rank}${r.minLevel}`)).toEqual(['E1', 'D10', 'C20', 'B35', 'A55', 'S80'])
+    expect(RANK_THRESHOLDS.map((r) => `${r.rank}${r.minLevel}`)).toEqual(['E1', 'D10', 'C20', 'B35', 'A55', 'S80', 'SS90', 'SSS96'])
   })
   it('les barèmes provisoires restent centralisés dans REWARD_CONFIG', () => {
     expect(REWARD_CONFIG.baseByDifficulty).toEqual({ easy: 20, normal: 40, hard: 70, epic: 120 })

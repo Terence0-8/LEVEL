@@ -50,6 +50,10 @@ export interface NotifContext {
   commitments: Commitment[]
   levels: SeenLevels
   seen: SeenLevels | null
+  /** Domaines dont le prestige est disponible (rappel unique, jamais de déclenchement automatique) */
+  prestigeReady?: Array<{ domain: 'LIFE' | 'SPORT'; number: number }>
+  /** Succès débloqués récemment (annonce unique, 48 h) */
+  recentUnlocks?: Array<{ id: string; title: string; at: string }>
 }
 
 const hhmm = (now: Date) => now.getHours() * 60 + now.getMinutes()
@@ -109,6 +113,10 @@ export function candidates(c: NotifContext): Candidate[] {
     const rk: Array<['rankGlobal' | 'rankLife' | 'rankSport', string]> = [['rankGlobal', 'global'], ['rankLife', 'LIFE'], ['rankSport', 'SPORT']]
     for (const [k, label] of rk) if (c.levels[k] !== c.seen[k]) out.push({ key: `rank:${label}:${c.levels[k]}`, category: 'progress', title: `Nouveau rang ${label} : ${c.levels[k]}`, body: 'Votre rang a évolué.', route: '/rpg', priority: 62 })
   }
+
+  // Prestige disponible (facultatif) et succès débloqués : une seule annonce chacun
+  for (const p of c.prestigeReady ?? []) out.push({ key: `prestige:ready:${p.domain}:${p.number}`, category: 'progress', title: `Prestige ${p.domain} disponible`, body: 'Facultatif : ouvrez un nouveau cycle quand vous le souhaitez.', route: '/rpg/prestige', priority: 58 })
+  for (const u of c.recentUnlocks ?? []) if (now.getTime() - new Date(u.at).getTime() < 48 * 3_600_000) out.push({ key: `unlock:${u.id}`, category: 'progress', title: `Succès débloqué : ${u.title}`, body: 'Retrouvez-le dans vos distinctions.', route: '/rpg/distinctions', priority: 52 })
 
   // Bilans : quotidien (20 h 30), hebdomadaire (dimanche 18 h), mensuel (dernier jour 18 h)
   if (t >= at(20, 30)) out.push({ key: `review:daily:${day}`, category: 'reviews', title: 'Votre bilan du jour est prêt', body: 'Accomplissements, XP gagnée et priorités de demain.', route: '/bilans', priority: 30 })

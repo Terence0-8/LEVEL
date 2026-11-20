@@ -39,7 +39,7 @@ export interface SeenLevels { global: number; life: number; sport: number; rankG
 export interface AppPrefs {
   planning: PlanningPrefs
   notifications: NotificationPrefs
-  rpg: { celebrations: boolean }
+  rpg: { celebrations: boolean; /** Titre affiché (identifiant `ach:…` ou `rw:…`) */ title: string | null; /** Effet de montée de niveau (identifiant de récompense) */ effect: string | null; /** Cadre de rang (identifiant de récompense) */ frame: string | null }
   /** Derniers niveaux/rangs signalés (détecte les montées de niveau à notifier) */
   seen: SeenLevels | null
 }
@@ -51,7 +51,7 @@ export const DEFAULT_PREFS: AppPrefs = {
     categories: { fixed: true, quests: true, deadlines: true, sport: true, recovery: true, progress: true, reviews: true },
     reminders: [],
   },
-  rpg: { celebrations: true },
+  rpg: { celebrations: true, title: null, effect: null, frame: null },
   seen: null,
 }
 
@@ -80,7 +80,12 @@ export function mergePrefs(raw: unknown): AppPrefs {
         ? (n.reminders as any[]).filter((x) => x && typeof x.id === 'string' && HHMM.test(x.time)).slice(0, 8).map((x) => ({ id: x.id, time: x.time, label: String(x.label ?? 'Rappel').slice(0, 60), enabled: x.enabled !== false }))
         : [],
     },
-    rpg: { celebrations: typeof r.rpg?.celebrations === 'boolean' ? r.rpg.celebrations : d.rpg.celebrations },
+    rpg: {
+      celebrations: typeof r.rpg?.celebrations === 'boolean' ? r.rpg.celebrations : d.rpg.celebrations,
+      title: typeof r.rpg?.title === 'string' ? r.rpg.title.slice(0, 80) : null,
+      effect: typeof r.rpg?.effect === 'string' ? r.rpg.effect.slice(0, 40) : null,
+      frame: typeof r.rpg?.frame === 'string' ? r.rpg.frame.slice(0, 40) : null,
+    },
     seen: r.seen && typeof r.seen === 'object' && Number.isFinite(r.seen.global) ? (r.seen as SeenLevels) : null,
   }
 }

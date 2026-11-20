@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Icon, type IconName } from '@/design/Icon'
 import { LogoWordmark } from '@/design/Logo'
 import { useAppState } from './AppState'
+import { REWARD_BY_ID } from '@/core/prestigeRewards'
 import { BackupBanner } from '@/features/backup/BackupBanner'
 import s from './Shell.module.css'
 
@@ -21,28 +22,45 @@ const TAB_NAV = NAV.filter((n) => n.to !== '/history')
 
 const cls = (base: string, active: boolean) => (active ? `${base} ${s.active}` : base)
 
-/** Annonce spectaculaire quand le niveau global ou le rang change (événement important → or lumineux). */
+/** Annonce quand un niveau (global ou de domaine) ou un rang change : événement important → or lumineux. */
 function useLevelUp() {
   const { progress, prefs } = useAppState()
+  const prev = useRef<{ demo: boolean; global: number; life: number; sport: number; rankLife: string; rankSport: string; cycles: string } | null>(null)
+  const [msg, setMsg] = useState<{ title: string; sub: string; rank: boolean } | null>(null)
   const celebrate = prefs.rpg.celebrations
-  const prev = useRef<{ demo: boolean; level: number } | null>(null)
-  const [msg, setMsg] = useState<{ title: string; sub: string } | null>(null)
-  const { level, isDemo, rank } = { level: progress.global.level, isDemo: progress.isDemo, rank: progress.rank }
+  const now = {
+    demo: progress.isDemo, global: progress.global.level, life: progress.life.level, sport: progress.sportLevel.level,
+    rankLife: progress.lifeRank?.rank ?? '', rankSport: progress.sportRank?.rank ?? '',
+    cycles: `${progress.cycles?.LIFE.cycle ?? 1}/${progress.cycles?.SPORT.cycle ?? 1}`,
+  }
+  const key = JSON.stringify(now)
   useEffect(() => {
     const before = prev.current
-    prev.current = { demo: isDemo, level }
-    if (celebrate && before && before.demo === isDemo && level > before.level) {
-      setMsg({ title: `Niveau ${level}`, sub: rank.minLevel === level ? `Nouveau rang ${rank.rank} · ${rank.title}` : 'Niveau supérieur atteint' })
-      const t = setTimeout(() => setMsg(null), 4200)
+    prev.current = now
+    // Un prestige remet le niveau du domaine à 1 : aucun bandeau de montée de niveau dans ce cas (l'écran de prestige s'en charge).
+    if (!celebrate || !before || before.demo !== now.demo || before.cycles !== now.cycles) return
+    let next: { title: string; sub: string; rank: boolean } | null = null
+    if (now.rankLife !== before.rankLife && now.life > before.life) next = { title: `LIFE · rang ${now.rankLife}`, sub: `Nouveau rang LIFE (niveau ${now.life})`, rank: true }
+    else if (now.rankSport !== before.rankSport && now.sport > before.sport) next = { title: `SPORT · rang ${now.rankSport}`, sub: `Nouveau rang SPORT (niveau ${now.sport})`, rank: true }
+    else if (now.global > before.global) next = { title: `Niveau ${now.global}`, sub: progress.rank.minLevel === now.global ? `Nouveau rang ${progress.rank.rank} · ${progress.rank.title}` : 'Niveau supérieur atteint', rank: progress.rank.minLevel === now.global }
+    else if (now.life > before.life) next = { title: `LIFE · niveau ${now.life}`, sub: 'Niveau LIFE supérieur', rank: false }
+    else if (now.sport > before.sport) next = { title: `SPORT · niveau ${now.sport}`, sub: 'Niveau SPORT supérieur', rank: false }
+    if (next) {
+      setMsg(next)
+      const t = setTimeout(() => setMsg(null), next.rank ? 5200 : 4200)
       return () => clearTimeout(t)
     }
-  }, [level, isDemo, rank, celebrate])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, celebrate])
   return msg
 }
 
 export function Shell() {
   const loc = useLocation()
   const toast = useLevelUp()
+  const { prefs } = useAppState()
+  const fxDef = prefs.rpg.effect ? REWARD_BY_ID[prefs.rpg.effect] : undefined
+  const fx = fxDef?.effect.type === 'levelup-effect' ? s[fxDef.effect.css] : ''
   const immersive = loc.pathname.startsWith('/sport/seance/')
 
   return (
@@ -83,8 +101,8 @@ export function Shell() {
       </nav>
 
       {toast ? (
-        <div className={s.toast} role="status" aria-live="polite">
-          <small>LEVEL UP</small><b>{toast.title}</b><div style={{ fontSize: 12, color: 'var(--c-text)' }}>{toast.sub}</div>
+        <div className={`${s.toast} ${fx ?? ''} ${toast.rank ? s.toastRank : ''}`} role="status" aria-live="polite">
+          <small>{toast.rank ? 'NOUVEAU RANG' : 'LEVEL UP'}</small><b>{toast.title}</b><div style={{ fontSize: 12, color: 'var(--c-text)' }}>{toast.sub}</div>
         </div>
       ) : null}
     </div>

@@ -160,3 +160,18 @@ export function WeekProgress({ d }: { d: Dashboard }) {
     </Card>
   )
 }
+
+/** Distinctions récentes (succès et récompenses) : bloc discret, affiché seulement s'il y en a. */
+export function RecentUnlocks() {
+  const { rpg } = useAppState()
+  return (
+    <Card>
+      <SectionTitle title="Distinctions récentes" aside={more('/rpg/distinctions', 'Toutes')} />
+      <ul className={s.unlocks}>
+        {rpg.recent.slice(0, 3).map((x) => (
+          <li key={`${x.kind}${x.id}`}><Icon name="rpg" size={18} /><span><b>{x.name}</b><small>{x.kind === 'reward' ? 'Récompense de prestige' : 'Succès débloqué'}</small></span></li>
+        ))}
+      </ul>
+    </Card>
+  )
+}

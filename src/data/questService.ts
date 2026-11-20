@@ -1,5 +1,6 @@
 import { planCompletion, planCredit, type AwardContext, type CreditInput } from '@/core/awards'
-import { ATTRIBUTE_IDS } from '@/core/attributes'
+import { ATTRIBUTE_IDS, DEFAULT_CATEGORY_ATTRIBUTE } from '@/core/attributes'
+import { xpBonusPct } from '@/core/prestigeRewards'
 import { dayKey, daysBetweenKeys, fromDayKey, isDayKey } from '@/core/dates'
 import { cycleKeyFor, questAwardKey, stepAwardKey, type Category, type Difficulty, type Priority, type Quest, type QuestStep, type QuestType } from '@/core/quest'
 import { openAwards, planReversal, type PlanError, type XpEvent } from '@/core/ledger'
@@ -66,7 +67,7 @@ export const DEFAULT_CATEGORIES: Array<{ id: string; name: string; attribute: At
   { id: 'cat-culture', name: 'Culture & connaissances', attribute: 'intellect' },
   { id: 'cat-finances', name: 'Économie & finances', attribute: 'prosperite' },
   { id: 'cat-perso', name: 'Développement personnel', attribute: 'endurance' },
-  { id: 'cat-social', name: 'Social & relations', attribute: 'vitalite' },
+  { id: 'cat-social', name: 'Social & relations', attribute: DEFAULT_CATEGORY_ATTRIBUTE['cat-social'] },
   { id: 'cat-projets', name: 'Projets personnels', attribute: 'force' },
   { id: 'cat-hygiene', name: 'Hygiène de vie', attribute: 'vitalite' },
 ]
@@ -85,7 +86,7 @@ export const questToInput = (q: Quest): QuestInput => ({
 
 export function createQuestService(database: LevelDB = db, deps: ServiceDeps = defaultDeps) {
   const { now, id } = deps
-  const stores = () => [database.quests, database.xpEvents, database.categories, database.settings, database.analyses, database.revisions]
+  const stores = () => [database.quests, database.xpEvents, database.categories, database.settings, database.analyses, database.revisions, database.rpgRewards]
   const tx = <T>(fn: () => Promise<T>) => database.transaction('rw', stores(), fn)
 
   async function getQuest(questId: string): Promise<Quest> {
@@ -112,7 +113,8 @@ export function createQuestService(database: LevelDB = db, deps: ServiceDeps = d
     const end = new Date(doneAt.getFullYear(), doneAt.getMonth(), doneAt.getDate() + 1)
     const todayEvents = await database.xpEvents.where('at').between(start.toISOString(), end.toISOString(), true, false).toArray()
     const category = await database.categories.get(quest.categoryId)
-    return { quest, category, questEvents, todayEvents, now: at, doneAt, eventId: id() }
+    const owned = await database.rpgRewards.toArray()
+    return { quest, category, questEvents, todayEvents, now: at, doneAt, eventId: id(), xpBonusPct: xpBonusPct('LIFE', owned, dayKey(doneAt)) }
   }
 
   /** Annule les gains ouverts sélectionnés ; marque les originaux « reversed ». */

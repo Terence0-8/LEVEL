@@ -10,6 +10,9 @@ import type { Exercise } from '@/core/sport/types'
 import type { Commitment, PlanMove } from '@/core/planning'
 import type { NotificationLogEntry } from '@/core/notifications'
 import type { Goal, Indicator, Project, Reading } from '@/core/goals'
+import type { PrestigeRecord } from '@/core/prestige'
+import type { RewardRow } from '@/core/prestigeRewards'
+import type { AchievementRow } from '@/core/achievements'
 
 /**
  * Base locale de Level (IndexedDB). Le schéma est versionné : toute évolution
@@ -67,6 +70,13 @@ export class LevelDB extends Dexie {
   indicators!: Table<Indicator, string>
   /** Historique des mesures : conservé tel quel (jamais d'XP) */
   indicatorReadings!: Table<Reading, string>
+  // ── RPG V1.1 (v7) ──
+  /** Historique des prestiges (jamais modifié ni supprimé) : un enregistrement par prestige de chaque domaine */
+  prestiges!: Table<PrestigeRecord, string>
+  /** Récompenses obtenues (clé = identifiant du catalogue : impossible en double) */
+  rpgRewards!: Table<RewardRow, string>
+  /** Succès débloqués avec leur date d'obtention (clé = identifiant : impossible en double) */
+  achievements!: Table<AchievementRow, string>
 
   constructor(name = 'level') {
     super(name)
@@ -162,6 +172,39 @@ export class LevelDB extends Dexie {
       projects: 'id, status, goalId',
       indicators: 'id, categoryId',
       indicatorReadings: 'id, indicatorId, at',
+    })
+    // v7 : RPG V1.1 — prestiges, récompenses et succès (tables ajoutées, données existantes inchangées).
+    // La catégorie par défaut « Social & relations » nourrit désormais l'attribut Relations (au lieu de Vitalité) : seules les
+    // PROCHAINES validations en bénéficient, les événements déjà inscrits gardent leur attribut (aucune réécriture).
+    this.version(7).stores({
+      profile: 'id',
+      settings: 'key',
+      demoQuestState: 'questId',
+      categories: 'id, order',
+      quests: 'id, archived, createdAt',
+      xpEvents: 'id, awardKey, questId, at, domain',
+      analyses: 'id, questId, createdAt',
+      revisions: 'id, questId, at',
+      sportProfile: 'id',
+      exercisePrefs: 'exerciseId',
+      customExercises: 'id',
+      sportSessions: 'id, date, status, kind',
+      recoveryChecks: 'id, day, at',
+      exerciseStates: 'exerciseId',
+      progressionLog: 'id, exerciseId, at',
+      bodyMeasures: 'id, date',
+      commitments: 'id, date',
+      planningMoves: 'id, refId, at',
+      notificationLog: 'id, key, at',
+      goals: 'id, status, categoryId',
+      projects: 'id, status, goalId',
+      indicators: 'id, categoryId',
+      indicatorReadings: 'id, indicatorId, at',
+      prestiges: 'id, domain, number',
+      rpgRewards: 'id, acquiredAt',
+      achievements: 'id, unlockedAt',
+    }).upgrade(async (tx) => {
+      await tx.table('categories').where('id').equals('cat-social').modify((c: { attribute: string }) => { if (c.attribute === 'vitalite') c.attribute = 'relations' })
     })
   }
 }

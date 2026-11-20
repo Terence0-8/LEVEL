@@ -49,7 +49,7 @@ function NumberField({ id, value, min, max, step, onCommit }: { id: string; valu
 }
 
 export function ProfilePage() {
-  const { displayName, settings, prefs, notifLog, events, sport, quests } = useAppState()
+  const { displayName, settings, prefs, notifLog, events, sport, quests, rpg, achievements, prestiges, rewards } = useAppState()
   const [name, setName] = useState(displayName)
   const [saved, setSaved] = useState(false)
   const [capVersion, setCapVersion] = useState(0)
@@ -177,10 +177,21 @@ export function ProfilePage() {
       </Card>
 
       <Card>
+        <SectionTitle title="Distinctions" aside={<Link to="/rpg/distinctions" style={{ color: 'var(--c-gold)' }}>Ouvrir</Link>} />
+        <div className={c.summary}>
+          <div>Titre affiché<b>{rpg.titles.find((t) => t.id === rpg.equippedTitle)?.title ?? 'Aucun'}</b></div>
+          <div>Succès<b>{achievements.length} débloqué{achievements.length > 1 ? 's' : ''}</b></div>
+          <div>Prestiges<b>LIFE ×{rpg.cycles.LIFE.prestigeCount} · SPORT ×{rpg.cycles.SPORT.prestigeCount}</b></div>
+          <div>Récompenses<b>{rewards.length} obtenue{rewards.length > 1 ? 's' : ''}</b></div>
+        </div>
+        <Link to="/rpg/prestige" style={{ color: 'var(--c-gold)', fontSize: 14 }}>Historique des prestiges</Link>
+      </Card>
+
+      <Card>
         <SectionTitle title="RPG" />
         <Toggle label="Annonces de montée de niveau" hint="Affiche un bandeau lumineux à chaque nouveau niveau ou rang." checked={prefs.rpg.celebrations} onChange={(v) => upd((p) => ({ ...p, rpg: { ...p.rpg, celebrations: v } }))} />
         <div style={{ marginTop: 14 }}>
-          <button className={s.btn} onClick={() => setAudit(auditRpg(events))}>Vérifier la cohérence du RPG</button>
+          <button className={s.btn} onClick={() => setAudit(auditRpg(events, prestiges, rewards, achievements))}>Vérifier la cohérence du RPG</button>
           {audit ? (
             <div role="status" aria-live="polite">
               <p style={{ marginTop: 10, fontSize: 14 }} className={audit.ok ? c.ok : c.ko}>{audit.ok ? 'Tout est cohérent : XP, niveaux, rangs et attributs correspondent au journal.' : 'Une incohérence a été trouvée.'}</p>

@@ -5,7 +5,7 @@
  */
 
 type ClassicWidgetId = 'hero' | 'domains' | 'quests' | 'sport' | 'attributes' | 'activity'
-export type WidgetId = ClassicWidgetId | 'alerts' | 'recovery' | 'deadlines' | 'week'
+export type WidgetId = ClassicWidgetId | 'alerts' | 'recovery' | 'deadlines' | 'week' | 'rpg'
 
 export interface HomeContext {
   now: Date
@@ -81,6 +81,8 @@ export interface GlobalHomeContext {
   deadlinesSoon: number
   /** Éléments d'échéances affichables */
   deadlines: number
+  /** Succès ou récompenses obtenus récemment (le bloc n'apparaît que s'il y en a) */
+  recentUnlocks?: number
 }
 
 export function arrangeGlobalHome(ctx: GlobalHomeContext): WidgetPlacement[] {
@@ -96,6 +98,7 @@ export function arrangeGlobalHome(ctx: GlobalHomeContext): WidgetPlacement[] {
   }
   if (ctx.alerts > 0) p.alerts = { id: 'alerts', priority: ctx.criticalAlert ? 99 : 72, reason: ctx.criticalAlert ? 'Alerte à traiter en premier' : 'Recommandations du moment' }
   if (ctx.deadlines > 0) p.deadlines = { id: 'deadlines', priority: ctx.deadlinesSoon > 0 ? 88 : 48, reason: ctx.deadlinesSoon > 0 ? 'Échéance dans moins de 48 h' : 'Échéances à venir' }
+  if ((ctx.recentUnlocks ?? 0) > 0) p.rpg = { id: 'rpg', priority: 42, reason: 'Distinctions récentes' }
   p.recovery = { id: 'recovery', priority: 40, reason: 'État de récupération' }
 
   if (ctx.pendingQuests === 0) { p.quests!.priority = 34; p.quests!.reason = 'Toutes les quêtes sont accomplies' }

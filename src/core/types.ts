@@ -2,12 +2,13 @@
 
 export type Domain = 'LIFE' | 'SPORT'
 
-export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
+export type Rank = 'E' | 'D' | 'C' | 'B' | 'A' | 'S' | 'SS' | 'SSS'
 
 export type AttributeId =
   | 'force'
   | 'endurance'
   | 'vitalite'
+  | 'relations'
   | 'discipline'
   | 'intellect'
   | 'prosperite'

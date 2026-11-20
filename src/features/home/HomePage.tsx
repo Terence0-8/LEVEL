@@ -8,14 +8,19 @@ import { formatDayLabel, formatNumber, formatTime } from '@/lib/format'
 import type { WidgetId } from '@/core/homeLayout'
 import type { DemoView } from '@/mocks/demoView'
 import type { Progress } from '@/app/AppState'
-import { Alerts, Deadlines, NextSession, Priorities, RecoveryCard, WeekProgress } from './GlobalWidgets'
+import { Alerts, Deadlines, NextSession, Priorities, RecoveryCard, RecentUnlocks, WeekProgress } from './GlobalWidgets'
+import { REWARD_BY_ID } from '@/core/prestigeRewards'
 import { QuestList } from '../shared/QuestList'
 import s from './HomePage.module.css'
 
 function Hero({ demo, name }: { demo: Progress; name: string }) {
   const g = demo.global
+  const { prefs, rpg } = useAppState()
+  const frameDef = prefs.rpg.frame ? REWARD_BY_ID[prefs.rpg.frame] : undefined
+  const frame = frameDef?.effect.type === 'rank-frame' ? s[frameDef.effect.css] : ''
+  const title = rpg.titles.find((x) => x.id === rpg.equippedTitle)?.title
   return (
-    <Card variant="event" className={s.span2}>
+    <Card variant="event" className={`${s.span2} ${frame ?? ''}`}>
       <div className={s.hero}>
         <Ring progress={g.progress} size={112} stroke={8} label={`Niveau ${g.level}, ${Math.round(g.progress * 100)} % vers le suivant`}>
           <div style={{ fontSize: 10, letterSpacing: '0.25em', color: 'var(--c-text-dim)' }}>NIVEAU</div>
@@ -24,6 +29,7 @@ function Hero({ demo, name }: { demo: Progress; name: string }) {
         <div className={s.heroText}>
           <div className={s.eyebrow}>Bienvenue dans Level</div>
           <h1>{name}</h1>
+          {title ? <div className={s.titleLine}>{title}</div> : null}
           <div className={s.rankChip}>
             <Badge tone="gold"><span className={s.rankLetter}>Rang {demo.rank.rank}</span> · {demo.rank.title}</Badge>
             {demo.isDemo ? <DemoTag /> : null}
@@ -46,7 +52,7 @@ function Domains({ demo }: { demo: Progress }) {
       {items.map(({ key, to, p, tone, rank }) => (
         <Link key={key} to={to}>
           <Card className={s.domain}>
-            <h3>{key}{rank ? <span className={s.domainRank}> · rang {rank.rank}</span> : null}</h3>
+            <h3>{key}{rank ? <span className={s.domainRank}> · rang {rank.rank}</span> : null}{(demo.cycles?.[key as 'LIFE' | 'SPORT']?.prestigeCount ?? 0) > 0 ? <span className={s.domainRank}> · prestige ×{demo.cycles![key as 'LIFE' | 'SPORT'].prestigeCount}</span> : null}</h3>
             <div className={s.lv}>{p.level}<small>NIV.</small></div>
             <ProgressBar value={p.progress} tone={tone} thin label={`Progression ${key}`} />
             <div className={`${s.domainXp} num`}>{formatNumber(p.xpIntoLevel)} / {formatNumber(p.xpForNext)} XP</div>
@@ -128,7 +134,7 @@ function Activity({ demo }: { demo: Progress }) {
 }
 
 export function HomePage() {
-  const { displayName, toggleDemoQuest, progress, demo, dashboard } = useAppState()
+  const { displayName, toggleDemoQuest, progress, demo, dashboard, rpg } = useAppState()
   const widgets: Partial<Record<WidgetId, ReactElement | null>> = {
     quests: demo ? <Quests demo={demo} toggle={toggleDemoQuest} /> : dashboard ? <Priorities d={dashboard} /> : null,
     sport: demo ? <SportPreview demo={demo} /> : dashboard ? <NextSession d={dashboard} /> : null,
@@ -136,6 +142,7 @@ export function HomePage() {
     recovery: dashboard ? <RecoveryCard d={dashboard} /> : null,
     deadlines: dashboard ? <Deadlines d={dashboard} /> : null,
     week: dashboard ? <WeekProgress d={dashboard} /> : null,
+    rpg: dashboard && rpg.recent.length ? <RecentUnlocks /> : null,
     attributes: <Attributes demo={progress} />,
     activity: <Activity demo={progress} />,
   }

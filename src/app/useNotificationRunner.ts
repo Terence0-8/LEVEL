@@ -19,6 +19,8 @@ interface Args {
   recovery: RecoveryState
   commitments: Commitment[]
   progress: ProgressSummary
+  prestigeReady: Array<{ domain: 'LIFE' | 'SPORT'; number: number }>
+  recentUnlocks: Array<{ id: string; title: string; at: string }>
 }
 
 /**
@@ -35,7 +37,7 @@ export function useNotificationRunner(args: Args) {
       if (!a.enabled) return
       const ctx: NotifContext = {
         now: new Date(), prefs: a.prefs.notifications, quests: a.quests, events: a.events, sessions: a.sessions, checks: a.checks,
-        recovery: a.recovery, commitments: a.commitments, levels: levelsOf(a.progress), seen: a.prefs.seen,
+        recovery: a.recovery, commitments: a.commitments, levels: levelsOf(a.progress), seen: a.prefs.seen, prestigeReady: a.prestigeReady, recentUnlocks: a.recentUnlocks,
       }
       void notificationService.tick(ctx).catch(() => undefined)
     }
