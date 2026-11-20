@@ -57,7 +57,7 @@ export function OverviewPanel({ go }: { go: (tab: string) => void }) {
           <SectionTitle title="À surveiller" aside={`${lifeFindings.length}`} />
           <div style={{ display: 'grid', gap: 8 }}>
             {lifeFindings.slice(0, 3).map((f) => <div key={f.id} className={`${s.finding} ${f.severity === 'warn' ? s.warn : ''}`}><div><b>{f.title}</b><small>{f.detail}</small></div></div>)}
-            <Link to="/planning" style={{ color: 'var(--c-gold)', fontSize: 13 }}>Voir les adaptations proposées dans le planning</Link>
+            <Link to="/planning" style={{ color: 'var(--c-life)', fontSize: 13 }}>Voir les adaptations proposées dans le planning</Link>
           </div>
         </Card>
       ) : null}

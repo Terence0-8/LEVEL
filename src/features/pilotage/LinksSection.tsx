@@ -18,7 +18,7 @@ export function GoalPilotage({ goalId }: { goalId: string }) {
         {l.cycles.map((c) => <span key={c.id} className={s.pill}>Cycle T{c.quarter} {c.year}</span>)}
         {l.plans.map((p) => <span key={p.id} className={s.pill}>Plan {p.year}</span>)}
       </div>
-      <p className={s.sub} style={{ marginTop: 6 }}><Link to="/pilotage/orientations" style={{ color: 'var(--c-gold)' }}>Gérer dans Pilotage</Link></p>
+      <p className={s.sub} style={{ marginTop: 6 }}><Link to="/pilotage/orientations" style={{ color: 'var(--c-pilot)' }}>Gérer dans Pilotage</Link></p>
     </section>
   )
 }
@@ -35,7 +35,7 @@ export function ProjectPilotage({ projectId }: { projectId: string }) {
         {l.cycles.map((c) => <span key={c.id} className={s.pill}>Cycle T{c.quarter} {c.year}</span>)}
         {l.plans.map((p) => <span key={p.id} className={s.pill}>Plan {p.year} · projet structurant</span>)}
       </div>
-      <p className={s.sub} style={{ marginTop: 6 }}><Link to="/pilotage/orientations" style={{ color: 'var(--c-gold)' }}>Gérer dans Pilotage</Link></p>
+      <p className={s.sub} style={{ marginTop: 6 }}><Link to="/pilotage/orientations" style={{ color: 'var(--c-pilot)' }}>Gérer dans Pilotage</Link></p>
     </section>
   )
 }

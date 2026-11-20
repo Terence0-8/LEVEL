@@ -13,21 +13,22 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
-  const go = async (label) => { await page.locator('nav >> a', { hasText: label }).last().click(); await page.waitForTimeout(700) }
+  const tab = async (name) => { const re = name instanceof RegExp ? name : new RegExp('^' + name + '$'); const t = page.getByRole('tab', { name: re }); if (await t.first().isVisible().catch(() => false)) { await t.first().click(); return } await page.locator('[role=tab][aria-haspopup]').first().click(); await page.getByRole('button', { name: re }).first().click() }
+  const go = async (label) => { await page.locator('nav >> a', { hasText: label === 'RPG' ? 'Progression' : label }).last().click(); await page.waitForTimeout(700) }
   const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png`, fullPage: true })
   const rpgXp = async () => { await go('RPG'); return (await page.locator('p', { hasText: /Total .* XP/ }).first().textContent()).replace(/\s| | /g, '') }
 
   // ── Accueil vide (données réelles, démo masquée par défaut)
   await page.goto(BASE); await page.waitForSelector('h1'); await page.waitForTimeout(800)
-  check('Accueil réel : état vide invitant à créer une quête', await page.getByText("Aucune quête pour l'instant").isVisible())
+  check('Accueil réel : état vide guidant vers des quêtes prêtes à l’emploi', (await page.getByText('Commence par ajouter quelques activités à ton quotidien').isVisible()) && (await page.getByRole('link', { name: 'Choisir des quêtes' }).isVisible()))
   check('Pas de débordement horizontal (mobile)', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
   await shot('home-empty-mobile')
 
   // ── LIFE : création d'une quête composée
   await go('LIFE')
-  check('LIFE : état vide', await page.getByText("Aucune quête pour l'instant").isVisible())
+  check('LIFE : état vide avec trois chemins (quêtes prédéfinies, pack, quête personnelle)', (await page.getByText('Commence par ajouter quelques activités à ton quotidien').isVisible()) && (await page.getByRole('button', { name: 'Choisir des quêtes prédéfinies' }).isVisible()) && (await page.getByRole('button', { name: 'Charger un pack de démarrage' }).isVisible()))
   await shot('life-empty-mobile')
-  await page.getByRole('button', { name: 'Créer ma première quête' }).click(); await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Créer une quête personnelle' }).click(); await page.waitForTimeout(400)
   await page.fill('#q-title', 'Rédiger le rapport client')
   await page.fill('#q-desc', 'Version finale à envoyer avant vendredi.')
   await page.getByRole('radio', { name: 'Difficile' }).click()
@@ -38,7 +39,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   check('Quête créée et visible', await page.getByText('Rédiger le rapport client').first().isVisible())
 
   // ── Étapes : valider, corriger (avec confirmation), revalider
-  await page.locator('button[aria-expanded]').first().click()
+  await page.locator('article button[aria-expanded]').first().click()
   await page.waitForTimeout(300)
   await page.getByRole('button', { name: /Plan détaillé/ }).click(); await page.waitForTimeout(300)
   check('Étape validée → progression 1/3', await page.getByText('1/3').first().isVisible())
@@ -66,20 +67,20 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   check('Validation conservée après rechargement', await page.getByRole('button', { name: /Corriger la validation de/ }).first().isVisible())
 
   // ── Journal des récompenses (avec correction tracée)
-  await page.getByRole('tab', { name: 'Gains' }).click(); await page.waitForTimeout(500)
+  await tab('Gains'); await page.waitForTimeout(500)
   check('Journal : correction visible et justifiée', (await page.getByText('Corrigé', { exact: true }).count()) > 0 && (await page.getByText(/Correction manuelle/).count()) > 0)
   await shot('life-rewards-mobile')
 
   // ── Catégories
-  await page.getByRole('tab', { name: 'Catégories' }).click(); await page.waitForTimeout(400)
+  await tab('Catégories'); await page.waitForTimeout(400)
   check('7 catégories initiales', (await page.locator('li', { hasText: /Hygiène de vie|Professionnel|Social & relations|Projets personnels|Économie & finances|Culture & connaissances|Développement personnel/ }).count()) >= 7)
   await page.getByRole('button', { name: '+ Ajouter' }).click(); await page.fill('#c-name', 'Bricolage'); await page.getByRole('button', { name: 'Enregistrer' }).click(); await page.waitForTimeout(500)
   check('Catégorie personnalisée ajoutée', await page.getByText('Bricolage').first().isVisible())
   await shot('life-categories-mobile')
 
   // ── Suppression avec confirmation (XP retirée)
-  await page.getByRole('tab', { name: 'Quêtes' }).click(); await page.waitForTimeout(300)
-  await page.locator('button[aria-expanded]').first().click(); await page.waitForTimeout(300)
+  await tab('Quêtes'); await page.waitForTimeout(300)
+  await page.locator('article button[aria-expanded]').first().click(); await page.waitForTimeout(300)
   await page.getByRole('button', { name: 'Supprimer' }).click(); await page.waitForTimeout(400)
   check('Suppression demande confirmation', await page.getByRole('heading', { name: 'Supprimer la quête ?' }).isVisible())
   await shot('life-delete-confirm-mobile')
@@ -89,7 +90,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   check('XP retirée après suppression', /Total0XP/.test(xpAfterDelete), xpAfterDelete)
 
   // ── Quête simple depuis l'accueil
-  await go('LIFE'); await page.getByRole('button', { name: 'Créer une quête' }).click(); await page.waitForTimeout(300)
+  await go('LIFE'); await page.getByRole('button', { name: 'Créer une quête', exact: true }).click(); await page.waitForTimeout(300)
   await page.fill('#q-title', 'Appeler le notaire'); await page.getByRole('button', { name: 'Créer la quête' }).click(); await page.waitForTimeout(500)
   await go('Accueil')
   await page.getByRole('button', { name: 'Valider Appeler le notaire' }).click(); await page.waitForTimeout(600)
@@ -102,8 +103,8 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d) }
   const daysAhead = (n) => daysAgo(-n)
   const createQuest = async (title, o = {}) => {
-    await go('LIFE'); await page.getByRole('tab', { name: 'Quêtes' }).click(); await page.waitForTimeout(250)
-    await page.getByRole('button', { name: 'Créer une quête' }).click(); await page.waitForTimeout(350)
+    await go('LIFE'); await tab('Quêtes'); await page.waitForTimeout(250)
+    await page.getByRole('button', { name: 'Créer une quête', exact: true }).click(); await page.waitForTimeout(350)
     await page.fill('#q-title', title)
     if (o.type) await page.getByRole('radio', { name: o.type, exact: true }).click()
     if (o.difficulty) await page.getByRole('radio', { name: o.difficulty }).click()
@@ -158,7 +159,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   await page.getByRole('button', { name: 'Enregistrer', exact: true }).click(); await page.waitForTimeout(500)
   check('Validation rétroactive confirmée', await page.getByText(/Validation rétroactive/).first().isVisible())
   await page.getByRole('button', { name: 'Terminé' }).click(); await page.waitForTimeout(300)
-  await page.getByRole('tab', { name: 'Gains' }).click(); await page.waitForTimeout(400)
+  await tab('Gains'); await page.waitForTimeout(400)
   check('Journal : badge Rétroactif et dates conservées', (await page.getByText('Rétroactif', { exact: true }).count()) > 0 && (await page.getByText(/réalisé le .*enregistré le/).count()) > 0)
   await page.screenshot({ path: `${OUT}/rewards-v3-mobile.png`, fullPage: true })
 
@@ -170,12 +171,12 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
 
   // Bilan des quêtes manquées
   await createQuest('Envoyer la facture', { effort: '15 min', due: daysAgo(1) })
-  await page.getByRole('tab', { name: /Bilan/ }).click(); await page.waitForTimeout(500)
+  await tab(/Bilan/); await page.waitForTimeout(500)
   check('Bilan : échéance dépassée à analyser', await page.getByText('Envoyer la facture').first().isVisible())
   check('Bilan : pastille de comptage', (await page.locator('[aria-label$="à analyser"]').count()) > 0)
   await page.screenshot({ path: `${OUT}/bilan-mobile.png`, fullPage: true })
   const xpBefore = await rpgXp()
-  await go('LIFE'); await page.getByRole('tab', { name: /Bilan/ }).click(); await page.waitForTimeout(300)
+  await go('LIFE'); await tab(/Bilan/); await page.waitForTimeout(300)
   await page.getByRole('button', { name: 'Analyser' }).first().click(); await page.waitForTimeout(400)
   await page.getByRole('radio', { name: 'Manque de temps' }).click()
   await page.getByRole('radio', { name: /Reporter/ }).click(); await page.fill('#a-due', daysAhead(3)); await page.fill('#a-note', 'Semaine chargée')
@@ -189,7 +190,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   check('Analyse : aucune pénalité d’XP', xpBefore === xpAfter, `${xpBefore} / ${xpAfter}`)
 
   // Modification historique tracée
-  await go('LIFE'); await page.getByRole('tab', { name: 'Quêtes' }).click(); await page.waitForTimeout(300)
+  await go('LIFE'); await tab('Quêtes'); await page.waitForTimeout(300)
   await expandCard('Préparer la présentation')
   await card('Préparer la présentation').getByRole('button', { name: 'Modifier' }).click(); await page.waitForTimeout(400)
   await page.getByRole('radio', { name: 'Épique' }).click(); await page.waitForTimeout(250)
@@ -245,7 +246,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
 
   // Export : mauvaise phrase refusée, bonne phrase → fichier téléchargé et vérifié
   await createQuest('Quête de test sauvegarde', { difficulty: 'Difficile', effort: '1 h' })
-  await go('LIFE'); await page.getByRole('button', { name: 'Créer une quête' }).waitFor()
+  await go('LIFE'); await page.getByRole('button', { name: 'Créer une quête', exact: true }).waitFor()
   await card('Quête de test sauvegarde').getByRole('button', { name: /Valider Quête de test sauvegarde/ }).click(); await page.waitForTimeout(500)
   const xpWithQuest = await rpgXp()
   await page.getByRole('link', { name: 'Profil et réglages' }).click(); await page.getByRole('link', { name: 'Gérer les sauvegardes' }).click(); await page.waitForTimeout(500)

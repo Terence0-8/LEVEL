@@ -87,6 +87,8 @@ export interface SportSession {
   safetyAtStart?: SafetyLevel | null
   /** Pour les séances prévues par le planning mais pas encore détaillées */
   runFamilyPlanned?: RunFamily
+  /** Séance issue d'un programme activé (rattachée à l'instance par sa date d'activation) : sert à suivre la rotation, jamais l'XP */
+  programTag?: { templateId: string; startedAt: string; index: number }
   createdAt: string
   updatedAt: string
 }

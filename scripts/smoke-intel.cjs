@@ -157,8 +157,8 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   check('Aucune recommandation de reprise ou d’entraînement pendant l’alerte', !(await vis(page.getByRole('article', { name: 'Reprendre progressivement' }))) && !/s’entraîner malgré|forcer/i.test(await page.locator('main').innerText()))
   await go('/')
   const order = await page.locator('main h2').allTextContents()
-  check('Accueil : la récupération et les alertes restent prioritaires sur « En ce moment »', order.indexOf('Récupération') >= 0 && order.indexOf('En ce moment') >= 0 && order.indexOf('Récupération') < order.indexOf('En ce moment') && order.indexOf('À savoir maintenant') < order.indexOf('En ce moment'), JSON.stringify(order))
-  check('Accueil : une seule carte « En ce moment » (événement, observation, recommandation)', (await page.getByRole('heading', { name: 'En ce moment' }).count()) === 1)
+  check('Accueil : la récupération et les alertes restent prioritaires (« À savoir » avant « À faire aujourd’hui »)', order.indexOf('À savoir') >= 0 && order.indexOf('À savoir') < order.indexOf('À faire aujourd’hui'), JSON.stringify(order))
+  check('Accueil : une seule carte « À savoir » regroupe alertes, événement et recommandation (aucune carte d’analyse longue)', ((await page.getByRole('heading', { name: 'À savoir' }).count()) === 1) && ((await page.getByRole('heading', { name: 'En ce moment' }).count()) === 0))
   await shot('intel-home-mobile')
 
   // ── 7. Événement majeur en cours de session : présentation marquée ─────────────────────────────────

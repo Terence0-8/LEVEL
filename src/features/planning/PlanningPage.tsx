@@ -150,7 +150,7 @@ export function PlanningPage() {
 
       {longTerm.length ? (
         <Card>
-          <SectionTitle title="Objectifs de long terme" aside={<Link to="/life/objectifs" style={{ color: 'var(--c-gold)' }}>Objectifs</Link>} />
+          <SectionTitle title="Objectifs de long terme" aside={<Link to="/life/objectifs" style={{ color: 'var(--c-accent)' }}>Objectifs</Link>} />
           <p className={s.empty} style={{ marginBottom: 8 }}>Toujours visibles, même quand rien ne presse aujourd’hui.</p>
           <ul className={s.items}>
             {longTerm.map((g) => (
@@ -176,7 +176,7 @@ export function PlanningPage() {
           </ul>
         )}
       </Card>
-      <p style={{ fontSize: 12, color: 'var(--c-text-faint)' }}>Capacité réglée dans <Link to="/profile#planning" style={{ color: 'var(--c-gold)' }}>Profil & réglages</Link> : {dur(prefs.planning.dailyCapacityMin)} par jour, {prefs.planning.marginPct} % de marge conservée.</p>
+      <p style={{ fontSize: 12, color: 'var(--c-text-faint)' }}>Capacité réglée dans <Link to="/profile#planning" style={{ color: 'var(--c-accent)' }}>Profil & réglages</Link> : {dur(prefs.planning.dailyCapacityMin)} par jour, {prefs.planning.marginPct} % de marge conservée.</p>
       {data.plans.length === 0 ? <EmptyState title="Rien à afficher" /> : null}
 
       <ConfirmDialog open={!!confirm} title={confirm?.title ?? ''} confirmLabel="Appliquer" onCancel={() => setConfirm(null)} onConfirm={() => { const p = confirm!; setConfirm(null); void run(() => apply(p), 'Fait.') }}>

@@ -35,7 +35,10 @@ const xpToMax = () => { let s = 0; for (let l = 1; l < 36; l++) s += Math.round(
 
   // ── 1. Progression : rangs E → SSS, niveaux de domaine, attributs ───────────────────────────────
   await page.goto(BASE + '#/rpg'); await page.waitForSelector('h1'); await page.waitForTimeout(1000)
-  check('RPG : 7 sections (Progression, Journal, Analyse, Attributs, Distinctions, Récompenses, Prestige)', (await page.getByRole('navigation', { name: 'Sections RPG' }).getByRole('link').count()) === 7)
+  const rpgTabs = page.getByRole('tablist', { name: 'Sections Progression' })
+  await rpgTabs.locator('[aria-haspopup]').click()
+  check('Progression : 4 sections essentielles + 6 sous « Plus » (Analyse, Récompenses, Prestige, Bilans, Historique, Planning)', ((await rpgTabs.getByRole('tab').count()) === 5) && ((await page.getByRole('group', { name: /Autres sections/ }).getByRole('button').count()) === 6))
+  await page.keyboard.press('Escape')
   check('Niveaux LIFE et SPORT indépendants, rang E au départ', await vis(page.getByText(/Niveau 1 · rang E/)))
   const rungs = await page.locator('[class*="rung"] [class*="letter"]').allTextContents()
   check('Échelle des rangs : E, D, C, B, A, S, SS, SSS', JSON.stringify(rungs) === JSON.stringify(['SSS', 'SS', 'S', 'A', 'B', 'C', 'D', 'E']), JSON.stringify(rungs))
@@ -53,7 +56,7 @@ const xpToMax = () => { let s = 0; for (let l = 1; l < 36; l++) s += Math.round(
   const countBefore = (await idbAll('xpEvents')).length
   await page.reload(); await page.waitForSelector('h1'); await page.waitForTimeout(3500)
   await go('/')
-  check('Accueil : LIFE au rang SSS (niveau 36) et alerte « Prestige LIFE disponible »', (await vis(page.getByText('Prestige LIFE disponible'))) && (await vis(page.getByRole('heading', { name: /LIFE · rang SSS/ }))))
+  check('Accueil : LIFE au rang SSS (niveau 36) et alerte « Prestige LIFE disponible »', (await vis(page.getByText('Prestige LIFE disponible'))) && (await vis(page.getByRole('link', { name: /LIFE · rang SSS/ }))))
   check('Accueil : SPORT sans prestige (non éligible)', !(await vis(page.getByText('Prestige SPORT disponible'))))
   await shot('rpg-home-prestige-mobile')
   await go('/rpg')

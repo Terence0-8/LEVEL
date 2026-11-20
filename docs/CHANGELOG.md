@@ -1,5 +1,41 @@
 # Changelog
 
+## 2.0.0 — V2 : refonte de l'expérience, contenu prêt à l'emploi et nouvelle direction artistique
+
+Diagnostic : `docs/UX_AUDIT.md` · système visuel : `docs/DESIGN_SYSTEM.md`. **Aucune règle métier modifiée** (XP, niveaux, rangs, prestiges, récupération, pompes) ; **aucun changement de schéma Dexie** (v9) ; sauvegardes inchangées (format 1).
+
+**Navigation et accueil**
+- **Cinq espaces** : Accueil, LIFE, SPORT, Progression, Pilotage (au lieu de sept onglets). Planning, Bilans et Historique : lien « Semaine » de l'accueil, menu « Plus » de Progression, menu latéral. Sous-sections de chaque espace : quelques onglets essentiels + « Plus » (composant `Tabs`).
+- **Accueil réécrit** : message contextualisé et date, un bloc de progression (niveau, XP, rangs LIFE/SPORT avec prestige et titre), **À faire aujourd'hui** (validation en un geste, XP du moteur affichée), prochaine séance du programme, **À savoir** seulement s'il y a une alerte, un événement ou une recommandation (placé avant la liste si urgent, ex. alerte de récupération). Plus de statistiques décoratives. Deux colonnes sur grand écran.
+- États vides guidés : LIFE (quêtes prédéfinies / pack / quête personnelle), SPORT (programme), Pilotage (facultatif).
+
+**LIFE : bibliothèque et packs** (`core/catalog/*`, `data/catalogService.ts`, `features/life/LibraryPanel.tsx`)
+- **56 modèles** (8 par catégorie, quatre rythmes dont quêtes « en N étapes » et défis exceptionnels), **6 packs** de démarrage (au plus 3 quotidiennes et 6 éléments, durée quotidienne plafonnée), recherche, filtres rythme/durée, favoris, **modèles personnels** (copie d'une quête), **duplication** de quête, personnalisation avant ajout.
+- Un modèle devient une **vraie quête** ; **aucune XP** n'est attribuée par le catalogue (l'XP affichée est `computeQuestReward`, indicative ; la récompense réelle reste celle du moteur). Détection des doublons (quête issue du modèle encore active, ou même titre), ajout d'un pack tout-ou-rien, quêtes déjà présentes ignorées. Versions de modèles : une mise à jour est signalée sans rien écraser.
+- Données dans `settings` (clé `lifeCatalog`) : sauvegardées et restaurées avec le reste.
+
+**SPORT : programmes** (`core/sport/programs.ts`, `data/programService.ts`, `features/sport/ProgramsPanel.tsx`)
+- **20 programmes** : 9 musculation (débutant, général, prise de masse, force, haut, bas, bras, reprise, intermédiaire), 7 course (débuter, endurance, allure, 5 km, 10 km, sorties longues, reprise), 4 mixtes. Chaque programme : objectif, niveaux, durée, fréquence, répartition, séries/répétitions/repos, consignes, progression, récupération, matériel (Sans matériel / Domicile / Salle) ; course : minutes par semaine avec semaine allégée toutes les quatre semaines (≤ +15 % d'une semaine à l'autre, testé), consignes d'initiation marche/course.
+- **Aucun moteur parallèle** : le programme choisit groupes et rythme ; la séance est composée au démarrage par le moteur SPORT existant (bibliothèque, contraintes, récupération, double progression). L'exemple de séance affiché est calculé par `generateStrengthSession` (lecture seule).
+- **Assistant en 5 étapes** (objectif, niveau — omis si le profil le connaît —, disponibilités, matériel, proposition) avec « Pourquoi ce programme ? », alternatives et personnalisation ; activation explicite qui annonce ce qui change (niveau, matériel, jours, durée ; jamais les contraintes physiques ni la préférence HIIT).
+- **Catalogue / instance / historique distincts** : l'activation copie le modèle (instance personnalisable), changer de programme archive l'ancien, les séances et l'XP ne sont jamais touchées. La rotation avance sur les seules séances **terminées** (`programTag`), jamais d'empilement ni de rattrapage ; alerte = aucune séance, vigilance = séance allégée, objectif hebdomadaire atteint = repos.
+- Règle absolue des pompes : aucune variante dans un programme (texte, groupes, séances générées pour chaque programme × niveau × matériel : testé) ; le circuit HIIT n'existe que via le moteur et la préférence du profil.
+
+**Direction artistique** : voir `docs/DESIGN_SYSTEM.md` — palette chaude (fond `#15191F`, accents vert LIFE / bleu SPORT / terre cuite Pilotage), **or réservé au RPG**, thème clair ivoire et sombre (automatique, par appareil), Bricolage Grotesque + Figtree, surfaces plates sans dégradé ni halo, nouveau logo et icônes, zones tactiles ≥ 36 px, mouvement uniquement en réponse à une action.
+
+**Dépendances** : remplacement de `@fontsource/cinzel` et `@fontsource-variable/inter` par `@fontsource-variable/bricolage-grotesque` et `@fontsource-variable/figtree` (polices servies localement, hors ligne ; aucune dépendance ajoutée au total).
+
+**Corrigé en route** : « Semaine 0 sur N » possible juste après l'activation d'un programme (horloge d'interface en retard) ; `EmptyState` imbriquait une carte et un paragraphe dans un paragraphe.
+
+**Tests** : voir `docs/UX_AUDIT.md` pour le diagnostic ; 528 tests unitaires et d'intégration (catalogue, programmes, services, sauvegarde) ; `smoke-v2` (62 contrôles : première utilisation, bibliothèque, packs, programmes, récupération, contrastes, absence de doré, 4 largeurs × 2 thèmes, hors ligne) ; toutes les suites existantes adaptées à la nouvelle interface (sélecteurs et libellés seulement, mêmes assertions métier).
+
+**Limites**
+- Catalogues intégrés au code (modèles/programmes) : l'ajout de contenu demande une nouvelle version ; la mise à jour d'un modèle déjà ajouté est signalée mais non appliquée automatiquement (choix volontaire).
+- Les programmes de course guident (durée, allure facile, consignes) ; la mesure précise de l'allure reste l'enregistrement de la sortie.
+- Nombre de séances d'un programme : la rotation suit les séances terminées ; une séance libre n'avance pas le programme.
+- Illustrations : aucune illustration décorative n'a été ajoutée (choix assumé : seulement des éléments qui aident à comprendre).
+- Mode démonstration : accueil minimal (liste de quêtes fictives étiquetée Démo).
+
 ## 1.0.1 — Stabilisation : audit global, fiabilité et validation
 
 Détail complet, gravités et limites : `docs/STABILIZATION_REPORT.md`.

@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { PageHeader } from '@/design/components'
+import { Tabs } from '@/design/Tabs'
 import { useAppState } from '@/app/AppState'
 import { CyclesPanel } from './CyclesPanel'
 import { Dashboard } from './Dashboard'
@@ -25,9 +26,8 @@ export function PilotagePage() {
     <div className={s.stack}>
       <PageHeader title="Pilotage" subtitle="Relier votre vision à vos priorités, objectifs, projets et actions concrètes." />
       {demo ? <p className={s.note}>Le mode démonstration n’affiche pas de données stratégiques.</p> : null}
-      <div className={s.tabs} role="tablist" aria-label="Sections Pilotage">
-        {(Object.keys(LABEL) as Tab[]).map((id) => <button key={id} role="tab" aria-selected={tab === id} onClick={() => go(SLUG[id])}>{LABEL[id]}</button>)}
-      </div>
+      <Tabs label="Sections Pilotage" color="var(--c-pilot)" value={tab} onChange={(id) => go(SLUG[id as Tab])} primary={['overview', 'vision', 'orientations', 'priorities']}
+        items={(Object.keys(LABEL) as Tab[]).map((id) => ({ id, label: LABEL[id] }))} />
       {tab === 'overview' ? <Dashboard go={go} /> : null}
       {tab === 'vision' ? <VisionPanel /> : null}
       {tab === 'orientations' ? <OrientationsPanel /> : null}

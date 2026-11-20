@@ -1,7 +1,9 @@
-import { NavLink, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAppState } from '@/app/AppState'
 import { PageHeader } from '@/design/components'
+import { Tabs } from '@/design/Tabs'
 import { Dashboard } from './Dashboard'
+import { ProgramsPanel } from './ProgramsPanel'
 import { HistoryPanel } from './HistoryPanel'
 import { Library } from './Library'
 import { PlanPanel } from './PlanPanel'
@@ -14,27 +16,26 @@ import { StrengthPanel } from './StrengthPanel'
 import s from './sport.module.css'
 
 const SECTIONS = [
-  ['', 'Tableau de bord'], ['muscu', 'Musculation'], ['course', 'Course'], ['planning', 'Planning'],
-  ['recuperation', 'Récupération'], ['progression', 'Progression'], ['historique', 'Historique'], ['profil', 'Profil'],
+  ['', 'Aujourd’hui'], ['programmes', 'Programmes'], ['muscu', 'Musculation'], ['course', 'Course'],
+  ['planning', 'Planning'], ['recuperation', 'Récupération'], ['progression', 'Progression'], ['historique', 'Historique'], ['profil', 'Profil'],
 ] as const
+const TODAY = 'aujourdhui'
 
 export function SportPage() {
   const { demo, sport } = useAppState()
   const { section = '' } = useParams()
   if (demo) return <SportDemo />
   const level = sport.recovery.level
+  const navigate = useNavigate()
 
   return (
     <div className={s.page}>
-      <PageHeader title="SPORT" subtitle="Coaching sportif personnalisé : musculation, course, récupération. Vos données restent sur cet appareil." />
-      <nav className={s.sections} aria-label="Sections SPORT">
-        {SECTIONS.map(([id, label]) => (
-          <NavLink key={id} to={id ? `/sport/${id}` : '/sport'} end className={() => (section === id ? `${s.sec} ${s.secOn}` : s.sec)}>
-            {label}{id === 'recuperation' && level !== 'NORMAL' ? <i className={`${s.dot} ${level === 'ALERTE' ? s.dotAlert : s.dotWarn}`} aria-label={level} /> : null}
-          </NavLink>
-        ))}
-      </nav>
+      <PageHeader title="SPORT" subtitle="Ton programme, ta prochaine séance et ta récupération." />
+      <Tabs label="Sections SPORT" color="var(--c-sport)" value={section || TODAY} onChange={(id) => navigate(id === TODAY ? '/sport' : `/sport/${id}`)}
+        primary={[TODAY, 'programmes', 'muscu']}
+        items={SECTIONS.map(([id, label]) => ({ id: id || TODAY, label, dot: id === 'recuperation' && level !== 'NORMAL' ? (level === 'ALERTE' ? 'alert' as const : 'warn' as const) : undefined }))} />
       {section === '' ? <Dashboard /> : null}
+      {section === 'programmes' ? <ProgramsPanel /> : null}
       {section === 'muscu' ? <><StrengthPanel /><Library /></> : null}
       {section === 'course' ? <RunPanel /> : null}
       {section === 'planning' ? <PlanPanel /> : null}

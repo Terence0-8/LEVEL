@@ -211,3 +211,20 @@ Principes : aucun moteur concurrent ; le journal d'XP n'est jamais écrit ; les 
 - **Sauvegardes** : `BackupError('storage_full')` si le quota est dépassé ; la création échoue avant toute rétention (aucune sauvegarde existante supprimée).
 - **Tests** : `data/stabilization.test.ts`, `core/performance.test.ts`, `scripts/smoke-stabilisation.cjs`, `scripts/smoke-update.cjs`. Aucune dépendance ajoutée.
 
+## V2 : catalogues, programmes, design (v2.0)
+| Couche | Fichiers | Rôle |
+|---|---|---|
+| `core` | `catalog/{types,lifeCatalog,catalog}.ts` | Modèles de quêtes et packs (données pures), recherche, filtres, doublons, charge d'un pack ; XP indicative via `computeQuestReward` |
+| `core` | `sport/programs.ts` | Catalogue de 20 programmes, instance, recommandation, minutes de course, prochaine séance, adaptation du profil |
+| `data` | `catalogService.ts` | Ajout de modèles/packs (via `questService.createQuest`), favoris, modèles personnels, duplication ; état dans `settings.lifeCatalog` |
+| `data` | `programService.ts` | Activation, personnalisation, arrêt, prochaine séance, démarrage (via `sportService.generateStrength/generateHiit`) ; état dans `settings.sportProgram` |
+| `features` | `life/LibraryPanel`, `sport/ProgramsPanel`, `home/HomePage` | Interfaces |
+| `design` | `tokens.css`, `Tabs`, `ui.module.css`, `Logo` | Système visuel (voir `docs/DESIGN_SYSTEM.md`) |
+
+- **Catalogue ≠ instance ≠ historique** : un modèle n'a ni état ni XP ; l'activation crée une copie (quête LIFE, ou instance de programme avec copie du plan) ; l'historique (quêtes, séances, XP) n'est jamais réécrit. Identifiants stables (`life.<cat>.<clé>`, `prog.<famille>.<clé>`) et versions (`v`) ; `installed[templateId]` mémorise la version ajoutée, une version plus récente est seulement signalée.
+- **Aucune migration** : pas de nouvelle table, schéma Dexie v9, `TABLE_KEYS` inchangé ; `settings` est déjà sauvegardé et restauré (testé).
+- **SPORT** : `SportSession.programTag` (optionnel) rattache une séance à l'instance qui l'a démarrée ; `generateStrength({ focus, minutes, programTag, title })`, `generateHiit(minutes, programTag)` et `logRun({ programTag })` l'acceptent ; aucune autre logique du moteur n'a changé.
+- **Thème** : `app/theme.ts` + script d'amorçage dans `index.html` (préférence dans `localStorage`, propre à l'appareil, hors sauvegarde).
+- **Polices** : Bricolage Grotesque et Figtree (fontsource, servies localement, mises en cache par le service worker) remplacent Cinzel et Inter ; aucune dépendance ajoutée au total.
+- **Tests** : `core/catalog/catalog.test.ts`, `core/sport/programs.test.ts`, `data/catalogs.test.ts` ; navigateur : `scripts/smoke-v2.cjs`, captures : `scripts/shots-v2.cjs`.
+

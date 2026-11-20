@@ -15,6 +15,7 @@ import { sportService } from '@/data/sportService'
 import { formatNumber } from '@/lib/format'
 import { useAction } from '../backup/useBackupData'
 import { SafetyBadge, SafetyNotice } from './parts'
+import { ProgramNextCard } from './ProgramsPanel'
 import { UnplannedSheet } from './UnplannedSheet'
 import { useState } from 'react'
 import s from './sport.module.css'
@@ -22,7 +23,7 @@ import s from './sport.module.css'
 const dayLabel = (d: string) => new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(d + 'T12:00:00'))
 
 export function Dashboard() {
-  const { sport, progress, now } = useAppState()
+  const { sport, progress, now, program } = useAppState()
   const nav = useNavigate()
   const act = useAction()
   const [unplanned, setUnplanned] = useState(false)
@@ -49,15 +50,16 @@ export function Dashboard() {
   return (
     <div className={s.stack}>
       <SafetyNotice />
-      {completeness < 1 ? (
-        <Card variant="flat" className={s.setupCard}>
-          <div><b>Profil sportif à {Math.round(completeness * 100)} %</b><p className={s.dim}>Facultatif : plus vous précisez, mieux Level adapte vos séances. Rien n’est bloqué en attendant.</p></div>
-          <Link to="/sport/profil" className={sheet.btnPrimary}>Compléter</Link>
+      {program ? <ProgramNextCard compact /> : (
+        <Card>
+          <SectionTitle title="Pas encore de programme" />
+          <p className={s.dim}>Choisis un objectif et Level te propose un programme prêt à l’emploi, adapté à ton niveau et à ton matériel.</p>
+          <div className={s.todayRow}><Link to="/sport/programmes" className={sheet.btnPrimary}>Trouver mon programme</Link></div>
         </Card>
-      ) : null}
+      )}
 
-      <Card variant="event">
-        <SectionTitle title={todays ? 'Séance du jour' : 'Aujourd’hui'} aside={dayLabel(today)} />
+      <Card>
+        <SectionTitle title={todays ? 'Séance du jour' : program ? 'Séance libre' : 'Aujourd’hui'} aside={dayLabel(today)} />
         {todays ? (
           <div className={s.todayRow}>
             <div>
@@ -95,6 +97,19 @@ export function Dashboard() {
           <Link to="/sport/recuperation" className={s.link}>{recovery.hasCheckToday ? 'Voir le détail' : 'Remplir le questionnaire'}</Link>
         </Card>
         <Card>
+          <SectionTitle title="Cette semaine" aside={`${doneThisWeek.length}/${target || '—'} séances`} />
+          {target > 0 ? <ProgressBar value={Math.min(1, doneThisWeek.length / target)} tone="info" label="Séances de la semaine" /> : null}
+          <table className={s.table}><tbody>
+            <tr><td>Séries réalisées</td><td className="num">{wk.sets}</td></tr>
+            <tr><td>Durée</td><td className="num">{wk.minutes} min</td></tr>
+            <tr><td>Course</td><td className="num">{km} km</td></tr>
+          </tbody></table>
+        </Card>
+      </div>
+      <details className={s.more}>
+      <summary>Plus de détails : progression, groupes prioritaires</summary>
+      <div className={s.grid2}>
+        <Card>
           <SectionTitle title="Progression générale" />
           <div className={s.ringRow}>
             <Ring progress={progress.sportLevel.progress} size={96} tone="info" label={`Niveau SPORT ${progress.sportLevel.level}`}>
@@ -107,18 +122,6 @@ export function Dashboard() {
             </div>
           </div>
           <p className={s.dim} style={{ marginTop: 8 }}>{PHASE_HINT[cycle.phase]}</p>
-        </Card>
-      </div>
-
-      <div className={s.grid2}>
-        <Card>
-          <SectionTitle title="Cette semaine" aside={`${doneThisWeek.length}/${target || '—'} séances`} />
-          {target > 0 ? <ProgressBar value={Math.min(1, doneThisWeek.length / target)} tone="info" label="Séances de la semaine" /> : null}
-          <table className={s.table}><tbody>
-            <tr><td>Séries réalisées</td><td className="num">{wk.sets}</td></tr>
-            <tr><td>Durée</td><td className="num">{wk.minutes} min</td></tr>
-            <tr><td>Course</td><td className="num">{km} km</td></tr>
-          </tbody></table>
         </Card>
         <Card>
           <SectionTitle title="Groupes prioritaires" aside={<Link to="/sport/profil" className={s.link}>Modifier</Link>} />
@@ -138,6 +141,8 @@ export function Dashboard() {
           )}
         </Card>
       </div>
+      {completeness < 1 ? <p className={s.dim}>Profil sportif à {Math.round(completeness * 100)} % — <Link to="/sport/profil" className={s.link}>compléter</Link> (facultatif).</p> : null}
+      </details>
       <div className={s.quick}>
         <button className={s.quickBtn} onClick={() => void prepare('hiit')} disabled={act.busy || recovery.level === 'ALERTE'}>Circuit HIIT full-body</button>
         <Link to="/sport/course" className={s.quickBtn}>Enregistrer une course</Link>

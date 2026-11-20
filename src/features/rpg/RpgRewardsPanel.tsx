@@ -32,14 +32,14 @@ export function RpgRewardsPanel() {
         <SectionTitle title="Bonus permanents d’XP" />
         <ul className={r.rows}>
           {bonuses.map((b) => (
-            <li key={b.d} className={r.row}><span className={r.grow} style={{ flex: 1 }}><b>{b.d}</b><small>{b.n ? `${b.n} palier${b.n > 1 ? 's' : ''} obtenu${b.n > 1 ? 's' : ''}` : 'Aucun bonus obtenu'} · s’applique uniquement à l’XP {b.d}, à partir du lendemain de l’obtention</small></span><b className="num" style={{ color: 'var(--c-gold-bright)' }}>+{b.pct} %</b></li>
+            <li key={b.d} className={r.row}><span className={r.grow} style={{ flex: 1 }}><b>{b.d}</b><small>{b.n ? `${b.n} palier${b.n > 1 ? 's' : ''} obtenu${b.n > 1 ? 's' : ''}` : 'Aucun bonus obtenu'} · s’applique uniquement à l’XP {b.d}, à partir du lendemain de l’obtention</small></span><b className="num" style={{ color: 'var(--c-rpg-strong)' }}>+{b.pct} %</b></li>
           ))}
         </ul>
         <p className={r.note} style={{ marginTop: 10 }}>Les bonus sont dégressifs (chaque palier apporte moins que le précédent) et n’altèrent jamais l’XP déjà acquise.</p>
       </Card>
 
       {owned.length === 0 ? (
-        <Card variant="flat"><p className={r.muted}>Aucune récompense pour l’instant. Chaque prestige permet d’en choisir une, définitivement. <Link to="/rpg/prestige" style={{ color: 'var(--c-gold)' }}>Voir le prestige</Link></p></Card>
+        <Card variant="flat"><p className={r.muted}>Aucune récompense pour l’instant. Chaque prestige permet d’en choisir une, définitivement. <Link to="/rpg/prestige" style={{ color: 'var(--c-rpg)' }}>Voir le prestige</Link></p></Card>
       ) : CATS.map((cat) => {
         const items = owned.filter((o) => o.def.category === cat)
         if (!items.length) return null
@@ -69,7 +69,7 @@ export function RpgRewardsPanel() {
                     </span>
                     {e.type === 'levelup-effect' || e.type === 'rank-frame' ? (
                       <button className={`${r.btn} ${r.mini}`} aria-pressed={equipped} onClick={() => void prefsService.update((p) => ({ ...p, rpg: { ...p.rpg, ...(e.type === 'levelup-effect' ? { effect: equipped ? null : def.id } : { frame: equipped ? null : def.id }) } }))}>{equipped ? 'Retirer' : 'Équiper'}</button>
-                    ) : e.type === 'title' ? <Link to="/rpg/distinctions" className={`${r.btn} ${r.mini} ${r.ghost}`}>Titres</Link> : <Badge tone="gold">{RARITY_LABEL[def.rarity]}</Badge>}
+                    ) : e.type === 'title' ? <Link to="/rpg/distinctions" className={`${r.btn} ${r.mini} ${r.ghost}`}>Titres</Link> : <Badge tone="rpg">{RARITY_LABEL[def.rarity]}</Badge>}
                   </li>
                 )
               })}

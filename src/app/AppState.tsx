@@ -19,6 +19,8 @@ import { REWARD_BY_ID, totalBonusPct, type RewardRow } from '@/core/prestigeRewa
 import { rpgService } from '@/data/rpgService'
 import { eventService } from '@/data/eventService'
 import { analyse, type Observation } from '@/core/insights'
+import { EMPTY_CATALOG, type CatalogState } from '@/core/catalog/types'
+import { sanitizeProgram, type ProgramInstance } from '@/core/sport/programs'
 import type { LifeCtx, StrategyState } from '@/core/pilotage'
 import { strategicProposals, type PilotageProposal, type StrategyCtx } from '@/core/strategy'
 import { buildRecommendations, filterRecommendations, type RecState, type Recommendation } from '@/core/recommendations'
@@ -115,6 +117,10 @@ interface AppState {
   rpgEvents: RpgEvent[]
   recStates: RecState[]
   intel: IntelView
+  /** Bibliothèque de quêtes : favoris, modèles personnels, quêtes issues d'un modèle */
+  catalog: CatalogState
+  /** Programme SPORT activé (instance personnalisée), ou null */
+  program: ProgramInstance | null
   /** Vision, orientations, priorités, plans, cycles, revues et mémoire stratégique (Pilotage) */
   strategy: StrategyState
   /** Contexte LIFE partagé (références résolues, avancement calculé) */
@@ -137,7 +143,7 @@ function useNow() {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs, goals, projects, indicators, readings, prestiges, rewards, achievements, rpgEvents, recStates, strategyRaw } = usePersistedState()
+  const { ready, profile, settings, doneQuests, quests, categories, events, analyses, revisions, sportRaw, commitments, moves, notifLog, prefs, goals, projects, indicators, readings, prestiges, rewards, achievements, rpgEvents, recStates, strategyRaw, catalogRaw, programRaw } = usePersistedState()
   const now = useNow()
 
   const demo = useMemo(() => (settings.showDemoData ? buildDemoView(doneQuests) : null), [settings.showDemoData, doneQuests])
@@ -177,6 +183,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [events, prestiges, achievements, rewards, prefs.rpg.title])
 
   const strategy = strategyRaw
+  const catalog = useMemo<CatalogState>(() => { const v = (catalogRaw ?? {}) as Partial<CatalogState>; return { ...EMPTY_CATALOG, installed: v.installed ?? {}, favorites: v.favorites ?? [], custom: v.custom ?? [] } }, [catalogRaw])
+  const program = useMemo(() => sanitizeProgram(programRaw), [programRaw])
   const lifeCtx = useMemo<LifeCtx>(() => ({ life: { goals, projects, indicators, readings }, quests, events, now }), [goals, projects, indicators, readings, quests, events, now])
   const strategyCtx = useMemo<StrategyCtx>(() => ({ strategy, prefs: prefs.pilotage, life: lifeCtx, findings: analysis.findings, planning: { dueQuestGoalIds: new Set<string>() } }), [strategy, prefs.pilotage, lifeCtx, analysis.findings])
   const pilotageProposals = useMemo(() => (demo ? [] : strategicProposals(strategyCtx)), [demo, strategyCtx])
@@ -229,10 +237,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppState>(
     () => ({
-      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, lifeFindings: analysis.findings, lifeProposals: analysis.proposals, prestiges, rewards, achievements, rpg, rpgEvents, recStates, intel, strategy, lifeCtx, pilotageProposals, now,
+      displayName: profile?.displayName ?? '…', settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, lifeFindings: analysis.findings, lifeProposals: analysis.proposals, prestiges, rewards, achievements, rpg, rpgEvents, recStates, intel, catalog, program, strategy, lifeCtx, pilotageProposals, now,
       toggleDemoQuest: (id) => void repos.demo.toggleQuest(id),
     }),
-    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, analysis, prestiges, rewards, achievements, rpg, rpgEvents, recStates, intel, strategy, lifeCtx, pilotageProposals, now],
+    [profile, settings, demo, progress, quests, categories, events, analyses, revisions, missed, sport, prefs, commitments, moves, notifLog, plan, dashboard, goals, projects, indicators, readings, analysis, prestiges, rewards, achievements, rpg, rpgEvents, recStates, intel, catalog, program, strategy, lifeCtx, pilotageProposals, now],
   )
 
   if (!ready) return <div style={{ minHeight: '100vh' }} aria-busy="true" />

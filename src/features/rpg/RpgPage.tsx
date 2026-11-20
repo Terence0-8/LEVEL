@@ -1,4 +1,5 @@
-import { Link, NavLink, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Tabs } from '@/design/Tabs'
 import { Badge, Card, DemoTag, PageHeader, ProgressBar, SectionTitle } from '@/design/components'
 import { RadarChart, Ring } from '@/design/charts'
 import { Notice } from '@/design/components'
@@ -17,17 +18,20 @@ import { RpgRewardsPanel } from './RpgRewardsPanel'
 import r from './rpg.module.css'
 import s from '../pages.module.css'
 
-const SECTIONS = [['', 'Progression'], ['journal', 'Journal'], ['analyse', 'Analyse'], ['attributs', 'Attributs'], ['distinctions', 'Distinctions'], ['recompenses', 'Récompenses'], ['prestige', 'Prestige']] as const
+const SECTIONS = [['progression', 'Progression'], ['journal', 'Journal'], ['attributs', 'Attributs'], ['distinctions', 'Distinctions'], ['analyse', 'Analyse'], ['recompenses', 'Récompenses'], ['prestige', 'Prestige'], ['bilans', 'Bilans'], ['history', 'Historique'], ['planning', 'Planning']] as const
+/** Entrées de ce menu qui ouvrent un autre espace (bilans, historique, planning) */
+const EXTERNAL: Record<string, string> = { bilans: '/bilans', history: '/history', planning: '/planning' }
 
 export function RpgPage() {
   const { section = '' } = useParams()
   const { demo } = useAppState()
+  const navigate = useNavigate()
   return (
     <div className={r.stack}>
-      <PageHeader title="RPG" subtitle="Niveaux, rangs, attributs, distinctions et prestige." />
-      <nav className={r.tabs} aria-label="Sections RPG">
-        {SECTIONS.map(([id, label]) => <NavLink key={id} to={id ? `/rpg/${id}` : '/rpg'} end>{label}</NavLink>)}
-      </nav>
+      <PageHeader title="Progression" subtitle="Ton niveau, tes rangs, tes attributs et tes distinctions." />
+      <Tabs label="Sections Progression" color="var(--c-rpg)" value={section || 'progression'} primary={['progression', 'journal', 'attributs', 'distinctions']}
+        onChange={(id) => navigate(EXTERNAL[id] ?? (id === 'progression' ? '/rpg' : `/rpg/${id}`))}
+        items={SECTIONS.map(([id, label]) => ({ id, label }))} />
       {section === '' ? <Progression /> : null}
       {section !== '' && demo ? <Notice title="Données de démonstration">cette section décrit votre vraie progression : désactivez la démonstration dans Profil & réglages pour la consulter.</Notice> : null}
       {section === 'journal' && !demo ? <JournalPanel /> : null}
@@ -54,13 +58,13 @@ function Progression() {
       <Card variant="event">
         <div className={s.profileHead}>
           <Ring progress={demo.global.progress} size={124} stroke={9} label={`Niveau ${demo.global.level}`}>
-            <div style={{ fontFamily: 'var(--font-title)', fontSize: 36, color: 'var(--c-gold-bright)' }}>{demo.global.level}</div>
+            <div style={{ fontFamily: 'var(--font-title)', fontSize: 36, color: 'var(--c-rpg-strong)' }}>{demo.global.level}</div>
           </Ring>
           <div style={{ width: '100%' }}>
             <h2>{displayName}</h2>
-            {title ? <p style={{ color: 'var(--c-gold)', fontSize: 13, letterSpacing: '0.12em', marginTop: 2 }}>{title}</p> : null}
+            {title ? <p style={{ color: 'var(--c-rpg)', fontSize: 13, letterSpacing: '0.12em', marginTop: 2 }}>{title}</p> : null}
             <div style={{ margin: '8px 0 12px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <Badge tone="gold">Rang {demo.rank.rank} · {demo.rank.title}</Badge>{demo.isDemo ? <DemoTag /> : null}
+              <Badge tone="rpg">Rang {demo.rank.rank} · {demo.rank.title}</Badge>{demo.isDemo ? <DemoTag /> : null}
             </div>
             <ProgressBar value={demo.global.progress} tone="event" label="XP vers le niveau suivant" />
             <p className="num" style={{ fontSize: 12, color: 'var(--c-text-dim)', marginTop: 6 }}>
@@ -86,13 +90,13 @@ function Progression() {
                   {p.maxed ? `Niveau maximal du cycle · ${formatNumber(p.xpIntoLevel)} XP au-delà` : `${formatNumber(p.xpIntoLevel)} / ${formatNumber(p.xpForNext)} XP`}
                   {c && c.cycle > 1 ? ` · cycle ${c.cycle} (prestige ×${c.prestigeCount})` : ''}
                 </p>
-                {c?.eligible ? <p style={{ marginTop: 6 }}><Link to="/rpg/prestige" style={{ color: 'var(--c-gold-bright)', fontSize: 13 }}>Prestige {n} disponible — facultatif</Link></p> : null}
+                {c?.eligible ? <p style={{ marginTop: 6 }}><Link to="/rpg/prestige" style={{ color: 'var(--c-rpg-strong)', fontSize: 13 }}>Prestige {n} disponible — facultatif</Link></p> : null}
               </div>
             ))}
           </div>
         </Card>
         <Card>
-          <SectionTitle title="Attributs" aside={<Link to="/rpg/attributs" style={{ color: 'var(--c-gold)' }}>Détail</Link>} />
+          <SectionTitle title="Attributs" aside={<Link to="/rpg/attributs" style={{ color: 'var(--c-rpg)' }}>Détail</Link>} />
           <div className={s.center}><RadarChart attributes={demo.attributes.filter((a) => LIFE_ATTRIBUTE_IDS.includes(a.id))} /></div>
           <p style={{ fontSize: 12, color: 'var(--c-text-faint)', marginTop: 6, textAlign: 'center' }}>Attributs LIFE · SPORT dans le détail</p>
         </Card>
@@ -127,7 +131,7 @@ function Progression() {
           <p style={{ fontSize: 12, color: 'var(--c-text-faint)', marginTop: 8 }}>Le rang global suit une échelle propre (niveau global 1–100) : {RANK_THRESHOLDS.map((x) => `${x.rank} ${x.minLevel}`).join(' · ')}.</p>
         </Card>
         <Card variant="flat">
-          <SectionTitle title="Prestige" aside={<Link to="/rpg/prestige" style={{ color: 'var(--c-gold)' }}>Ouvrir</Link>} />
+          <SectionTitle title="Prestige" aside={<Link to="/rpg/prestige" style={{ color: 'var(--c-rpg)' }}>Ouvrir</Link>} />
           <p className={r.muted}>
             Au dernier niveau du rang SSS d’un domaine, vous pouvez ouvrir un nouveau cycle : récompense majeure au choix, historique conservé, difficulté en légère hausse.
             Il reste toujours facultatif.
@@ -138,7 +142,7 @@ function Progression() {
 
       {rpg.recent.length ? (
         <Card>
-          <SectionTitle title="Distinctions récentes" aside={<Link to="/rpg/distinctions" style={{ color: 'var(--c-gold)' }}>Toutes</Link>} />
+          <SectionTitle title="Distinctions récentes" aside={<Link to="/rpg/distinctions" style={{ color: 'var(--c-rpg)' }}>Toutes</Link>} />
           <ul className={r.rows}>{rpg.recent.slice(0, 3).map((x) => <li key={`${x.kind}${x.id}`} className={r.row}><span className={r.grow + ' ' + 'grow'} style={{ flex: 1 }}>{x.name}<small style={{ display: 'block' }}>{x.kind === 'reward' ? 'Récompense' : ACHIEVEMENT_BY_ID[x.id]?.description}</small></span></li>)}</ul>
         </Card>
       ) : null}

@@ -47,7 +47,7 @@ const GUILT = /paresse|manque de discipline|manque de motivation|inconstan|éche
   // ── 1. Départ : Pilotage facultatif, rien d'imposé ──────────────────────────────────────────────────
   await page.goto(BASE + '#/'); await page.waitForSelector('h1'); await page.waitForTimeout(1200)
   check('Navigation : onglet Pilotage présent', await vis(page.getByRole('link', { name: 'Pilotage' })))
-  check('Navigation mobile : 7 onglets sans débordement horizontal', (await noOverflow()) && (await page.locator('nav[aria-label="Navigation principale"] a').count()) >= 7)
+  check('Navigation mobile : 5 espaces sans débordement horizontal', (await noOverflow()) && (await page.locator('nav[aria-label="Navigation principale"] a:visible').count()) === 5)
   await page.getByRole('link', { name: 'Pilotage' }).first().click(); await page.waitForTimeout(700)
   check('Pilotage sans données : invitation facultative, aucune vision imposée', (await vis(page.getByText('Une trajectoire, à votre rythme'))) && (await vis(page.getByText(/Level fonctionne très bien sans lui/))))
   await shot('pilotage-empty-mobile')

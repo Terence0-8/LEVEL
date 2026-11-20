@@ -7,7 +7,7 @@ export function Ring({ progress, size = 120, stroke = 8, children, label, tone =
 }) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
-  const color = tone === 'gold' ? 'var(--c-gold)' : tone === 'info' ? 'var(--c-info)' : 'var(--c-success)'
+  const color = tone === 'gold' ? 'var(--c-rpg)' : tone === 'info' ? 'var(--c-info)' : 'var(--c-success)'
   return (
     <div className={s.ring} style={{ width: size, height: size }} role="img" aria-label={label}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
@@ -35,8 +35,8 @@ export function RadarChart({ attributes, size = 260 }: { attributes: Attribute[]
       aria-label={'Attributs : ' + attributes.map((a) => `${a.label} ${a.value}`).join(', ')}>
       {[0.25, 0.5, 0.75, 1].map((k) => <polygon key={k} points={ring(k)} fill="none" stroke="var(--c-line)" strokeWidth={1} />)}
       {attributes.map((_, i) => { const [x, y] = pt(i, 1); return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--c-line)" /> })}
-      <polygon points={shape} fill="rgba(201,177,122,0.18)" stroke="var(--c-gold)" strokeWidth={1.8} strokeLinejoin="round" />
-      {attributes.map((a, i) => { const [x, y] = pt(i, a.value / 100); return <circle key={a.id} cx={x} cy={y} r={3.2} fill="var(--c-gold-bright)" /> })}
+      <polygon points={shape} fill="color-mix(in srgb, var(--c-rpg) 18%, transparent)" stroke="var(--c-rpg)" strokeWidth={1.8} strokeLinejoin="round" />
+      {attributes.map((a, i) => { const [x, y] = pt(i, a.value / 100); return <circle key={a.id} cx={x} cy={y} r={3.2} fill="var(--c-rpg-strong)" /> })}
       {attributes.map((a, i) => {
         const [x, y] = pt(i, 1.2)
         return <text key={a.id} x={x} y={y} fontSize={11} textAnchor="middle" dominantBaseline="middle">{a.label}</text>
@@ -53,7 +53,7 @@ export function BarChart({ data, height = 120, label }: { data: Array<{ label: s
       {data.map((d, i) => {
         const h = (d.value / max) * (height - 18)
         return <rect key={i} x={i * w + w * 0.18} y={height - 14 - h} width={w * 0.64} height={Math.max(h, d.value ? 2 : 0)} rx={1.2}
-          fill={d.value ? 'var(--c-gold)' : 'var(--c-surface)'} opacity={d.value ? 0.9 : 0.5} />
+          fill={d.value ? 'var(--c-rpg)' : 'var(--c-surface)'} opacity={d.value ? 0.9 : 0.5} />
       })}
     </svg>
   )
@@ -79,8 +79,8 @@ export function LineChart({ points, target, height = 140, label, format }: {
           <text x={W - padR} y={y(target) - 4} fontSize={9} textAnchor="end" fill="var(--c-success)">cible {f(target)}</text>
         </g>
       ) : null}
-      {points.length > 1 ? <path d={path} fill="none" stroke="var(--c-gold)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" /> : null}
-      {points.map((p, i) => <circle key={i} cx={x(i)} cy={y(p.value)} r={i === points.length - 1 ? 4 : 2.8} fill={i === points.length - 1 ? 'var(--c-gold-bright)' : 'var(--c-gold)'} />)}
+      {points.length > 1 ? <path d={path} fill="none" stroke="var(--c-rpg)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" /> : null}
+      {points.map((p, i) => <circle key={i} cx={x(i)} cy={y(p.value)} r={i === points.length - 1 ? 4 : 2.8} fill={i === points.length - 1 ? 'var(--c-rpg-strong)' : 'var(--c-rpg)'} />)}
       <text x={x(points.length - 1)} y={y(points[points.length - 1].value) - 8} fontSize={10} textAnchor={points.length > 1 ? 'end' : 'middle'} fill="var(--c-text)">{f(points[points.length - 1].value)}</text>
       <text x={padL} y={height - 6} fontSize={9} fill="var(--c-text-faint)">{points[0].label}</text>
       {points.length > 1 ? <text x={W - padR} y={height - 6} fontSize={9} textAnchor="end" fill="var(--c-text-faint)">{points[points.length - 1].label}</text> : null}
@@ -93,5 +93,5 @@ export function Sparkline({ values, width = 84, height = 28 }: { values: number[
   if (values.length < 2) return null
   const lo = Math.min(...values), hi = Math.max(...values), span = hi - lo || 1
   const d = values.map((v, i) => `${i ? 'L' : 'M'}${((i / (values.length - 1)) * (width - 4) + 2).toFixed(1)} ${((1 - (v - lo) / span) * (height - 6) + 3).toFixed(1)}`).join(' ')
-  return <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true"><path d={d} fill="none" stroke="var(--c-gold)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></svg>
+  return <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true"><path d={d} fill="none" stroke="var(--c-rpg)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></svg>
 }

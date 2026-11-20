@@ -86,13 +86,13 @@ export function PrestigeConfirmPage() {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<PrestigeRecord | null>(null)
 
-  if (!domain || demo) return <div className={r.stack}><PageHeader title="Prestige" /><p className={r.muted}>Domaine inconnu ou démonstration active. <Link to="/rpg/prestige" style={{ color: 'var(--c-gold)' }}>Retour</Link></p></div>
+  if (!domain || demo) return <div className={r.stack}><PageHeader title="Prestige" /><p className={r.muted}>Domaine inconnu ou démonstration active. <Link to="/rpg/prestige" style={{ color: 'var(--c-rpg)' }}>Retour</Link></p></div>
   const c = rpg.cycles[domain]
   const proposals = proposeRewards(domain, c.nextNumber, new Set(rewards.map((x) => x.id)))
   const nextScale = xpScaleForCycle(c.cycle + 1)
 
   if (!c.eligible && !done) {
-    return <div className={r.stack}><PageHeader title={`Prestige ${domain}`} /><Card><p className={r.muted}>Le prestige {domain} n’est pas disponible : il faut atteindre le dernier niveau du rang SSS. <Link to="/rpg/prestige" style={{ color: 'var(--c-gold)' }}>Retour</Link></p></Card></div>
+    return <div className={r.stack}><PageHeader title={`Prestige ${domain}`} /><Card><p className={r.muted}>Le prestige {domain} n’est pas disponible : il faut atteindre le dernier niveau du rang SSS. <Link to="/rpg/prestige" style={{ color: 'var(--c-rpg)' }}>Retour</Link></p></Card></div>
   }
 
   const confirm = async () => {

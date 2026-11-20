@@ -143,27 +143,27 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
     startNewCycle: () => tx(async () => api.saveProfile({ cycleStartWeek: weekKey(now()) })),
 
     // ── Génération des séances ───────────────────────────────────
-    generateStrength: (o: { minutes?: number; focus?: MuscleGroup[]; date?: string } = {}) => tx(async () => {
+    generateStrength: (o: { minutes?: number; focus?: MuscleGroup[]; date?: string; programTag?: SportSession['programTag']; title?: string } = {}) => tx(async () => {
       const c = await context()
       if (c.recovery.level === 'ALERTE') throw new SportError('alert', 'Alerte de récupération : aucune séance de musculation n’est proposée tant que vous ne vous êtes pas réévalué(e).')
       const r = generateStrengthSession({ profile: c.prof, prefs: c.prefs, custom: c.custom, recovery: c.recovery, sessions: c.sessions, states: c.states, now: c.now, cycle: c.cycle, minutes: o.minutes, focus: o.focus, measured: c.measured })
       if (!r.slots.length) throw new SportError('nothing_available', r.notes[0] ?? 'Aucun exercice disponible.')
       const s: SportSession = {
         id: id(), kind: 'strength', origin: 'generated', date: o.date ?? today(), status: 'planned',
-        title: `Musculation · ${r.focus.slice(0, 3).join(', ')}`, plannedMinutes: r.minutes,
+        title: o.title ?? `Musculation · ${r.focus.slice(0, 3).join(', ')}`, plannedMinutes: r.minutes, programTag: o.programTag,
         variant: hasEquipmentVariant(c.prof) ? 'equipment' : 'bodyweight', slots: r.slots, startedAt: null, endedAt: null, pausedMs: 0, pausedAt: null, restEndsAt: null,
         notes: '', createdAt: stamp(), updatedAt: stamp(),
       }
       await database.sportSessions.add(s)
       return { session: s, notes: r.notes }
     }),
-    generateHiit: (minutes = 20) => tx(async () => {
+    generateHiit: (minutes = 20, programTag?: SportSession['programTag']) => tx(async () => {
       const c = await context()
       if (c.recovery.level === 'ALERTE') throw new SportError('alert', 'Alerte de récupération : pas de circuit HIIT aujourd’hui.')
       const h = generateHiit(c.prof, c.recovery, minutes, c.now)
       const s: SportSession = {
         id: id(), kind: 'hiit', origin: 'generated', date: today(), status: 'planned', title: 'Circuit HIIT full-body', plannedMinutes: minutes, variant: 'bodyweight',
-        slots: h.slots, hiit: h.hiit, startedAt: null, endedAt: null, pausedMs: 0, pausedAt: null, restEndsAt: null, notes: '', createdAt: stamp(), updatedAt: stamp(),
+        slots: h.slots, hiit: h.hiit, programTag, startedAt: null, endedAt: null, pausedMs: 0, pausedAt: null, restEndsAt: null, notes: '', createdAt: stamp(), updatedAt: stamp(),
       }
       await database.sportSessions.add(s)
       return { session: s, notes: h.notes }
@@ -301,7 +301,7 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
     abandonSession: (sid: string) => tx(async () => { const s = await getSession(sid); s.status = 'abandoned'; s.endedAt = stamp(); s.restEndsAt = null; await save(s); return syncXpUnsafe() }),
 
     // ── Course (saisie manuelle) ─────────────────────────────────
-    logRun: (input: RunInput & { date?: string; organised?: boolean; plannedSessionId?: string; notes?: string }) => tx(async () => {
+    logRun: (input: RunInput & { date?: string; organised?: boolean; plannedSessionId?: string; notes?: string; programTag?: SportSession['programTag'] }) => tx(async () => {
       const built = buildRun(input)
       if (!built.ok) throw new SportError('invalid', built.error)
       const date = input.date ?? today()
@@ -311,6 +311,7 @@ export function createSportService(database: LevelDB = db, deps: ServiceDeps = d
       const s: SportSession = planned && planned.status === 'planned' ? planned : {
         id: id(), kind: 'run', origin: 'unplanned', date, status: 'completed', title: '', plannedMinutes: 0, variant: 'bodyweight', slots: [], startedAt: null, endedAt: null, pausedMs: 0, pausedAt: null, restEndsAt: null, notes: '', createdAt: stamp(), updatedAt: stamp(),
       }
+      if (input.programTag) s.programTag = input.programTag
       s.kind = 'run'; s.run = built.run; s.date = date; s.status = 'completed'; s.endedAt = new Date(date + 'T12:00:00').toISOString()
       // Niveau de sécurité au moment de la sortie : état actuel, ou questionnaire de ce jour-là pour une saisie rétroactive (inconnu sinon)
       s.safetyAtStart = date === today() ? c.recovery.level : c.checks.filter((k) => k.day === date).sort((a, b) => a.at.localeCompare(b.at)).at(-1)?.safety ?? null

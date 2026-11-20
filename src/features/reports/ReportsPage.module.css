@@ -1,12 +1,12 @@
 .wrap { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
 .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
 .nav { display: flex; align-items: center; gap: 8px; flex: 1 1 100%; min-width: 0; }
-.nav .label { flex: 1; min-width: 0; overflow-wrap: anywhere; text-align: center; font-family: var(--font-title); letter-spacing: 0.05em; text-transform: capitalize; }
+.nav .label { flex: 1; min-width: 0; overflow-wrap: anywhere; text-align: center; font-family: var(--font-title); letter-spacing: 0; text-transform: capitalize; }
 .doc { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
 .doc h2 { font-size: 16px; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .stat { padding: 10px 12px; border-radius: var(--r-md); background: var(--c-panel); border: 1px solid var(--c-line); }
-.stat b { display: block; font-family: var(--font-title); font-size: 22px; color: var(--c-gold-bright); line-height: 1.2; }
+.stat b { display: block; font-family: var(--font-title); font-size: 22px; color: var(--c-accent-strong); line-height: 1.2; }
 .stat span { font-size: 12px; color: var(--c-text-dim); }
 .stat small { display: block; font-size: 12px; color: var(--c-text-faint); margin-top: 2px; }
 .table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
@@ -21,10 +21,10 @@
 @media (max-width: 560px) { .export { justify-items: stretch; } .export small { text-align: left; } }
 
 .tag { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--c-line); color: var(--c-text-dim); white-space: nowrap; letter-spacing: 0; }
-.tag.fact { color: var(--c-success); border-color: rgba(76,175,122,0.4); }
+.tag.fact { color: var(--c-success); border-color: color-mix(in srgb, var(--c-success) 40%, transparent); }
 .tag.estimate { color: var(--c-info); border-color: rgba(100,160,220,0.4); }
-.tag.interpretation { color: #c8a2e8; border-color: rgba(200,162,232,0.4); }
-.tag.recommendation { color: var(--c-gold-bright); border-color: var(--c-gold); }
+.tag.interpretation { color: var(--c-epic); border-color: color-mix(in srgb, var(--c-epic) 40%, transparent); }
+.tag.recommendation { color: var(--c-accent-strong); border-color: var(--c-accent); }
 .narr { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 10px; }
 .narr li { display: grid; gap: 4px; font-size: 14px; line-height: 1.5; }
 .narr li .tag { justify-self: start; }

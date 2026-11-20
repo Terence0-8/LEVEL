@@ -42,7 +42,7 @@ const LEG: MuscleGroup[] = ['quadriceps', 'ischios', 'fessiers', 'mollets']
 function Frame({ k, ex, dx }: { k: Skel; ex: Exercise; dx: number }) {
   const g = ex.primary
   const arm = g.some((x) => ARM.includes(x)), torso = g.some((x) => TORSO.includes(x)), leg = g.some((x) => LEG.includes(x))
-  const col = (on: boolean) => (on ? 'var(--c-gold-bright)' : 'var(--c-text-faint)')
+  const col = (on: boolean) => (on ? 'var(--c-sport)' : 'var(--c-text-faint)')
   const seg = (a: P, b: P, on: boolean, w = 5) => <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={col(on)} strokeWidth={w} strokeLinecap="round" />
   const eq = ex.equipment
   return (

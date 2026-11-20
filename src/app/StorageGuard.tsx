@@ -16,7 +16,7 @@ export function StorageGuard({ children }: { children: ReactNode }) {
   if (state === 'ok') return <>{children}</>
   return (
     <main style={{ maxWidth: 560, margin: '0 auto', padding: '48px 20px', color: 'var(--c-text)', lineHeight: 1.6 }} role="alert">
-      <h1 style={{ fontFamily: 'var(--font-title)', fontSize: 22, color: 'var(--c-gold)' }}>Le stockage local est indisponible</h1>
+      <h1 style={{ fontFamily: 'var(--font-title)', fontSize: 22, color: 'var(--c-accent)' }}>Le stockage local est indisponible</h1>
       <p>Level conserve toutes vos données sur cet appareil, dans le stockage du navigateur (IndexedDB). Il n’a pas pu l’ouvrir, donc rien n’a été lu ni modifié.</p>
       <p>Causes fréquentes : navigation privée, stockage désactivé dans les réglages du navigateur, espace disque saturé ou profil du navigateur endommagé. Essayez une fenêtre normale, libérez de l’espace, puis rechargez la page.</p>
       <p style={{ color: 'var(--c-text-dim)', fontSize: 13 }}>Détail technique : {state.error}</p>

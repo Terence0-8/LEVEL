@@ -69,11 +69,11 @@ export function RunPanel() {
   )
 }
 
-function RunSheet({ open, pre, onClose }: { open: boolean; pre?: RunSuggestion; onClose: () => void }) {
-  return <Sheet open={open} onClose={onClose} title="Enregistrer une course">{open ? <RunForm pre={pre} onDone={onClose} /> : null}</Sheet>
+export function RunSheet({ open, pre, programTag, onClose }: { open: boolean; pre?: RunSuggestion; programTag?: { templateId: string; startedAt: string; index: number }; onClose: () => void }) {
+  return <Sheet open={open} onClose={onClose} title="Enregistrer une course">{open ? <RunForm pre={pre} programTag={programTag} onDone={onClose} /> : null}</Sheet>
 }
 
-function RunForm({ pre, onDone }: { pre?: RunSuggestion; onDone: () => void }) {
+function RunForm({ pre, programTag, onDone }: { pre?: RunSuggestion; programTag?: { templateId: string; startedAt: string; index: number }; onDone: () => void }) {
   const { sport, now } = useAppState()
   const planned = sport.sessions.find((x) => x.kind === 'run' && x.status === 'planned' && x.date <= dayKey(now))
   const [family, setFamily] = useState<RunFamily>(pre?.family ?? planned?.runFamilyPlanned ?? sport.profile.runFamilies[0] ?? 'easy')
@@ -93,7 +93,7 @@ function RunForm({ pre, onDone }: { pre?: RunSuggestion; onDone: () => void }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const r = await run(() => sportService.logRun({ family, distanceKm: Number(km), durationSec, rpe, intervals: iv, date, organised, plannedSessionId: planned?.id, notes }))
+    const r = await run(() => sportService.logRun({ family, distanceKm: Number(km), durationSec, rpe, intervals: iv, date, organised, plannedSessionId: planned?.id, notes, programTag }))
     if (r) setResult({ warnings: r.warnings, xp: r.xp })
   }
   if (result) return (

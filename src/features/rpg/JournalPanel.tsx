@@ -59,7 +59,7 @@ export function JournalPanel() {
                   </span>
                   {isOpen ? (
                     <span style={{ display: 'grid', gap: 6 }}>
-                      <span className={r.entryBody} style={{ color: 'var(--c-gold)', fontStyle: 'italic' }}>{n.headline}</span>
+                      <span className={r.entryBody} style={{ color: 'var(--c-accent)', fontStyle: 'italic' }}>{n.headline}</span>
                       <span className={r.entryBody}>{e.description}</span>
                       {e.route ? <Link to={e.route} className={`${r.btn} ${r.mini}`} style={{ justifySelf: 'start' }} onClick={(ev) => ev.stopPropagation()}>Ouvrir</Link> : null}
                     </span>

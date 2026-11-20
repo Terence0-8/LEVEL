@@ -17,6 +17,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+  const tab = async (name) => { const re = name instanceof RegExp ? name : new RegExp('^' + name + '$'); const t = page.getByRole('tab', { name: re }); if (await t.first().isVisible().catch(() => false)) { await t.first().click(); return } await page.locator('[role=tab][aria-haspopup]').first().click(); await page.getByRole('button', { name: re }).first().click() }
   const go = async (hash) => { await page.evaluate((h) => { location.hash = h }, hash); await page.waitForTimeout(800) }
   const shot = (n, full = true) => page.screenshot({ path: `${OUT}/${n}.png`, fullPage: full })
   const vis = (loc) => loc.first().isVisible().catch(() => false)
@@ -32,9 +33,11 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
 
   // ── 1. Aucune donnée : LIFE reste sur les quêtes, la vue d'ensemble invite à commencer ─────────
   await page.goto(BASE + '#/life'); await page.waitForSelector('h1'); await page.waitForTimeout(1000)
-  check('LIFE vide : section Quêtes par défaut (comportement V1 inchangé)', await vis(page.getByText("Aucune quête pour l'instant")))
-  check('LIFE : 8 sections dont Ensemble, Objectifs, Projets, Indicateurs', (await page.getByRole('tablist', { name: 'Sections LIFE' }).getByRole('tab').count()) === 8)
-  await page.getByRole('tab', { name: 'Ensemble' }).click(); await page.waitForTimeout(500)
+  check('LIFE vide : section Quêtes par défaut, avec les trois chemins de démarrage', (await vis(page.getByText('Commence par ajouter quelques activités à ton quotidien'))) && (await vis(page.getByRole('button', { name: 'Charger un pack de démarrage' }))))
+  await page.getByRole('tablist', { name: 'Sections LIFE' }).locator('[aria-haspopup]').click()
+  check('LIFE : Quêtes, Bibliothèque, Objectifs, Projets + 5 sections sous « Plus » (Ensemble, Indicateurs, Gains, Bilan, Catégories)', ((await page.getByRole('tablist', { name: 'Sections LIFE' }).getByRole('tab').count()) === 5) && ((await page.getByRole('group', { name: /Autres sections/ }).getByRole('button').count()) === 5))
+  await page.keyboard.press('Escape')
+  await tab('Ensemble'); await page.waitForTimeout(500)
   check('Vue d’ensemble vide : invitation à créer objectif, projet, indicateur', (await vis(page.getByRole('button', { name: 'Créer un objectif' }))) && (await vis(page.getByRole('button', { name: 'Suivre un indicateur' }))))
   check('Mobile : pas de débordement horizontal (ensemble vide)', await noOverflow())
   await shot('life2-overview-empty-mobile')
@@ -121,7 +124,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   check('Aucune seconde récompense : terminer le projet ne change pas l’XP', (await xpTotal()) === xp1)
   // rattachement via le formulaire d'une quête
   await go('/life/quetes')
-  await page.getByRole('button', { name: 'Créer une quête' }).click(); await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Créer une quête', exact: true }).click(); await page.waitForTimeout(400)
   await page.fill('#q-title', 'Rédiger la FAQ')
   await page.getByLabel('Projet', { exact: true }).selectOption({ label: 'Développer Solitiquo' }); await page.waitForTimeout(200)
   await page.getByLabel('Étape du projet').selectOption({ label: 'Lancement' })
@@ -153,9 +156,9 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   check('Les indicateurs ne génèrent aucune XP', (await xpTotal()) === xpBeforeInd)
 
   // ── 6. Vue d'ensemble ─────────────────────────────────────────────────────────────────────────
-  await go('/life')
+  await go('/life/apercu')
   check('Vue d’ensemble : objectifs actifs, projets en cours, étapes prioritaires, échéances, indicateurs importants', (await vis(page.getByRole('heading', { name: 'Objectifs en cours' }))) && (await vis(page.getByRole('heading', { name: 'Projets en cours' }))) && (await vis(page.getByRole('heading', { name: 'Étapes prioritaires' }))) && (await vis(page.getByRole('heading', { name: 'Échéances' }))) && (await vis(page.getByRole('heading', { name: 'Indicateurs importants' }))) && (await vis(page.getByRole('heading', { name: 'Progression globale' }))))
-  check('Vue d’ensemble : devient la page par défaut de LIFE', await vis(page.getByRole('tab', { name: 'Ensemble', selected: true })))
+  check('Vue d’ensemble : accessible sous « Plus » (l’onglet affiche la section courante)', await vis(page.getByRole('tab', { name: /Ensemble/, selected: true })))
   check('Mobile : pas de débordement horizontal (ensemble)', await noOverflow())
   await shot('life2-overview-mobile')
 
@@ -180,7 +183,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   check('Après confirmation : échéance décalée (+14 j) et tracée', lateAfter.dueDate === ahead(14) && (await idbAll('planningMoves')).some((m) => m.kind === 'project' && m.byLevel))
   await go('/')
   const alertsText = await page.locator('main').innerText()
-  check('Accueil global toujours opérationnel avec les échéances de projets', /échéances importantes|quêtes prioritaires/i.test(alertsText))
+  check('Accueil global toujours opérationnel avec les échéances de projets', /À faire aujourd’hui/i.test(alertsText))
 
   // ── 8. Bilans ───────────────────────────────────────────────────────────────────────────────────
   await go('/bilans'); await page.getByRole('radio', { name: 'Semaine' }).click(); await page.waitForTimeout(600)
@@ -228,7 +231,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   await page.setViewportSize({ width: 1280, height: 900 })
   await go('/life'); await shot('life2-overview-desktop')
   await go('/life/projets'); await shot('life2-projects-desktop')
-  check('Bureau : onglets LIFE sans défilement forcé', await vis(page.getByRole('tab', { name: 'Indicateurs' })))
+  check('Bureau : onglets LIFE essentiels visibles sans défilement', (await vis(page.getByRole('tab', { name: 'Bibliothèque' }))) && (await vis(page.getByRole('tab', { name: 'Objectifs' }))))
 
   const real = errors.filter((e) => !/favicon|Failed to load resource|net::ERR/.test(e))
   check('Aucune erreur JavaScript', real.length === 0, real.slice(0, 3).join(' | '))

@@ -24,7 +24,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   }, { store, rows })
   const count = (store) => page.evaluate(async (s) => { const db = await new Promise((res) => { const r = indexedDB.open('level'); r.onsuccess = () => res(r.result) }); const n = await new Promise((res) => { const r = db.transaction(s).objectStore(s).count(); r.onsuccess = () => res(r.result) }); db.close(); return n }, store)
 
-  const ROUTES = ['/', '/pilotage', '/pilotage/vision', '/pilotage/orientations', '/pilotage/priorites', '/pilotage/cycles', '/pilotage/revues', '/pilotage/historique', '/life', '/life/quetes', '/life/objectifs', '/life/projets', '/life/indicateurs', '/life/gains', '/life/bilan', '/life/categories', '/sport', '/sport/seances', '/sport/recuperation', '/planning', '/rpg', '/rpg/journal', '/rpg/analyse', '/rpg/attributs', '/rpg/distinctions', '/rpg/recompenses', '/rpg/prestige', '/bilans', '/history', '/profile', '/backups']
+  const ROUTES = ['/', '/pilotage', '/pilotage/vision', '/pilotage/orientations', '/pilotage/priorites', '/pilotage/cycles', '/pilotage/revues', '/pilotage/historique', '/life', '/life/quetes', '/life/bibliotheque', '/life/objectifs', '/life/projets', '/life/indicateurs', '/life/gains', '/life/bilan', '/life/categories', '/sport', '/sport/programmes', '/sport/recuperation', '/planning', '/rpg', '/rpg/journal', '/rpg/analyse', '/rpg/attributs', '/rpg/distinctions', '/rpg/recompenses', '/rpg/prestige', '/bilans', '/history', '/profile', '/backups']
 
   // ── 1. Démarrage à vide ───────────────────────────────────────────────────────────────────────────
   const t0 = Date.now()
@@ -57,14 +57,14 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
     await page.setViewportSize({ width: w, height: 800 })
     await go('/')
     const tabs = await page.locator('nav[aria-label="Navigation principale"] a').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().width > 0).map((e) => ({ label: e.textContent.trim(), w: e.getBoundingClientRect().width, clipped: e.scrollWidth > e.clientWidth + 1, right: e.getBoundingClientRect().right })))
-    check(`Barre du bas ${w} px : 7 onglets, aucun texte tronqué, zone tactile ≥ 40 px`, tabs.length === 7 && tabs.every((t) => !t.clipped && t.w >= 40 && t.right <= w + 1), JSON.stringify(tabs.map((t) => `${t.label}:${Math.round(t.w)}`)))
+    check(`Barre du bas ${w} px : 5 espaces, aucun texte tronqué, zone tactile ≥ 40 px`, tabs.length === 5 && tabs.every((t) => !t.clipped && t.w >= 40 && t.right <= w + 1), JSON.stringify(tabs.map((t) => `${t.label}:${Math.round(t.w)}`)))
   }
   await page.screenshot({ path: `${OUT}/stabilisation-nav-320.png` })
   await page.setViewportSize({ width: 390, height: 844 })
-  for (const label of ['Pilotage', 'LIFE', 'SPORT', 'Planning', 'RPG', 'Bilans', 'Accueil']) { await page.locator('nav[aria-label="Navigation principale"]').last().getByRole('link', { name: label }).click(); await page.waitForTimeout(350) }
+  for (const label of ['Pilotage', 'LIFE', 'SPORT', 'Progression', 'Accueil']) { await page.locator('nav[aria-label="Navigation principale"]').last().getByRole('link', { name: label }).click(); await page.waitForTimeout(350) }
   check('Navigation par la barre du bas : tous les onglets atteignables', await vis(page.locator('h1')))
   await page.goBack(); await page.waitForTimeout(400)
-  check('Retour arrière du navigateur : écran précédent', (await page.evaluate(() => location.hash)).includes('bilans'))
+  check('Retour arrière du navigateur : écran précédent', (await page.evaluate(() => location.hash)).includes('rpg'))
 
   // ── 5. Clavier et modales ─────────────────────────────────────────────────────────────────────────
   await go('/life/quetes')

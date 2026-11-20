@@ -19,8 +19,11 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   const daysAgo = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 
   await page.goto(BASE + '#/sport'); await page.waitForSelector('h1'); await page.waitForTimeout(900)
-  check('SPORT : tableau de bord réel (sans démo)', await vis(page.getByText(/Profil sportif à \d+ %/)))
-  check('SPORT : 8 sections de navigation', (await page.getByRole('navigation', { name: 'Sections SPORT' }).getByRole('link').count()) === 8)
+  check('SPORT : tableau de bord réel (sans démo) avec invitation à choisir un programme', (await vis(page.getByText('Pas encore de programme'))) && (await vis(page.getByRole('link', { name: 'Trouver mon programme' }))))
+  const sportTabs = page.getByRole('tablist', { name: 'Sections SPORT' })
+  await sportTabs.locator('[aria-haspopup]').click()
+  check('SPORT : 3 onglets essentiels + 6 sections sous « Plus » (9 au total)', ((await sportTabs.getByRole('tab').count()) === 4) && ((await page.getByRole('group', { name: /Autres sections/ }).getByRole('button').count()) === 6))
+  await page.keyboard.press('Escape')
   check('Aucun blocage : module utilisable avec un profil vide', await vis(page.getByRole('button', { name: 'Préparer une séance' })))
   await shot('sport-dashboard-mobile')
 
@@ -224,6 +227,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log(`${ok ? 
   // ── Desktop
   const d = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
   await d.goto(BASE + '#/sport'); await d.waitForSelector('h1'); await d.waitForTimeout(900)
+  await d.getByText(/Plus de détails/).click()
   check('Desktop : menu latéral et tableau de bord', (await d.locator('aside').isVisible()) && (await d.getByText('Progression générale').isVisible()))
   await d.screenshot({ path: `${OUT}/sport-dashboard-desktop.png`, fullPage: true })
 

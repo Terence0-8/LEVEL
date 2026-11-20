@@ -33,7 +33,7 @@ export function ProgressBar({ value, tone = 'gold', thin, label }: { value: numb
   )
 }
 
-export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'gold' | 'success' | 'info' | 'danger'; children: ReactNode }) {
+export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'gold' | 'rpg' | 'success' | 'info' | 'danger'; children: ReactNode }) {
   return <span className={cx(s.badge, tone !== 'neutral' && s[tone])}>{children}</span>
 }
 
@@ -48,7 +48,7 @@ export function Notice({ title, children }: { title: string; children: ReactNode
 
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
-    <Card variant="flat"><div className={s.empty}><h3>{title}</h3><p>{children}</p></div></Card>
+    <div className={s.empty}><h3>{title}</h3>{typeof children === 'string' ? <p>{children}</p> : children}</div>
   )
 }
 

@@ -10,19 +10,20 @@ import { BackupBanner } from '@/features/backup/BackupBanner'
 import { UpdateBanner } from './UpdateBanner'
 import s from './Shell.module.css'
 
-export const NAV: Array<{ to: string; label: string; icon: IconName }> = [
-  { to: '/', label: 'Accueil', icon: 'home' },
-  { to: '/pilotage', label: 'Pilotage', icon: 'compass' },
-  { to: '/life', label: 'LIFE', icon: 'life' },
-  { to: '/sport', label: 'SPORT', icon: 'sport' },
+/** Cinq espaces essentiels. Planning, bilans et historique restent accessibles depuis l'accueil et l'espace Progression ; réglages et sauvegardes depuis le profil. */
+export const NAV: Array<{ to: string; label: string; icon: IconName; color: string }> = [
+  { to: '/', label: 'Accueil', icon: 'home', color: 'var(--c-accent)' },
+  { to: '/life', label: 'LIFE', icon: 'life', color: 'var(--c-life)' },
+  { to: '/sport', label: 'SPORT', icon: 'sport', color: 'var(--c-sport)' },
+  { to: '/rpg', label: 'Progression', icon: 'rpg', color: 'var(--c-rpg)' },
+  { to: '/pilotage', label: 'Pilotage', icon: 'compass', color: 'var(--c-pilot)' },
+]
+/** Entrées secondaires du menu latéral (grand écran) */
+const MORE: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/planning', label: 'Planning', icon: 'calendar' },
-  { to: '/rpg', label: 'RPG', icon: 'rpg' },
   { to: '/bilans', label: 'Bilans', icon: 'report' },
   { to: '/history', label: 'Historique', icon: 'history' },
 ]
-
-/** Barre du bas (mobile) : l'Historique reste accessible depuis l'accueil et le menu latéral. */
-const TAB_NAV = NAV.filter((n) => n.to !== '/history')
 
 const cls = (base: string, active: boolean) => (active ? `${base} ${s.active}` : base)
 
@@ -89,7 +90,13 @@ export function Shell() {
       <aside className={s.side} aria-label="Navigation principale">
         <div className={s.brand}><LogoWordmark /></div>
         {NAV.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => cls(s.link, isActive)}>
+          <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => cls(s.link, isActive)} style={{ ['--nav-color' as string]: n.color }}>
+            <Icon name={n.icon} /> {n.label}
+          </NavLink>
+        ))}
+        <div className={s.group}>Plus</div>
+        {MORE.map((n) => (
+          <NavLink key={n.to} to={n.to} className={({ isActive }) => cls(s.link, isActive)}>
             <Icon name={n.icon} /> {n.label}
           </NavLink>
         ))}
@@ -115,8 +122,8 @@ export function Shell() {
       </div>
 
       <nav className={s.tabs} aria-label="Navigation principale">
-        {TAB_NAV.map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => cls(s.tab, isActive)}>
+        {NAV.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => cls(s.tab, isActive)} style={{ ['--nav-color' as string]: n.color }}>
             <Icon name={n.icon} size={22} /> {n.label}
           </NavLink>
         ))}

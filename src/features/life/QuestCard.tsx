@@ -1,3 +1,4 @@
+import { catalogService, CatalogError } from '@/data/catalogService'
 import { useState } from 'react'
 import { Badge, Card, ProgressBar } from '@/design/components'
 import { ConfirmDialog } from '@/design/Sheet'
@@ -17,6 +18,7 @@ export function QuestCard({ view, onEdit }: { view: QuestView; onEdit: () => voi
   const { quest, category, cp, status } = view
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState<Pending>(null)
+  const [feedback, setFeedback] = useState<string | null>(null)
   const [work, setWork] = useState(false)
   const { revisions, categories } = useAppState()
   const myRevisions = revisions.filter((r) => r.questId === quest.id)
@@ -105,10 +107,13 @@ export function QuestCard({ view, onEdit }: { view: QuestView; onEdit: () => voi
               </ul>
             </details>
           ) : null}
+          {feedback ? <p className={s.note} role="status">{feedback}</p> : null}
           <div className={s.qActions}>
             {!quest.archived && (!done || recurring) ? <button className={`${s.act} ${s.actMain}`} onClick={() => setWork(true)}>Enregistrer mon travail</button> : null}
             <button className={s.act} onClick={onEdit}>Modifier</button>
             {cp.earnedXp > 0 ? <button className={s.act} onClick={() => setPending({ kind: 'undo-quest' })}>Corriger la validation</button> : null}
+            <button className={s.act} onClick={() => void catalogService.duplicateQuest(quest.id).then(() => setFeedback('Quête dupliquée.'))}>Dupliquer</button>
+            <button className={s.act} onClick={() => void catalogService.saveAsTemplate(quest.id).then(() => setFeedback('Modèle enregistré dans la bibliothèque (Mes modèles).'), (e) => setFeedback(e instanceof CatalogError ? e.message : 'Action impossible.'))}>Enregistrer comme modèle</button>
             <button className={s.act} onClick={() => void questService.setArchived(quest.id, !quest.archived)}>{quest.archived ? 'Désarchiver' : 'Archiver'}</button>
             <button className={`${s.act} ${s.actDanger}`} onClick={() => setPending({ kind: 'delete' })}>Supprimer</button>
           </div>

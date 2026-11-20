@@ -1,0 +1,14 @@
+.wrap { position: relative; --tab-color: var(--c-accent); }
+.row { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; padding: 4px; background: var(--c-panel); border: 1px solid var(--c-line); border-radius: 99px; }
+.tab { flex: 1 0 auto; min-width: 0; min-height: 42px; padding: 0 12px; border: 0; background: transparent; border-radius: 99px; font-size: 15px; font-weight: 600; color: var(--c-text-dim); white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s, color 0.15s; }
+.tab:hover { color: var(--c-text); }
+.tab[aria-selected='true'] { background: var(--tab-color); color: var(--c-on-accent); }
+.caret { font-size: 11px; opacity: 0.8; }
+.badge { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--c-warn); color: var(--c-on-accent); font-size: 12px; font-weight: 700; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-warn); }
+.dot.alert { background: var(--c-danger); }
+.menu { position: absolute; z-index: 15; right: 0; top: calc(100% + 6px); min-width: 220px; max-width: 100%; display: grid; padding: 6px; background: var(--c-panel); border: 1px solid var(--c-line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-raised); }
+.item { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 12px; border: 0; background: transparent; border-radius: var(--r-sm); text-align: left; font-size: 15px; color: var(--c-text); }
+.item:hover { background: var(--c-card); }
+.item[aria-current='page'] { background: var(--c-card); font-weight: 650; }
+@media (max-width: 480px) { .row { padding: 3px; gap: 0; } .tab { padding: 0 8px; font-size: 14px; } }

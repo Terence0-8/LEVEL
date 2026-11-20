@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppState } from '@/app/AppState'
-import { Card, EmptyState, Notice, PageHeader, SectionTitle } from '@/design/components'
+import { Card, EmptyState, PageHeader, SectionTitle } from '@/design/components'
+import { Tabs } from '@/design/Tabs'
 import sheet from '@/design/sheet.module.css'
 import { isRecurring, type Quest, type QuestType } from '@/core/quest'
 import { BilanPanel } from './BilanPanel'
+import { LibraryPanel } from './LibraryPanel'
 import { CategoriesPanel } from './CategoriesPanel'
 import { GoalsPanel } from './GoalsPanel'
 import { IndicatorsPanel } from './IndicatorsPanel'
@@ -17,20 +19,19 @@ import { TYPE_LABEL } from './labels'
 import { useQuestViews } from './useQuestViews'
 import s from './life.module.css'
 
-type Tab = 'overview' | 'quests' | 'goals' | 'projects' | 'indicators' | 'rewards' | 'review' | 'categories'
+type Tab = 'overview' | 'quests' | 'library' | 'goals' | 'projects' | 'indicators' | 'rewards' | 'review' | 'categories'
 /** Adresse de chaque section : /life (défaut), /life/objectifs, /life/projets… */
-const SLUG: Record<Tab, string> = { overview: 'apercu', quests: 'quetes', goals: 'objectifs', projects: 'projets', indicators: 'indicateurs', rewards: 'gains', review: 'bilan', categories: 'categories' }
-const LABEL: Record<Tab, string> = { overview: 'Ensemble', quests: 'Quêtes', goals: 'Objectifs', projects: 'Projets', indicators: 'Indicateurs', rewards: 'Gains', review: 'Bilan', categories: 'Catégories' }
+const SLUG: Record<Tab, string> = { overview: 'apercu', quests: 'quetes', library: 'bibliotheque', goals: 'objectifs', projects: 'projets', indicators: 'indicateurs', rewards: 'gains', review: 'bilan', categories: 'categories' }
+const LABEL: Record<Tab, string> = { overview: 'Ensemble', quests: 'Quêtes', library: 'Bibliothèque', goals: 'Objectifs', projects: 'Projets', indicators: 'Indicateurs', rewards: 'Gains', review: 'Bilan', categories: 'Catégories' }
 type TypeFilter = 'all' | QuestType
 
 export function LifePage() {
-  const { progress, missed, goals, projects, indicators } = useAppState()
+  const { progress, missed } = useAppState()
   const { section } = useParams()
   const navigate = useNavigate()
-  const hasLife = goals.length + projects.length + indicators.length > 0
   const fromUrl = (Object.keys(SLUG) as Tab[]).find((k) => SLUG[k] === section)
-  // Par défaut : la vue d'ensemble dès qu'il existe un objectif, un projet ou un indicateur ; sinon les quêtes
-  const tab: Tab = fromUrl ?? (hasLife ? 'overview' : 'quests')
+  // Par défaut : les quêtes (l'action d'abord) ; l'ensemble et les réglages avancés sont derrière « Plus »
+  const tab: Tab = fromUrl ?? 'quests'
   const setTab = (t: Tab) => navigate(`/life/${SLUG[t]}`)
   const [form, setForm] = useState<{ quest?: Quest } | null>(null)
 
@@ -38,21 +39,16 @@ export function LifePage() {
     <div className={s.stack}>
       <PageHeader title="LIFE" subtitle={`Niveau ${progress.life.level} · quêtes, objectifs, projets et indicateurs.`}
         right={<button className={`${sheet.btnPrimary} ${s.newDesktop}`} onClick={() => setForm({})}>+ Nouvelle quête</button>} />
-      <Notice title="Piloter sans compliquer">quêtes, objectifs, projets et indicateurs sont opérationnels. Seules les quêtes rapportent de l’XP ; objectifs, projets et indicateurs servent à s’organiser et à mesurer. Habitudes avancées et budgets détaillés arriveront plus tard.</Notice>
-
-      <div className={s.tabs} role="tablist" aria-label="Sections LIFE">
-        {(Object.keys(LABEL) as Tab[]).map((id) => [id, LABEL[id]] as const).map(([id, label]) => (
-          <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>
-            {label}{id === 'review' && missed.length > 0 ? <span className={s.tabBadge} aria-label={`${missed.length} à analyser`}>{missed.length}</span> : null}
-          </button>
-        ))}
-      </div>
+      <Tabs label="Sections LIFE" color="var(--c-life)" value={tab} onChange={(id) => setTab(id as Tab)}
+        primary={['quests', 'library', 'goals', 'projects']}
+        items={(Object.keys(LABEL) as Tab[]).map((id) => ({ id, label: LABEL[id], badge: id === 'review' && missed.length > 0 ? missed.length : undefined, badgeLabel: id === 'review' ? `${missed.length} à analyser` : undefined }))} />
 
       {tab === 'overview' ? <OverviewPanel go={(slug) => navigate(`/life/${slug}`)} /> : null}
+      {tab === 'library' ? <LibraryPanel openQuests={() => setTab('quests')} /> : null}
       {tab === 'goals' ? <GoalsPanel /> : null}
       {tab === 'projects' ? <ProjectsPanel /> : null}
       {tab === 'indicators' ? <IndicatorsPanel /> : null}
-      {tab === 'quests' ? <QuestsTab onEdit={(q) => setForm({ quest: q })} onNew={() => setForm({})} /> : null}
+      {tab === 'quests' ? <QuestsTab onEdit={(q) => setForm({ quest: q })} onNew={() => setForm({})} onLibrary={() => setTab('library')} /> : null}
       {tab === 'rewards' ? <RewardsPanel /> : null}
       {tab === 'review' ? <BilanPanel /> : null}
       {tab === 'categories' ? <CategoriesPanel /> : null}
@@ -63,7 +59,7 @@ export function LifePage() {
   )
 }
 
-function QuestsTab({ onEdit, onNew }: { onEdit: (q: Quest) => void; onNew: () => void }) {
+function QuestsTab({ onEdit, onNew, onLibrary }: { onEdit: (q: Quest) => void; onNew: () => void; onLibrary: () => void }) {
   const views = useQuestViews()
   const [filter, setFilter] = useState<TypeFilter>('all')
   const [showArchived, setShowArchived] = useState(false)
@@ -72,9 +68,13 @@ function QuestsTab({ onEdit, onNew }: { onEdit: (q: Quest) => void; onNew: () =>
     return (
       <Card variant="flat">
         <div className={s.empty}>
-          <h3>Aucune quête pour l'instant</h3>
-          <p>Une quête est une action à accomplir, seule ou découpée en étapes. Chaque validation rapporte de l'XP.</p>
-          <button className={sheet.btnPrimary} onClick={onNew}>Créer ma première quête</button>
+          <h3>Commence par ajouter quelques activités à ton quotidien</h3>
+          <p>Une quête est une action à accomplir ; chaque validation te rapporte de l’XP. Pas besoin de tout inventer : choisis dans la bibliothèque.</p>
+          <div className={s.emptyActions}>
+            <button className={sheet.btnPrimary} onClick={onLibrary}>Choisir des quêtes prédéfinies</button>
+            <button className={sheet.btnGhost} onClick={onLibrary}>Charger un pack de démarrage</button>
+            <button className={sheet.btnGhost} onClick={onNew}>Créer une quête personnelle</button>
+          </div>
         </div>
       </Card>
     )

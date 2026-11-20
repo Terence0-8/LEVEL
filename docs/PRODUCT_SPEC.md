@@ -248,3 +248,11 @@ Règles : la sécurité SPORT prime sur toute recommandation ; une pause n'est j
 - **Stockage local** : les sauvegardes locales ne protègent pas contre la perte de l'appareil ni l'effacement des données du navigateur ; une copie externe d'un fichier chiffré est nécessaire (voir `docs/STABILIZATION_REPORT.md`, §6–7). Level l'indique dans l'application et ne présente jamais une sauvegarde locale comme une protection contre la perte physique.
 - **Stockage indisponible ou saturé** : message explicite, aucune donnée existante supprimée.
 
+## V2 : expérience, contenu prêt à l'emploi, identité (v2.0)
+- **Philosophie** : orienté action. À l'ouverture : que faire aujourd'hui, quelle est la prochaine activité, où j'en suis, y a-t-il quelque chose qui demande mon attention ? Aucune information n'est affichée parce qu'elle existe ; les détails vivent dans leur espace.
+- **Navigation** : Accueil, LIFE, SPORT, Progression (RPG + bilans + historique + planning), Pilotage. Divulgation progressive (« Plus »).
+- **LIFE** : bibliothèque de modèles (7 catégories, 4 rythmes, quêtes en étapes), packs facultatifs et légers, favoris, modèles personnels, duplication. Un modèle devient une vraie quête ; les XP viennent du moteur existant. Jamais de doublon silencieux.
+- **SPORT** : 20 programmes prédéfinis (musculation, course, mixtes) activables en quelques choix ; instance personnalisée distincte du catalogue et de l'historique ; rotation sur séances terminées ; récupération prioritaire ; pompes exclues des programmes ordinaires (circuit HIIT full-body seulement, si autorisé).
+- **Identité** : or réservé au RPG ; vert LIFE, bleu SPORT, terre cuite Pilotage ; thème clair ou sombre par appareil ; voir `docs/DESIGN_SYSTEM.md`.
+- **Arbitrages** : « quêtes de progression » = quêtes ponctuelles à étapes (aucun nouveau type de quête, donc aucune migration) ; « exceptionnelles » = type existant ; catalogue et programme actif stockés dans `settings` (pas de nouvelle table, sauvegardés d'office) ; l'agencement automatique de l'accueil de l'étape 5 est remplacé par un ordre fixe (l'urgent passe devant), `core/homeLayout` reste disponible et testé mais n'est plus affiché.
+

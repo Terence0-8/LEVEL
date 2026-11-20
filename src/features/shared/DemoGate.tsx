@@ -11,7 +11,7 @@ export function DemoGate({ children }: { children: (demo: DemoView) => ReactNode
     return (
       <EmptyState title="Aucune donnée pour l'instant">
         Les données de démonstration sont masquées et ce module n'enregistre pas encore de données réelles.{' '}
-        <Link to="/profile" style={{ color: 'var(--c-gold)' }}>Réafficher la démo</Link>
+        <Link to="/profile" style={{ color: 'var(--c-accent)' }}>Réafficher la démo</Link>
       </EmptyState>
     )
   }

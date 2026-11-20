@@ -42,13 +42,14 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
 
   // ── 1. Accueil global (aucune donnée) ───────────────────────────────────
   await page.goto(BASE); await page.waitForSelector('h1'); await page.waitForTimeout(1200)
-  check('Accueil : en-tête, niveaux LIFE et SPORT avec rang par domaine', (await vis(page.getByRole('heading', { name: 'LIFE · rang E' }))) && (await vis(page.getByRole('heading', { name: 'SPORT · rang E' }))))
-  check('Accueil : prochaine séance (état vide utile), récupération, semaine', (await vis(page.getByText('Planifier ma semaine'))) && (await vis(page.getByRole('heading', { name: 'Récupération' }))) && (await vis(page.getByRole('heading', { name: 'Cette semaine' }))))
-  check('Accueil vide : aucune alerte ni échéance affichée (pas de bloc vide)', !(await vis(page.getByRole('heading', { name: 'À savoir maintenant' }))) && !(await vis(page.getByRole('heading', { name: 'Échéances importantes' }))))
+  check('Accueil : niveau global, rangs LIFE et SPORT par domaine', (await vis(page.getByRole('link', { name: 'LIFE · rang E' }))) && (await vis(page.getByRole('link', { name: 'SPORT · rang E' }))))
+  const homeH2 = await page.locator('main h2').allTextContents()
+  check('Accueil : essentiel seulement — à faire, SPORT (invitation utile), aucune statistique secondaire', (await vis(page.getByText('Trouver mon programme'))) && homeH2.includes('À faire aujourd’hui') && !homeH2.some((t) => /Attributs|Activités récentes|Cette semaine|Distinctions|Récupération/.test(t)), JSON.stringify(homeH2))
+  check('Accueil vide : aucune alerte ni échéance affichée (pas de bloc vide)', !(await vis(page.getByRole('heading', { name: 'À savoir' }))) && !(await vis(page.getByRole('heading', { name: 'Échéances importantes' }))))
   check('Accueil : aucune réorganisation manuelle (pas de poignée ni de glisser-déposer)', (await page.locator('[draggable="true"]').count()) === 0)
   check('Mobile : pas de débordement horizontal (accueil)', await noOverflow())
   await shot('global-home-empty-mobile')
-  check('Navigation mobile : Planning et Bilans accessibles', (await vis(page.locator('nav.tabs, nav[aria-label="Navigation principale"]').last().getByRole('link', { name: 'Planning' }))) || (await page.getByRole('link', { name: 'Planning' }).count()) > 0)
+  check('Navigation : cinq espaces en bas ; Planning depuis l’accueil, Bilans/Historique/Planning depuis Progression', (await page.locator('nav[aria-label="Navigation principale"] a:visible').count()) === 5 && (await vis(page.getByRole('link', { name: 'Semaine' }))))
 
   // ── 2. Jeu de données : semaine chargée, engagement important, séance, quête importante ──
   const D = { tomorrow: ahead(1), d3: ahead(3), d6: ahead(6), d9: ahead(9) }
@@ -67,11 +68,11 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   await page.reload(); await page.waitForSelector('h1'); await page.waitForTimeout(7000)
 
   // ── 3. Accueil adaptatif et alertes ─────────────────────────────────────
-  check('Accueil : alertes et recommandations (échéance importante demain)', (await vis(page.getByRole('heading', { name: 'À savoir maintenant' }))) && (await vis(page.getByText('Échéance importante demain'))))
+  check('Accueil : alertes et recommandations (échéance importante demain)', (await vis(page.getByRole('heading', { name: 'À savoir' }))) && (await vis(page.getByText('Échéance importante demain'))))
   check('Accueil : quêtes prioritaires avec raisons, la quête importante en tête', (await page.locator('ul li').filter({ hasText: 'Dossier de prêt bancaire' }).first().isVisible()) && (await vis(page.getByText(/échéance demain/i))))
   const order = await page.locator('main h2').allTextContents()
-  check('Accueil : alertes et échéances avant les blocs secondaires (ordre automatique)', order.indexOf('À savoir maintenant') >= 0 && order.indexOf('À savoir maintenant') < order.indexOf('Activités récentes') && order.indexOf('Échéances importantes') < order.indexOf('Attributs'), JSON.stringify(order))
-  check('Accueil : échéances importantes listées (engagement + quête)', (await vis(page.getByText('Rendez-vous notaire'))) && (await vis(page.getByText('Demain').first())))
+  check('Accueil : l’alerte importante passe avant la liste (ordre automatique) et aucun bloc secondaire', order.indexOf('À savoir') >= 0 && order.indexOf('À savoir') < order.indexOf('À faire aujourd’hui') && !order.some((t) => /Attributs|Activités récentes/.test(t)), JSON.stringify(order))
+  check('Accueil : échéances importantes proches signalées (engagement + quête)', (await vis(page.getByText('Rendez-vous notaire'))) && (await vis(page.getByText('Échéance demain').first())))
   check('Accueil : prochaine séance planifiée visible', await vis(page.getByText('Haut du corps')))
   await shot('global-home-loaded-mobile')
 
@@ -127,7 +128,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   await go('/')
   check('Accueil : alerte de récupération en tête, rappel « repos »', (await vis(page.getByText('Récupération en alerte'))) && (await page.locator('main h2').first().textContent()) !== null)
   const order2 = await page.locator('main h2').allTextContents()
-  check('Accueil : alerte et récupération passent avant les quêtes (réorganisation automatique)', order2.indexOf('À savoir maintenant') < order2.indexOf('Quêtes prioritaires') && order2.indexOf('Récupération') < order2.indexOf('Quêtes prioritaires'), JSON.stringify(order2))
+  check('Accueil : alerte de récupération avant la liste (réorganisation automatique)', order2.indexOf('À savoir') >= 0 && order2.indexOf('À savoir') < order2.indexOf('À faire aujourd’hui'), JSON.stringify(order2))
   await shot('global-home-alert-mobile')
   await page.waitForTimeout(2500)
   log = await all('notificationLog')
@@ -212,7 +213,7 @@ const ahead = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return 
   await go('/')
   await ctx.setOffline(true)
   await page.reload(); await page.waitForSelector('h1'); await page.waitForTimeout(1200)
-  check('Hors ligne : accueil global disponible', await vis(page.getByRole('heading', { name: 'Cette semaine' })))
+  check('Hors ligne : accueil global disponible', await vis(page.getByRole('heading', { name: 'À faire aujourd’hui' })))
   await go('/planning'); check('Hors ligne : planning disponible', await vis(page.getByRole('heading', { name: 'Planning' })))
   await go('/bilans')
   const [dlo] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Exporter ce bilan en PDF/ }).click()])

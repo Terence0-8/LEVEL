@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '@/app/AppState'
+import { getThemePref, setThemePref, type ThemePref } from '@/app/theme'
 import { Badge, Card, PageHeader, SectionTitle } from '@/design/components'
 import { Field, inputClass, Segmented } from '@/design/Form'
 import { repos } from '@/data/repositories'
@@ -52,6 +53,7 @@ export function ProfilePage() {
   const { displayName, settings, prefs, notifLog, events, sport, quests, rpg, achievements, prestiges, rewards } = useAppState()
   const [name, setName] = useState(displayName)
   const [saved, setSaved] = useState(false)
+  const [theme, setTheme] = useState<ThemePref>(getThemePref())
   const [capVersion, setCapVersion] = useState(0)
   const [testMsg, setTestMsg] = useState('')
   const [newTime, setNewTime] = useState('08:30')
@@ -91,6 +93,7 @@ export function ProfilePage() {
 
       <Card>
         <SectionTitle title="Affichage" />
+        <Field label="Thème" hint="Automatique suit le réglage de votre appareil. Ce choix est propre à cet appareil."><Segmented<ThemePref> label="Thème" value={theme} options={[{ value: 'auto', label: 'Automatique' }, { value: 'light', label: 'Clair' }, { value: 'dark', label: 'Sombre' }]} onChange={(v) => { setThemePref(v); setTheme(v) }} /></Field>
         <Toggle label="Réduire les animations" hint="Désactive les transitions et effets lumineux animés." checked={settings.reducedMotion} onChange={(v) => void repos.settings.set('reducedMotion', v)} />
         <Toggle label="Données de démonstration" hint="Affiche des données fictives (niveaux, quêtes, séances) pour illustrer l’application. Les bilans et notifications restent basés sur vos vraies données." checked={settings.showDemoData} onChange={(v) => void repos.settings.set('showDemoData', v)} />
       </Card>
@@ -182,20 +185,20 @@ export function ProfilePage() {
         <SectionTitle title="LIFE et SPORT" />
         <p className={c.sub}>Les préférences propres à chaque module restent dans le module, pour ne rien dupliquer.</p>
         <div className={c.summary}>
-          <div>LIFE<b>{quests.filter((q) => !q.archived).length} quêtes actives</b><Link to="/life" style={{ color: 'var(--c-gold)' }}>Catégories et quêtes</Link></div>
-          <div>SPORT<b>{PROFILE_LABEL[sport.profile.equipmentProfile]} · {sport.profile.availability.strengthPerWeek} séance{sport.profile.availability.strengthPerWeek > 1 ? 's' : ''}/sem.</b><Link to="/sport/profil" style={{ color: 'var(--c-gold)' }}>Profil sportif et matériel</Link></div>
+          <div>LIFE<b>{quests.filter((q) => !q.archived).length} quêtes actives</b><Link to="/life" style={{ color: 'var(--c-accent)' }}>Catégories et quêtes</Link></div>
+          <div>SPORT<b>{PROFILE_LABEL[sport.profile.equipmentProfile]} · {sport.profile.availability.strengthPerWeek} séance{sport.profile.availability.strengthPerWeek > 1 ? 's' : ''}/sem.</b><Link to="/sport/profil" style={{ color: 'var(--c-accent)' }}>Profil sportif et matériel</Link></div>
         </div>
       </Card>
 
       <Card>
-        <SectionTitle title="Distinctions" aside={<Link to="/rpg/distinctions" style={{ color: 'var(--c-gold)' }}>Ouvrir</Link>} />
+        <SectionTitle title="Distinctions" aside={<Link to="/rpg/distinctions" style={{ color: 'var(--c-accent)' }}>Ouvrir</Link>} />
         <div className={c.summary}>
           <div>Titre affiché<b>{rpg.titles.find((t) => t.id === rpg.equippedTitle)?.title ?? 'Aucun'}</b></div>
           <div>Succès<b>{achievements.length} débloqué{achievements.length > 1 ? 's' : ''}</b></div>
           <div>Prestiges<b>LIFE ×{rpg.cycles.LIFE.prestigeCount} · SPORT ×{rpg.cycles.SPORT.prestigeCount}</b></div>
           <div>Récompenses<b>{rewards.length} obtenue{rewards.length > 1 ? 's' : ''}</b></div>
         </div>
-        <Link to="/rpg/prestige" style={{ color: 'var(--c-gold)', fontSize: 14 }}>Historique des prestiges</Link>
+        <Link to="/rpg/prestige" style={{ color: 'var(--c-accent)', fontSize: 14 }}>Historique des prestiges</Link>
       </Card>
 
       <Card>
