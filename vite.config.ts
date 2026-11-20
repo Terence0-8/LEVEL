@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 
 export default defineConfig({
+  // Hébergement dans un sous-dossier (GitHub Pages) : VITE_BASE=/LEVEL/ ; en local : racine
+  base: process.env.VITE_BASE ?? '/',
   resolve: { alias: { '@': new URL('./src', import.meta.url).pathname } },
   plugins: [
     react(),
